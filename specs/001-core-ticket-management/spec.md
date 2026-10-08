@@ -15,6 +15,12 @@ using the received high-level business scope and explicitly documented assumptio
 
 - Q: Which tickets should support staff be allowed to view and manage in this first feature?
   → A: Authorized support staff can view and manage all tickets in one shared support queue.
+- Q: May unrelated ticket changes retain an existing inactive category or assigned agent?
+  → A: Yes. Saved references may remain unchanged; only newly selected categories or agents
+  must be currently available or eligible. Clearing an assignment is allowed.
+- Q: Must Uncategorised remain available while it is the default category?
+  → A: Yes. It is a protected system fallback and cannot be deleted or deactivated while
+  required as the default.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -42,6 +48,12 @@ on assignment, status changes, or other CRM modules.
 4. **Given** staff authorized for the shared support queue, **When** they retrieve or manage
    a ticket assigned to another agent or unassigned, **Then** the same lifecycle permissions
    apply. A person without that authorization cannot view or change any queue ticket.
+5. **Given** Uncategorised is the required default, **When** a new ticket is created without
+   another category selection, **Then** Uncategorised remains available and is used even if
+   all other categories are unavailable.
+6. **Given** Uncategorised is the required default, **When** its deletion or deactivation
+   is attempted through the source of reference information, **Then** the attempt is rejected
+   and it remains available. This does not introduce category administration into this feature.
 
 ### User Story 2 - List and Track Tickets (Priority: P1)
 
@@ -85,11 +97,23 @@ reassign it, and remove its assignment, then inspect current values and history.
 2. **Given** a non-closed ticket and an eligible agent, **When** staff assign or reassign it,
    **Then** it has exactly that one agent, its status is unchanged, and history records
    the previous and new assignment. Removing assignment returns it to unassigned.
-3. **Given** invalid required content or an ineligible agent, **When** staff attempt a
+3. **Given** invalid required content or a newly selected ineligible agent, **When** staff attempt a
    change, **Then** the change is rejected with an explanation and existing information
    and history remain unchanged.
 4. **Given** a saved ticket, **When** staff submit identical values, **Then** no new history
    entry or last change time is produced.
+5. **Given** a non-closed ticket whose saved category or assigned agent became inactive,
+   **When** staff change its subject, description, or priority while retaining those references,
+   **Then** the change succeeds and history records only the actual ticket changes.
+6. **Given** an unavailable category or ineligible agent, **When** staff newly select it
+   for a ticket, **Then** the entire attempted change is rejected and saved values and
+   history remain unchanged, even if that reference appeared earlier in the ticket's history.
+7. **Given** a ticket with an inactive saved category or agent, **When** staff replace it
+   with an available category or eligible agent, **Then** the replacement succeeds and history
+   records it. Clearing an inactive agent assignment also succeeds and records unassignment.
+8. **Given** a non-closed ticket with inactive saved references, **When** staff resubmit its
+   identical values, **Then** retaining those references does not fail eligibility checks
+   and no new history entry or last change time is produced.
 
 ### User Story 4 - Progress, Close, and Reopen a Ticket (Priority: P2)
 
@@ -115,6 +139,9 @@ transition and reject every disallowed transition independently of assignment.
    preserved and the reopening in history.
 5. **Given** a Closed ticket, **When** staff attempt an information or assignment edit,
    **Then** the edit is rejected until the ticket is reopened.
+6. **Given** a ticket with an inactive saved category or assigned agent, **When** staff
+   perform an otherwise allowed status transition, including closure or reopening,
+   **Then** the transition succeeds, retains those references, and records only the status change.
 
 ### User Story 5 - Review Ticket History (Priority: P2)
 
@@ -140,8 +167,18 @@ changes to verify the complete chronological account, without making new changes
   permit any changes. Denied operations produce no ticket activity entry.
 - A ticket may remain unassigned throughout its lifecycle; assignment is not a transition
   prerequisite and changing assignment never implicitly changes status.
-- Category or agent eligibility is checked at the time of saving. If unavailable, reject
-  the entire attempted change and preserve the last saved ticket and history.
+- Availability or eligibility is checked at saving for newly selected categories or agents.
+  If a new selection is unavailable, reject the entire attempted change and preserve saved
+  values and history. Retaining the same saved reference is not a new selection, even if
+  it is included alongside unrelated edits or became inactive since the ticket was viewed.
+- An inactive saved category or agent remains readable and is not automatically replaced
+  or cleared. Unrelated edits and allowed status changes must not fail because of it;
+  closed edit restrictions and stale-change checks still apply.
+- A removed or replaced inactive reference cannot be newly selected again. Unassignment
+  requires no eligible replacement agent.
+- Uncategorised remains available while required as the default. Reference information
+  changes must not delete or deactivate it; default creation remains possible when all
+  other categories are unavailable.
 - Invalid status changes are rejected without adding history; selecting the existing
   status is a no-op.
 - If another staff member has changed a ticket since it was retrieved, reject the stale
@@ -170,11 +207,18 @@ behaviors, except decisions explicitly confirmed in Clarifications.
   search by exact reference or case-insensitive subject substring, and combine category,
   priority, status, and assignment filters using all-match behavior.
 - **FR-005**: Staff MUST edit subject, description, category, and priority on non-closed
-  tickets. Blank required content and unavailable choices MUST be rejected.
+  tickets. Blank required content and newly selected unavailable categories MUST be rejected.
+  An unchanged saved category or agent MAY remain even after becoming inactive; unrelated
+  edits MUST NOT fail merely because those retained references are inactive.
 - **FR-006**: Priority choices MUST be Low, Normal, High, and Urgent. Categories MUST come
-  from available business labels with Uncategorised as a valid fallback.
+  from available business labels for new selections. Uncategorised MUST be a protected
+  system fallback that remains available and MUST NOT be deleted or deactivated while
+  required as the default. These protections do not introduce category administration.
 - **FR-007**: Staff MUST manually assign, reassign, or unassign a non-closed ticket.
-  A ticket MUST have at most one assigned eligible agent. Assignment MUST NOT change status.
+  A ticket MUST have at most one assigned agent; a newly selected agent MUST be currently
+  eligible. An unchanged saved assignment MAY remain if that agent later becomes inactive.
+  Staff MUST be able to clear such an assignment without selecting a replacement.
+  Assignment MUST NOT change status.
 - **FR-008**: Statuses MUST be Open, In Progress, Resolved, and Closed. Only the following
   transitions MUST be allowed; no automatic transitions occur:
 
@@ -187,7 +231,8 @@ behaviors, except decisions explicitly confirmed in Clarifications.
 
 - **FR-009**: Closing MUST preserve the ticket and history. Closed tickets MUST reject
   edits and assignment changes until reopened. Reopening MUST preserve reference, details,
-  and assignment and MUST record a new status change.
+  and assignment and MUST record a new status change. Allowed status transitions MUST NOT
+  fail merely because an unchanged saved category or assigned agent is inactive.
 - **FR-010**: Ticket history MUST record creation and every successful change to editable
   information, assignment, or status with actor, time, and previous/new values for changes.
   History MUST remain readable and immutable through this feature.
@@ -207,8 +252,11 @@ behaviors, except decisions explicitly confirmed in Clarifications.
 
 - **Ticket**: A recorded support issue with a stable reference, subject, description,
   classification, priority, current status, optional agent assignment, and activity times.
-- **Agent**: An existing staff member eligible to receive ticket assignments.
-- **Category**: An available label for classifying an issue; managing labels is outside scope.
+- **Agent**: A staff reference that must be eligible for a new assignment; an inactive
+  reference may remain on an existing ticket.
+- **Category**: A classification reference that must be available for a new selection;
+  inactive references may remain on existing tickets. Uncategorised is the protected default.
+  Managing labels is outside scope.
 - **Ticket History Entry**: An immutable account of ticket creation or a successful change,
   identifying the actor, time, and changed values.
 
@@ -266,3 +314,11 @@ behaviors, except decisions explicitly confirmed in Clarifications.
 - **A-010 — Evaluation**: Success criteria are proposed acceptance targets, not supplied
   business metrics. Prepared ticket records and representative support staff are needed
   to evaluate tracking accuracy and independent task completion.
+- **A-011 — Inactive references (confirmed)**: Availability and eligibility may change in
+  the supplied reference information. The user confirmed that existing saved references
+  may be retained without blocking unrelated changes; new selections require current
+  availability or eligibility. Inactivation does not automatically change tickets or history.
+  The source of these reference changes remains outside this feature's administration scope.
+- **A-012 — Protected fallback (confirmed)**: The user confirmed that Uncategorised cannot
+  be deleted or deactivated while required as the creation default. The reference source
+  must preserve this invariant; no fallback-management workflow is introduced here.
