@@ -4,11 +4,11 @@ description: "Implementation tasks for Core Ticket Management"
 
 # Tasks: Core Ticket Management
 
-**Input**: Latest `specs/001-core-ticket-management/` design artifacts; synchronized 2026-10-08 with the single local SQL Server/Windows Authentication decision. Existing 81 task IDs, ordering and all other approved design decisions are preserved. Implementation is complete through T065; subsequent tasks remain outside the authorized run.
+**Input**: Latest `specs/001-core-ticket-management/` design artifacts; synchronized 2026-10-08 with the single local SQL Server/Windows Authentication decision. Existing 81 task IDs, ordering and all other approved design decisions are preserved. Implementation is complete through T072; subsequent tasks remain outside the authorized run.
 **Prerequisites**: [spec](spec.md), [plan](plan.md), [research](research.md),
 [data model](data-model.md), [REST](contracts/tickets-rest.md),
 [provisioning](contracts/reference-provisioning.md), [single Windows DB connection](contracts/database-principals.md), [quickstart](quickstart.md), constitution v1.0.0.
-**Tests**: Required by the constitution and the user's planning instructions. T001-T065 are implemented and verified; T066-T081 remain unchecked. See validation/us1.md, validation/us2.md, validation/us3.md and validation/us4.md.
+**Tests**: Required by the constitution and the user's planning instructions. T001-T072 are implemented and verified; T073-T081 remain unchecked. See validation/us1.md, validation/us2.md, validation/us3.md, validation/us4.md and validation/us5.md.
 **Organization**: US1 create/view P1; US2 tracking P1; US3 edit/assign P2; US4 lifecycle P2;
 US5 history review P2. US1 includes creation history; US3/US4 must read the kinds they emit at their own checkpoints. US5 verifies comprehensive mixed-history review/presentation.
 
@@ -195,16 +195,16 @@ inactive references; no live edits needed for the review journey.
 
 ### Tests for User Story 5
 
-- [ ] T066 [P] [US5] Write `tests/backend/Crm.Application.Tests/Tickets/GetTicketHistoryTests.cs`, `tests/backend/Crm.IntegrationTests/Tickets/TicketHistoryTests.cs`: exact discriminated shapes, "Revision bigint serialized as decimal string; Sequence positive int; unique together per ticket", numeric ordering, immutable snapshots/paging/auth/missing behavior.
-- [ ] T067 [P] [US5] Write feature `src/frontend/src/app/features/tickets/components/ticket-history.component.spec.ts`: every kind/field/null value, large revisions without Number conversion, actors/times, safe text, pages/empty/loading/error states.
+- [X] T066 [P] [US5] Write `tests/backend/Crm.Application.Tests/Tickets/GetTicketHistoryTests.cs`, `tests/backend/Crm.IntegrationTests/Tickets/TicketHistoryTests.cs`: exact discriminated shapes, "Revision bigint serialized as decimal string; Sequence positive int; unique together per ticket", numeric ordering, immutable snapshots/paging/auth/missing behavior.
+- [X] T067 [P] [US5] Write feature `src/frontend/src/app/features/tickets/components/ticket-history.component.spec.ts`: every kind/field/null value, large revisions without Number conversion, actors/times, safe text, pages/empty/loading/error states.
 
 ### Implementation for User Story 5
 
-- [ ] T068 [US5] Verify/refine comprehensive mixed-history ordering/paging/snapshot behavior in existing Application `src/backend/Crm.Application/Tickets/Queries/GetTicketHistoryQuery.cs`, DTOs and Infrastructure `src/backend/Crm.Infrastructure/Tickets/TicketReadService.cs`; all emitted kinds already have serialization/projection support from their producing stories; no live directory join, history mutation or duplicate US1 endpoint (after T066/T067).
-- [ ] T069 [US5] Refine/verify comprehensive presentation in feature `src/frontend/src/app/features/tickets/components/ticket-history.component.ts`, `models/ticket-history.models.ts`: creation/all before-after kinds already render at earlier checkpoints; verify readable mixed entries, null semantics, stable pages/error states and no edit/delete controls (after T068).
-- [ ] T070 [US5] Integrate full history refresh/rendering in feature `src/frontend/src/app/features/tickets/pages/ticket-detail.page.ts`, `data-access/tickets.service.ts`; preserve initial history from US1 and preserve already-readable US3/US4 entries and verify comprehensive review/refresh behavior (after T069).
-- [ ] T071 [US5] Add/run `src/frontend/e2e/tickets/history.spec.ts` with prepared full history: who/what/when, pages/equal timestamps and snapshots unchanged after reference-label updates (after T070).
-- [ ] T072 [US5] Run T066/T067/T071 plus US3/US4 actual-change/no-op/rollback regressions; record FR-010/011 and SC-004 in `specs/001-core-ticket-management/validation/us5.md`.
+- [X] T068 [US5] Verify/refine comprehensive mixed-history ordering/paging/snapshot behavior in existing Application `src/backend/Crm.Application/Tickets/Queries/GetTicketHistoryQuery.cs`, DTOs and Infrastructure `src/backend/Crm.Infrastructure/Tickets/TicketReadService.cs`; all emitted kinds already have serialization/projection support from their producing stories; no live directory join, history mutation or duplicate US1 endpoint (after T066/T067).
+- [X] T069 [US5] Refine/verify comprehensive presentation in feature `src/frontend/src/app/features/tickets/components/ticket-history.component.ts`, `models/ticket-history.models.ts`: creation/all before-after kinds already render at earlier checkpoints; verify readable mixed entries, null semantics, stable pages/error states and no edit/delete controls (after T068).
+- [X] T070 [US5] Integrate full history refresh/rendering in feature `src/frontend/src/app/features/tickets/pages/ticket-detail.page.ts`, `data-access/tickets.service.ts`; preserve initial history from US1 and preserve already-readable US3/US4 entries and verify comprehensive review/refresh behavior (after T069).
+- [X] T071 [US5] Add/run `src/frontend/e2e/tickets/history.spec.ts` with prepared full history: who/what/when, pages/equal timestamps and snapshots unchanged after reference-label updates (after T070).
+- [X] T072 [US5] Run T066/T067/T071 plus US3/US4 actual-change/no-op/rollback regressions; record FR-010/011 and SC-004 in `specs/001-core-ticket-management/validation/us5.md`.
 
 **Checkpoint**: Complete immutable history review passes; all earlier stories remain usable.
 

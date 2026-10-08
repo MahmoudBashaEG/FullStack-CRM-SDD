@@ -53,6 +53,7 @@ try {
     { id: '20000000-0000-0000-0000-000000000002', issuer: 'https://example.test', subject: 'agent-b', displayName: 'Inactive Agent', isEligible: false }] }));
   run('dotnet', ['run', '--no-build', '--no-launch-profile', '--project', 'src/backend/Crm.Api', '--', 'provision-ticket-references', '--input', input]);
   run('pwsh', ['-NoProfile', '-File', 'scripts/e2e-database.ps1', '-Mode', 'SeedTracking', '-Owner', owner]);
+  run('pwsh', ['-NoProfile', '-File', 'scripts/e2e-database.ps1', '-Mode', 'SeedHistory', '-Owner', owner]);
   run(process.execPath, ['node_modules/@playwright/test/cli.js', 'test'], frontend);
 } catch (error) { console.error(error.message); exitCode = 1; }
 finally {

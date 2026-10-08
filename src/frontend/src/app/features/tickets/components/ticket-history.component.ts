@@ -5,7 +5,7 @@ import { ticketStatusLabels } from '../models/ticket-lifecycle';
 
 @Component({ selector: 'app-ticket-history', imports: [DatePipe], template: `<section aria-labelledby="history-heading"><h2 id="history-heading">Ticket history</h2>
   @if (loading()) { <p role="status">Loading history…</p> }
-  @if (error()) { <p role="alert">{{ error() }}</p><button (click)="requested.emit(page()?.page ?? 1)">Retry history</button> }
+  @if (error()) { <p role="alert">{{ error() }}</p><button (click)="requested.emit(retryPage() ?? page()?.page ?? 1)">Retry history</button> }
   @if (page(); as history) {
     @if (history.items.length === 0) { <p>No history entries.</p> }
     <ol>@for (entry of history.items; track entry.id) { <li>
@@ -28,5 +28,6 @@ export class TicketHistoryComponent {
   display(value: string | ReferenceChoice | null, field?: string): string { return value === null ? 'Unassigned' : typeof value === 'string' ? field === 'status' ? ticketStatusLabels[value as TicketStatus] ?? value : value : value.displayName; }
   fieldLabel(field: string): string { return ({ subject: 'Subject', description: 'Description', category: 'Category', priority: 'Priority', assignedAgent: 'Assigned agent', status: 'Status' } as Record<string, string>)[field] ?? field; }
   readonly page = input<Page<TicketHistory> | null>(null); readonly loading = input(false); readonly error = input('');
+  readonly retryPage = input<number | null>(null);
   readonly requested = output<number>();
 }

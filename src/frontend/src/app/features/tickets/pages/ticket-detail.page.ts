@@ -13,7 +13,7 @@ import { TicketEditSession } from '../services/ticket-edit-session.service';
 import { TicketStatusComponent } from '../components/ticket-status.component';
 import { ticketStatusLabels } from '../models/ticket-lifecycle';
 import { ticketMessages } from '../models/ticket-messages';
-import { switchMap, catchError, of } from 'rxjs';
+import { switchMap, catchError, of, Subject } from 'rxjs';
 
 @Component({ imports: [DatePipe, TicketHistoryComponent, TicketEditForm, TicketAssignment, TicketConflict, TicketStatusComponent], providers: [TicketEditSession], template: `
   @if (loading()) { <p role="status">{{ messages.loading }}</p> }
@@ -33,20 +33,27 @@ import { switchMap, catchError, of } from 'rxjs';
       <app-ticket-assignment [ticket]="detail" [seed]="seed" [agents]="agents()" [ready]="referencesReady()" [blocked]="session.blocked()" (save)="session.saveAssignment($event)" />
       <app-ticket-status [ticket]="detail" [seed]="seed" [blocked]="session.statusBlocked()" (save)="session.saveStatus($event)" />
     }
-    <app-ticket-history [page]="history()" [loading]="historyLoading()" [error]="historyError()" (requested)="loadHistory($event)" />
+    <app-ticket-history [page]="history()" [loading]="historyLoading()" [error]="historyError()" [retryPage]="historyRequestedPage()" (requested)="loadHistory($event)" />
   }`, styles: `.description {white-space:pre-wrap;overflow-wrap:anywhere;} dl{display:grid;grid-template-columns:minmax(7rem, 1fr) 3fr;gap:.5rem;} dd{margin:0;overflow-wrap:anywhere;} h1{overflow-wrap:anywhere;}` })
 export class TicketDetailPage implements OnInit {
   readonly statusLabels = ticketStatusLabels;
   readonly session = inject(TicketEditSession);
   private readonly service = inject(TicketsService); private readonly route = inject(ActivatedRoute); private readonly destroy = inject(DestroyRef);
   private reference = ''; readonly messages = ticketMessages;
+  private readonly historyRequests = new Subject<{ reference: string; page: number } | null>();
   readonly ticket = this.session.detail; readonly loading = signal(true); readonly error = signal('');
   readonly categories = signal<ReferenceChoice[]>([]); readonly agents = signal<ReferenceChoice[]>([]); readonly referencesReady = signal(false); readonly referenceError = signal('');
   readonly history = signal<Page<TicketHistory> | null>(null); readonly historyLoading = signal(false); readonly historyError = signal('');
+  readonly historyRequestedPage = signal(1);
   ngOnInit(): void {
+    this.historyRequests.pipe(switchMap(request => {
+      if (request === null) return of(null);
+      this.historyRequestedPage.set(request.page); this.historyLoading.set(true); this.historyError.set('');
+      return this.service.history(request.reference, request.page).pipe(catchError(() => { this.historyError.set(this.messages.historyFailed); return of(null); }));
+    }), takeUntilDestroyed(this.destroy)).subscribe(history => { this.historyLoading.set(false); if (history) this.history.set(history); });
     this.session.saved.pipe(takeUntilDestroyed(this.destroy)).subscribe(() => { this.loadHistory(1); this.loadReferences(); });
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroy), switchMap(params => {
-      this.reference = params.get('reference') ?? ''; this.loading.set(true); this.error.set(''); this.session.reset(); this.history.set(null);
+      this.reference = params.get('reference') ?? ''; this.loading.set(true); this.error.set(''); this.session.reset(); this.historyRequests.next(null); this.historyRequestedPage.set(1); this.history.set(null); this.historyError.set('');
       return this.service.detail(this.reference).pipe(catchError((failure: HttpErrorResponse) => { this.handleFailure(failure); return of(null); }));
     })).subscribe(detail => { this.loading.set(false); if (detail) { this.session.accept(detail); this.loadHistory(1); this.loadReferences(); } });
   }
@@ -60,9 +67,7 @@ export class TicketDetailPage implements OnInit {
     this.service.agents().pipe(takeUntilDestroyed(this.destroy)).subscribe({ next: choices => { if (reference !== this.reference) return; this.agents.set(choices); agentsDone = true; this.referencesReady.set(categoriesDone && !this.referenceError()); }, error: failed });
   }
   loadHistory(page: number): void {
-    const requestedReference = this.reference;
-    this.historyLoading.set(true); this.historyError.set('');
-    this.service.history(requestedReference, page).pipe(takeUntilDestroyed(this.destroy)).subscribe({ next: history => { if (requestedReference !== this.reference) return; this.history.set(history); this.historyLoading.set(false); }, error: () => { if (requestedReference !== this.reference) return; this.historyLoading.set(false); this.historyError.set(this.messages.historyFailed); } });
+    this.historyRequests.next({ reference: this.reference, page });
   }
   private handleFailure(error: HttpErrorResponse): void { this.loading.set(false); this.error.set(error.status === 404 ? this.messages.missing : error.status === 403 ? this.messages.forbidden : error.status === 401 ? this.messages.unauthenticated : this.messages.failed); }
 }
