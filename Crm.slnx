@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/backend/">
+    <Project Path="src/backend/Crm.Api/Crm.Api.csproj" />
+    <Project Path="src/backend/Crm.Application/Crm.Application.csproj" />
+    <Project Path="src/backend/Crm.Domain/Crm.Domain.csproj" />
+    <Project Path="src/backend/Crm.Infrastructure/Crm.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/" />
+  <Folder Name="/tests/backend/">
+    <Project Path="tests/backend/Crm.Application.Tests/Crm.Application.Tests.csproj" />
+    <Project Path="tests/backend/Crm.ArchitectureTests/Crm.ArchitectureTests.csproj" />
+    <Project Path="tests/backend/Crm.Domain.Tests/Crm.Domain.Tests.csproj" />
+    <Project Path="tests/backend/Crm.IntegrationTests/Crm.IntegrationTests.csproj" />
+  </Folder>
+</Solution>

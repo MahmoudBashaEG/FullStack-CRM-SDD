@@ -1,0 +1,24 @@
+import { Component, input, output } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { Page, TicketHistory } from '../models/ticket.models';
+
+@Component({ selector: 'app-ticket-history', imports: [DatePipe], template: `<section aria-labelledby="history-heading"><h2 id="history-heading">Ticket history</h2>
+  @if (loading()) { <p role="status">Loading history…</p> }
+  @if (error()) { <p role="alert">{{ error() }}</p><button (click)="requested.emit(page()?.page ?? 1)">Retry history</button> }
+  @if (page(); as history) {
+    @if (history.items.length === 0) { <p>No history entries.</p> }
+    <ol>@for (entry of history.items; track entry.id) { <li>
+      <h3>Created — revision {{ entry.revision }}</h3>
+      <p>{{ entry.actor.displayName }} · <time [attr.datetime]="entry.occurredAtUtc">{{ entry.occurredAtUtc | date:'medium' }}</time></p>
+      <dl><dt>Reference</dt><dd>{{ entry.newValue.reference }}</dd><dt>Subject</dt><dd dir="auto">{{ entry.newValue.subject }}</dd>
+      <dt>Description</dt><dd class="text" dir="auto">{{ entry.newValue.description }}</dd><dt>Category</dt><dd>{{ entry.newValue.category.displayName }}</dd>
+      <dt>Priority</dt><dd>{{ entry.newValue.priority }}</dd><dt>Status</dt><dd>{{ entry.newValue.status }}</dd><dt>Assigned agent</dt><dd>Unassigned</dd></dl>
+    </li> }</ol>
+    <nav aria-label="History pages"><button [disabled]="history.page <= 1 || loading()" (click)="requested.emit(history.page - 1)">Previous history</button>
+    <span>Page {{ history.page }}</span><button [disabled]="!history.hasMore || loading()" (click)="requested.emit(history.page + 1)">Next history</button></nav>
+  }
+  </section>`, styles: `li { margin-block-end:1.5rem; } dl { display:grid; grid-template-columns:minmax(7rem, 1fr) 3fr; gap:.4rem; } dd { margin:0; overflow-wrap:anywhere; } .text {white-space:pre-wrap;} nav {display:flex;gap:1rem;flex-wrap:wrap;}` })
+export class TicketHistoryComponent {
+  readonly page = input<Page<TicketHistory> | null>(null); readonly loading = input(false); readonly error = input('');
+  readonly requested = output<number>();
+}
