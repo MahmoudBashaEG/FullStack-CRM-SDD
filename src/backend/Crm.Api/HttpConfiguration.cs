@@ -4,6 +4,7 @@ using Crm.Api.Errors;
 using Crm.Application.Common;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using Microsoft.Net.Http.Headers;
 
 namespace Crm.Api;
 
@@ -56,7 +57,8 @@ public static class HttpConfiguration
             { await ProblemDetailsMapping.WriteAsync(context, new("validation_failed", 400)); return; }
             if (context.Request.Method is "POST" or "PUT" or "PATCH")
             {
-                if (!context.Request.HasJsonContentType()) { await ProblemDetailsMapping.WriteAsync(context, new("unsupported_media_type", 415)); return; }
+                if (!MediaTypeHeaderValue.TryParse(context.Request.ContentType, out var contentType) || !contentType.MediaType.ToString().Equals("application/json", StringComparison.OrdinalIgnoreCase))
+                { await ProblemDetailsMapping.WriteAsync(context, new("unsupported_media_type", 415)); return; }
                 context.Request.EnableBuffering();
                 using var json = await JsonDocument.ParseAsync(context.Request.Body, cancellationToken: context.RequestAborted);
                 if (json.RootElement.ValueKind != JsonValueKind.Object || HasDuplicate(json.RootElement))

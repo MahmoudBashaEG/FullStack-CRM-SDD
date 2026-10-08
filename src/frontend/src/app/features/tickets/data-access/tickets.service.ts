@@ -1,7 +1,8 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
-import { CreateTicket, Page, ReferenceChoice, TicketDetail, TicketHistory, TicketListParams, TicketSummary, TicketDetailsPatch } from '../models/ticket.models';
+import { CreateTicket, Page, ReferenceChoice, TicketDetail, TicketHistory, TicketListParams, TicketSummary, TicketDetailsPatch, TicketStatus } from '../models/ticket.models';
+import { Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class TicketsService {
@@ -10,6 +11,7 @@ export class TicketsService {
   create(input: CreateTicket) { return this.http.post<TicketDetail>(`${this.base}/tickets`, input); }
   update(reference: string, expectedVersion: string, patch: TicketDetailsPatch) { return this.http.patch<TicketDetail>(`${this.base}/tickets/${encodeURIComponent(reference)}/details`, { expectedVersion, ...patch }); }
   assign(reference: string, expectedVersion: string, agentId: string | null) { return this.http.put<TicketDetail>(`${this.base}/tickets/${encodeURIComponent(reference)}/assignment`, { expectedVersion, agentId }); }
+  changeStatus(reference: string, expectedVersion: string, status: TicketStatus): Observable<TicketDetail> { return this.http.put<TicketDetail>(`${this.base}/tickets/${encodeURIComponent(reference)}/status`, { expectedVersion, status }); }
   list(criteria: TicketListParams = {}) {
     let params = new HttpParams();
     for (const [key, value] of Object.entries(criteria)) if (value !== undefined) params = params.set(key, value);

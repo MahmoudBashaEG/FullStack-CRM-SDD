@@ -5,6 +5,7 @@ const nonblank = (control: AbstractControl): ValidationErrors | null => typeof c
 
 @Component({ selector: 'app-ticket-edit-form', imports: [ReactiveFormsModule], template: `<section aria-labelledby="edit-heading"><h2 id="edit-heading">Edit ticket information</h2>
   <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <fieldset [disabled]="ticket().status === 'Closed'" aria-labelledby="edit-heading">
     <label for="edit-subject">Subject</label><input id="edit-subject" formControlName="subject" dir="auto" aria-required="true" aria-describedby="edit-subject-error">
     <p id="edit-subject-error">@if (form.controls.subject.touched && form.controls.subject.invalid) { Subject is required. } {{ fieldErrors()['subject']?.join(' ') }}</p>
     <label for="edit-description">Description</label><textarea id="edit-description" formControlName="description" dir="auto" rows="5" aria-required="true" aria-describedby="edit-description-error"></textarea>
@@ -17,7 +18,8 @@ const nonblank = (control: AbstractControl): ValidationErrors | null => typeof c
     <p>{{ fieldErrors()['priority']?.join(' ') }}</p>
     @if (selectionError) { <p role="alert">{{ selectionError }}</p> }
     <button [disabled]="blocked() || ticket().status === 'Closed' || !ready()" type="submit">Save ticket information</button>
-  </form></section>`, styles: `form{display:grid;gap:.4rem;max-inline-size:46rem;} p{color:var(--error-color);margin-block:0 .7rem;} textarea{resize:vertical;}` })
+    </fieldset>
+  </form></section>`, styles: `form{max-inline-size:46rem;}fieldset{display:grid;gap:.4rem;border:0;padding:0;margin:0;min-inline-size:0;} p{color:var(--error-color);margin-block:0 .7rem;} textarea{resize:vertical;}` })
 export class TicketEditForm {
   readonly ticket = input.required<TicketDetail>(); readonly seed = input.required<TicketDetail>();
   readonly categories = input<ReferenceChoice[]>([]); readonly ready = input(false); readonly blocked = input(false); readonly fieldErrors = input<Record<string, string[]>>({});

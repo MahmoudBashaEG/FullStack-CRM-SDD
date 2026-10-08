@@ -39,6 +39,19 @@ describe('TicketDetailPage', () => {
     for (const value of ['9007199254740993', 'Before text', '<img> after', 'Historical category', 'Replacement category', 'Historical agent', 'Unassigned', 'Historical staff']) expect(text).toContain(value);
     expect(fixture.nativeElement.querySelector('img')).toBeNull();
   });
+  it('makes closed details and assignment read-only while permitting an explicit reopen', async () => {
+    const fixture = TestBed.createComponent(TicketDetailPage); fixture.detectChanges();
+    http.expectOne('/api/tickets/TKT-TEST').flush({ ...sampleTicket, status: 'Closed' }); http.expectOne('/api/tickets/TKT-TEST/history?page=1&pageSize=25').flush({ items: [], page: 1, pageSize: 25, hasMore: false });
+    http.expectOne('/api/ticket-reference-data/categories').flush([]); http.expectOne('/api/ticket-reference-data/agents').flush([]);
+    await fixture.whenStable(); fixture.detectChanges();
+    for (const selector of ['#edit-subject', '#edit-description', '#edit-category', '#edit-priority', '#assignment-agent']) expect(fixture.nativeElement.querySelector(selector).matches(':disabled')).toBe(true);
+    expect(fixture.nativeElement.querySelector('#ticket-status').matches(':disabled')).toBe(false);
+    const status = fixture.nativeElement.querySelector('#ticket-status'); status.value = 'Open'; status.dispatchEvent(new Event('change', { bubbles: true }));
+    fixture.nativeElement.querySelector('app-ticket-status form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    const save = http.expectOne('/api/tickets/TKT-TEST/status'); expect(save.request.body.status).toBe('Open'); save.flush({ ...sampleTicket, editVersion: 'AAAAAAAAAAI=' });
+    http.expectOne('/api/tickets/TKT-TEST/history?page=1&pageSize=25').flush({ items: [], page: 1, pageSize: 25, hasMore: false }); http.expectOne('/api/ticket-reference-data/categories').flush([]); http.expectOne('/api/ticket-reference-data/agents').flush([]);
+    await fixture.whenStable(); fixture.detectChanges(); expect(fixture.nativeElement.querySelector('#edit-subject').matches(':disabled')).toBe(false);
+  });
   for (const [status, message] of [[403, 'You do not have shared queue access.'], [404, 'Ticket not found.'], [503, 'Ticket information could not be loaded. Try again.']] as const) {
     it(`distinguishes ${status} from an empty successful result`, async () => {
       const fixture = TestBed.createComponent(TicketDetailPage); fixture.detectChanges(); http.expectOne('/api/tickets/TKT-TEST').flush({}, { status, statusText: 'Error' });

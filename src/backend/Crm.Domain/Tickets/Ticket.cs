@@ -18,6 +18,24 @@ public sealed class Ticket
     private readonly List<TicketHistoryEntry> pendingHistory = [];
     public IReadOnlyList<TicketHistoryEntry> PendingHistory => pendingHistory.AsReadOnly();
     private Ticket() { }
+    public void ChangeStatus(TicketStatus status, ActorSnapshot actor, DateTimeOffset now)
+    {
+        ValidateActor(actor);
+        if (!Enum.IsDefined(status)) throw new ArgumentException("A valid ticket status is required.");
+        if (status == Status) return;
+        var allowed = (Status, status) switch
+        {
+            (TicketStatus.Open, TicketStatus.InProgress or TicketStatus.Resolved) => true,
+            (TicketStatus.InProgress, TicketStatus.Resolved) => true,
+            (TicketStatus.Resolved, TicketStatus.Closed or TicketStatus.Open) => true,
+            (TicketStatus.Closed, TicketStatus.Open) => true,
+            _ => false
+        };
+        if (!allowed) throw new InvalidTicketTransitionException();
+        var previous = Status;
+        Revision = checked(Revision + 1); Status = status; UpdatedAtUtc = now.ToUniversalTime();
+        pendingHistory.Add(TicketHistoryEntry.Changed(this, 1, "StatusChanged", "status", new TicketTextValue(previous.ToString()), new TicketTextValue(status.ToString()), actor));
+    }
     public void UpdateDetails(string subject, string description, CategorySnapshot previousCategory, CategorySnapshot category, TicketPriority priority, ActorSnapshot actor, DateTimeOffset now)
     {
         if (Status == TicketStatus.Closed) throw new TicketClosedException();

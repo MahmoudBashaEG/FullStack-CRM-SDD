@@ -4,11 +4,11 @@ description: "Implementation tasks for Core Ticket Management"
 
 # Tasks: Core Ticket Management
 
-**Input**: Latest `specs/001-core-ticket-management/` design artifacts; synchronized 2026-10-08 with the single local SQL Server/Windows Authentication decision. Existing 81 task IDs, ordering and all other approved design decisions are preserved. Implementation is complete through T055; subsequent tasks remain outside the authorized run.
+**Input**: Latest `specs/001-core-ticket-management/` design artifacts; synchronized 2026-10-08 with the single local SQL Server/Windows Authentication decision. Existing 81 task IDs, ordering and all other approved design decisions are preserved. Implementation is complete through T065; subsequent tasks remain outside the authorized run.
 **Prerequisites**: [spec](spec.md), [plan](plan.md), [research](research.md),
 [data model](data-model.md), [REST](contracts/tickets-rest.md),
 [provisioning](contracts/reference-provisioning.md), [single Windows DB connection](contracts/database-principals.md), [quickstart](quickstart.md), constitution v1.0.0.
-**Tests**: Required by the constitution and the user's planning instructions. T001-T055 are implemented and verified; T056-T081 remain unchecked. See validation/us1.md, validation/us2.md and validation/us3.md.
+**Tests**: Required by the constitution and the user's planning instructions. T001-T065 are implemented and verified; T066-T081 remain unchecked. See validation/us1.md, validation/us2.md, validation/us3.md and validation/us4.md.
 **Organization**: US1 create/view P1; US2 tracking P1; US3 edit/assign P2; US4 lifecycle P2;
 US5 history review P2. US1 includes creation history; US3/US4 must read the kinds they emit at their own checkpoints. US5 verifies comprehensive mixed-history review/presentation.
 
@@ -169,19 +169,19 @@ references, without any mandatory assignment/customer approval/resolution note.
 
 ### Tests for User Story 4
 
-- [ ] T056 [P] [US4] Write `tests/backend/Crm.Domain.Tests/Tickets/TicketLifecycleTests.cs`: "Open, InProgress, Resolved, Closed", six allowed unequal transitions, four equal no-ops, remaining six pairs rejected; reopen preservation and status history.
-- [ ] T057 [P] [US4] Write `tests/backend/Crm.Application.Tests/Tickets/ChangeTicketStatusTests.cs`, `tests/backend/Crm.IntegrationTests/Tickets/TicketStatusTests.cs`: no retained-reference eligibility check or assignment prerequisite, stale no-op conflict, closed restrictions and failure atomicity.
+- [X] T056 [P] [US4] Write `tests/backend/Crm.Domain.Tests/Tickets/TicketLifecycleTests.cs`: "Open, InProgress, Resolved, Closed", six allowed unequal transitions, four equal no-ops, remaining six pairs rejected; reopen preservation and status history.
+- [X] T057 [P] [US4] Write `tests/backend/Crm.Application.Tests/Tickets/ChangeTicketStatusTests.cs`, `tests/backend/Crm.IntegrationTests/Tickets/TicketStatusTests.cs`: no retained-reference eligibility check or assignment prerequisite, stale no-op conflict, closed restrictions and failure atomicity.
 
 ### Implementation for User Story 4
 
-- [ ] T058 [US4] Add Domain `src/backend/Crm.Domain/Tickets/Ticket.cs` lifecycle method: Open -> InProgress/Resolved, InProgress -> Resolved, Resolved -> Closed/Open, Closed -> Open; equal no-op, preserve inactive references, actual status history/revision/time only (after T056/T057; merge T044 first).
-- [ ] T059 [US4] Implement Application `src/backend/Crm.Application/Tickets/Commands/ChangeTicketStatusCommand.cs`, `Validation/ChangeTicketStatusValidator.cs`: required status/expectedVersion, T046 scope/trusted actor/time, no unchanged category/agent revalidation; extend existing history DTO/projection/serializer to make StatusChanged readable through GET history before the US4 checkpoint; include actor/time/before-after projection assertions in the US4 API cases (after T058).
-- [ ] T060 [US4] Implement protected API `src/backend/Crm.Api/Controllers/TicketStatusController.cs`: PUT status, consistent invalid-version/stale/lifecycle errors, no escalation status/automation (after T059).
-- [ ] T061 [US4] Extend feature `src/frontend/src/app/features/tickets/data-access/tickets.service.ts`, `models/ticket-lifecycle.ts`: canonical state codes/localizable labels, allowed choices, expectedVersion and no automatic replay (after T060).
-- [ ] T062 [US4] Implement feature `src/frontend/src/app/features/tickets/components/ticket-status.component.ts` and detail integration: allowed changes/close/reopen, read-only closed details/assignment, reuse conflict behavior and retain inactive references; extend feature history models/component to render StatusChanged actor/time/before-after values now, not first in US5 (after T061).
-- [ ] T063 [US4] Write/run feature `src/frontend/src/app/features/tickets/components/ticket-status.component.spec.ts`: choices, guards, reopen preservation, 409 distinction and no implicit state changes (after T062).
-- [ ] T064 [US4] Add/run `src/frontend/e2e/tickets/lifecycle.spec.ts`: full create-to-reopen, retained inactive references, unassigned ticket, direct-close rejection and StatusChanged readable through history endpoint and detail UI before completing US4 (after T063).
-- [ ] T065 [US4] Run T056/T057/T063/T064 and US3 regressions; record FR-008/009 and SC-003 in `specs/001-core-ticket-management/validation/us4.md`.
+- [X] T058 [US4] Add Domain `src/backend/Crm.Domain/Tickets/Ticket.cs` lifecycle method: Open -> InProgress/Resolved, InProgress -> Resolved, Resolved -> Closed/Open, Closed -> Open; equal no-op, preserve inactive references, actual status history/revision/time only (after T056/T057; merge T044 first).
+- [X] T059 [US4] Implement Application `src/backend/Crm.Application/Tickets/Commands/ChangeTicketStatusCommand.cs`, `Validation/ChangeTicketStatusValidator.cs`: required status/expectedVersion, T046 scope/trusted actor/time, no unchanged category/agent revalidation; extend existing history DTO/projection/serializer to make StatusChanged readable through GET history before the US4 checkpoint; include actor/time/before-after projection assertions in the US4 API cases (after T058).
+- [X] T060 [US4] Implement protected API `src/backend/Crm.Api/Controllers/TicketStatusController.cs`: PUT status, consistent invalid-version/stale/lifecycle errors, no escalation status/automation (after T059).
+- [X] T061 [US4] Extend feature `src/frontend/src/app/features/tickets/data-access/tickets.service.ts`, `models/ticket-lifecycle.ts`: canonical state codes/localizable labels, allowed choices, expectedVersion and no automatic replay (after T060).
+- [X] T062 [US4] Implement feature `src/frontend/src/app/features/tickets/components/ticket-status.component.ts` and detail integration: allowed changes/close/reopen, read-only closed details/assignment, reuse conflict behavior and retain inactive references; extend feature history models/component to render StatusChanged actor/time/before-after values now, not first in US5 (after T061).
+- [X] T063 [US4] Write/run feature `src/frontend/src/app/features/tickets/components/ticket-status.component.spec.ts`: choices, guards, reopen preservation, 409 distinction and no implicit state changes (after T062).
+- [X] T064 [US4] Add/run `src/frontend/e2e/tickets/lifecycle.spec.ts`: full create-to-reopen, retained inactive references, unassigned ticket, direct-close rejection and StatusChanged readable through history endpoint and detail UI before completing US4 (after T063).
+- [X] T065 [US4] Run T056/T057/T063/T064 and US3 regressions; record FR-008/009 and SC-003 in `specs/001-core-ticket-management/validation/us4.md`.
 
 **Checkpoint**: Every lifecycle rule passes and emitted StatusChanged entries are readable through GET history and the detail UI at US4 completion, with earlier history kinds preserved.
 

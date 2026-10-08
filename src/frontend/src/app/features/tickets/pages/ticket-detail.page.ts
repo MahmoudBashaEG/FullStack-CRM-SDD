@@ -10,16 +10,18 @@ import { TicketEditForm } from '../components/ticket-edit-form.component';
 import { TicketAssignment } from '../components/ticket-assignment.component';
 import { TicketConflict } from '../components/ticket-conflict.component';
 import { TicketEditSession } from '../services/ticket-edit-session.service';
+import { TicketStatusComponent } from '../components/ticket-status.component';
+import { ticketStatusLabels } from '../models/ticket-lifecycle';
 import { ticketMessages } from '../models/ticket-messages';
 import { switchMap, catchError, of } from 'rxjs';
 
-@Component({ imports: [DatePipe, TicketHistoryComponent, TicketEditForm, TicketAssignment, TicketConflict], providers: [TicketEditSession], template: `
+@Component({ imports: [DatePipe, TicketHistoryComponent, TicketEditForm, TicketAssignment, TicketConflict, TicketStatusComponent], providers: [TicketEditSession], template: `
   @if (loading()) { <p role="status">{{ messages.loading }}</p> }
   @if (error()) { <h1>Ticket information</h1><p role="alert">{{ error() }}</p><button (click)="reload()">Retry ticket</button> }
   @if (ticket(); as detail) {
     <h1>{{ detail.reference }}</h1><h2 dir="auto">{{ detail.subject }}</h2><p class="description" dir="auto">{{ detail.description }}</p>
     <dl><dt>Category</dt><dd>{{ detail.category.displayName }} @if (!detail.category.isAvailable) { <span>(inactive)</span> }</dd>
-    <dt>Priority</dt><dd>{{ detail.priority }}</dd><dt>Status</dt><dd>{{ detail.status === 'InProgress' ? 'In Progress' : detail.status }}</dd>
+    <dt>Priority</dt><dd>{{ detail.priority }}</dd><dt>Status</dt><dd>{{ statusLabels[detail.status] }}</dd>
     <dt>Assigned agent</dt><dd>{{ detail.assignedAgent?.displayName ?? 'Unassigned' }} @if (detail.assignedAgent && !detail.assignedAgent.isEligible) { <span>(inactive)</span> }</dd>
     <dt>Created</dt><dd><time [attr.datetime]="detail.createdAtUtc">{{ detail.createdAtUtc | date:'medium' }}</time></dd>
     <dt>Last change</dt><dd><time [attr.datetime]="detail.updatedAtUtc">{{ detail.updatedAtUtc | date:'medium' }}</time></dd></dl>
@@ -29,10 +31,12 @@ import { switchMap, catchError, of } from 'rxjs';
     @if (session.seed(); as seed) {
       <app-ticket-edit-form [ticket]="detail" [seed]="seed" [categories]="categories()" [ready]="referencesReady()" [blocked]="session.blocked()" [fieldErrors]="session.fieldErrors()" (save)="session.saveDetails($event)" />
       <app-ticket-assignment [ticket]="detail" [seed]="seed" [agents]="agents()" [ready]="referencesReady()" [blocked]="session.blocked()" (save)="session.saveAssignment($event)" />
+      <app-ticket-status [ticket]="detail" [seed]="seed" [blocked]="session.statusBlocked()" (save)="session.saveStatus($event)" />
     }
     <app-ticket-history [page]="history()" [loading]="historyLoading()" [error]="historyError()" (requested)="loadHistory($event)" />
   }`, styles: `.description {white-space:pre-wrap;overflow-wrap:anywhere;} dl{display:grid;grid-template-columns:minmax(7rem, 1fr) 3fr;gap:.5rem;} dd{margin:0;overflow-wrap:anywhere;} h1{overflow-wrap:anywhere;}` })
 export class TicketDetailPage implements OnInit {
+  readonly statusLabels = ticketStatusLabels;
   readonly session = inject(TicketEditSession);
   private readonly service = inject(TicketsService); private readonly route = inject(ActivatedRoute); private readonly destroy = inject(DestroyRef);
   private reference = ''; readonly messages = ticketMessages;
