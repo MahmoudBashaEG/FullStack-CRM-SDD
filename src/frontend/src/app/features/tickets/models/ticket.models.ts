@@ -13,10 +13,11 @@ export interface CreationSnapshot {
   reference: string; subject: string; description: string; category: ReferenceChoice;
   priority: TicketPriority; status: TicketStatus; assignedAgent: null;
 }
-export interface TicketHistory {
-  id: string; revision: string; sequence: number; kind: 'Created'; field: null;
-  previousValue: null; newValue: CreationSnapshot;
-  actor: { issuer: string; subject: string; displayName: string }; occurredAtUtc: string;
-}
+export type { TicketHistory } from './ticket-history.models';
+export interface TicketDetailsPatch { subject?: string; description?: string; categoryId?: string; priority?: TicketPriority; }
 export interface Page<T> { items: T[]; page: number; pageSize: number; hasMore: boolean; }
 export const FALLBACK_CATEGORY = '00000000-0000-0000-0000-000000000001';
+export type TicketSummary = Omit<TicketDetail, 'description' | 'createdAtUtc' | 'editVersion'>;
+export interface TicketListParams { q?: string; status?: string; categoryId?: string; priority?: string; assignment?: string; page?: number | string; pageSize?: number | string; }
+export interface TicketFilters { q: string; status: string; categoryId: string; priority: string; assignment: string; }
+export interface FilterReference extends ReferenceChoice { inactive?: boolean; }

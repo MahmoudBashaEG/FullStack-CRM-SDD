@@ -1,13 +1,20 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
-import { CreateTicket, Page, ReferenceChoice, TicketDetail, TicketHistory } from '../models/ticket.models';
+import { CreateTicket, Page, ReferenceChoice, TicketDetail, TicketHistory, TicketListParams, TicketSummary, TicketDetailsPatch } from '../models/ticket.models';
 
 @Injectable({ providedIn: 'root' })
 export class TicketsService {
   private readonly http = inject(HttpClient);
   private readonly base = environment.apiBaseUrl.replace(/\/$/, '');
   create(input: CreateTicket) { return this.http.post<TicketDetail>(`${this.base}/tickets`, input); }
+  update(reference: string, expectedVersion: string, patch: TicketDetailsPatch) { return this.http.patch<TicketDetail>(`${this.base}/tickets/${encodeURIComponent(reference)}/details`, { expectedVersion, ...patch }); }
+  assign(reference: string, expectedVersion: string, agentId: string | null) { return this.http.put<TicketDetail>(`${this.base}/tickets/${encodeURIComponent(reference)}/assignment`, { expectedVersion, agentId }); }
+  list(criteria: TicketListParams = {}) {
+    let params = new HttpParams();
+    for (const [key, value] of Object.entries(criteria)) if (value !== undefined) params = params.set(key, value);
+    return this.http.get<Page<TicketSummary>>(`${this.base}/tickets`, { params });
+  }
   detail(reference: string) { return this.http.get<TicketDetail>(`${this.base}/tickets/${encodeURIComponent(reference)}`); }
   history(reference: string, page = 1) {
     return this.http.get<Page<TicketHistory>>(`${this.base}/tickets/${encodeURIComponent(reference)}/history`, { params: new HttpParams().set('page', page).set('pageSize', 25) });

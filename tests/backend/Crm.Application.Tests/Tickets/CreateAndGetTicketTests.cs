@@ -12,6 +12,7 @@ public sealed class CreateAndGetTicketTests
     private sealed class Clock : TimeProvider { public override DateTimeOffset GetUtcNow() => new(2026, 10, 8, 0, 0, 0, TimeSpan.Zero); }
     private sealed class Store : ITicketMutationStore
     {
+        public Task<OperationResult<TicketDetailDto>> MutateAsync(string reference, byte[] version, Func<TicketMutationContext, CancellationToken, Task<Failure?>> mutation, CancellationToken token) => throw new NotSupportedException();
         public Ticket? Saved;
         public bool Available = true;
         public Guid Selected;
@@ -60,6 +61,7 @@ public sealed class CreateAndGetTicketTests
     }
     private sealed class Reader : ITicketReadService
     {
+        public Task<TicketPageDto<TicketSummaryDto>> ListAsync(TicketListCriteria criteria, CancellationToken cancellationToken) => throw new NotSupportedException();
         public CancellationToken Received;
         public Task<TicketDetailDto?> GetAsync(string reference, CancellationToken cancellationToken) { Received = cancellationToken; return Task.FromResult<TicketDetailDto?>(null); }
         public Task<TicketPageDto<TicketHistoryDto>?> GetHistoryAsync(string reference, int page, int pageSize, CancellationToken cancellationToken) => Task.FromResult<TicketPageDto<TicketHistoryDto>?>(null);

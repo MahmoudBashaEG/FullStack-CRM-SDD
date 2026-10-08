@@ -1,0 +1,2 @@
+import { TicketDetail } from '../models/ticket.models';
+export const sampleTicket: TicketDetail = { reference: 'TKT-TEST', subject: 'Saved', description: 'Description', category: { id: 'old', displayName: 'Old', isAvailable: false }, priority: 'Normal', status: 'Open', assignedAgent: { id: 'old-agent', displayName: 'Old agent', isEligible: false }, editVersion: 'AAAAAAAAAAE=', createdAtUtc: '2026-10-08T00:00:00Z', updatedAtUtc: '2026-10-08T00:00:00Z' };

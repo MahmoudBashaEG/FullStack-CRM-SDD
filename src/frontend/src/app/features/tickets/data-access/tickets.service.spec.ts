@@ -13,6 +13,14 @@ describe('TicketsService', () => {
     service = TestBed.inject(TicketsService); http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => http.verify());
+  it('transports combined list criteria and preserves an empty page as success', () => {
+    let empty: boolean | undefined;
+    service.list({ q: '%_[مشكلة]', status: 'Closed', categoryId: 'category', priority: 'High', assignment: 'unassigned', page: 2, pageSize: 25 }).subscribe(page => empty = page.items.length === 0);
+    const request = http.expectOne(request => request.url === '/api/tickets'); expect(request.request.method).toBe('GET');
+    expect(request.request.params.get('q')).toBe('%_[مشكلة]'); expect(request.request.params.get('status')).toBe('Closed'); expect(request.request.params.get('assignment')).toBe('unassigned');
+    expect(request.request.params.get('categoryId')).toBe('category'); expect(request.request.params.get('priority')).toBe('High'); expect(request.request.params.get('page')).toBe('2');
+    request.flush({ items: [], page: 2, pageSize: 25, hasMore: false }); expect(empty).toBe(true);
+  });
   it('posts only writable creation input and includes credentials for this API', () => {
     service.create({ subject: 'Subject', description: 'Description' }).subscribe();
     const request = http.expectOne('/api/tickets'); expect(request.request.method).toBe('POST');

@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { of } from 'rxjs';
 import { TicketDetailPage } from './ticket-detail.page';
+import { sampleTicket } from '../testing/ticket-fixtures';
 
 describe('TicketDetailPage', () => {
   let http: HttpTestingController;
@@ -17,10 +18,26 @@ describe('TicketDetailPage', () => {
     http.expectOne('/api/tickets/TKT-TEST/history?page=1&pageSize=25').flush({ items: [{ id: 'entry', revision: '1', sequence: 1, kind: 'Created', field: null, previousValue: null,
       newValue: { reference: 'TKT-TEST', subject: 'Original subject', description: 'Original description', category: { id: 'category', displayName: 'Original category' }, priority: 'Normal', status: 'Open', assignedAgent: null },
       actor: { issuer: 'https://example.test', subject: 'staff', displayName: 'Original actor' }, occurredAtUtc: '2026-10-08T12:00:00Z' }], page: 1, pageSize: 25, hasMore: false });
+    http.expectOne('/api/ticket-reference-data/categories').flush([{ id: 'active', displayName: 'Available' }]);
+    http.expectOne('/api/ticket-reference-data/agents').flush([{ id: 'eligible', displayName: 'Eligible' }]);
     await fixture.whenStable(); fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Inactive category (inactive)'); expect(fixture.nativeElement.textContent).toContain('Inactive agent (inactive)');
     expect(fixture.nativeElement.textContent).toContain('<img src=x onerror=alert(1)>'); expect(fixture.nativeElement.querySelector('img')).toBeNull();
     expect(fixture.nativeElement.textContent).toContain('Original actor'); expect(fixture.nativeElement.textContent).toContain('Original category');
+  });
+  it('renders changed string/reference/null snapshots with actor and time at the US3 checkpoint', async () => {
+    const fixture = TestBed.createComponent(TicketDetailPage); fixture.detectChanges();
+    http.expectOne('/api/tickets/TKT-TEST').flush(sampleTicket);
+    const common = { revision: '9007199254740993', sequence: 1, actor: { issuer: 'issuer', subject: 'staff-b', displayName: 'Historical staff' }, occurredAtUtc: '2026-10-08T12:00:00Z' };
+    http.expectOne('/api/tickets/TKT-TEST/history?page=1&pageSize=25').flush({ page: 1, pageSize: 25, hasMore: false, items: [
+      { ...common, id: 'one', kind: 'DetailsChanged', field: 'subject', previousValue: 'Before text', newValue: '<img> after' },
+      { ...common, id: 'two', kind: 'DetailsChanged', field: 'category', previousValue: { id: 'old', displayName: 'Historical category' }, newValue: { id: 'new', displayName: 'Replacement category' } },
+      { ...common, id: 'three', kind: 'AssignmentChanged', field: 'assignedAgent', previousValue: { id: 'old-agent', displayName: 'Historical agent' }, newValue: null }
+    ] });
+    http.expectOne('/api/ticket-reference-data/categories').flush([]); http.expectOne('/api/ticket-reference-data/agents').flush([]);
+    await fixture.whenStable(); fixture.detectChanges(); const text = fixture.nativeElement.textContent;
+    for (const value of ['9007199254740993', 'Before text', '<img> after', 'Historical category', 'Replacement category', 'Historical agent', 'Unassigned', 'Historical staff']) expect(text).toContain(value);
+    expect(fixture.nativeElement.querySelector('img')).toBeNull();
   });
   for (const [status, message] of [[403, 'You do not have shared queue access.'], [404, 'Ticket not found.'], [503, 'Ticket information could not be loaded. Try again.']] as const) {
     it(`distinguishes ${status} from an empty successful result`, async () => {
