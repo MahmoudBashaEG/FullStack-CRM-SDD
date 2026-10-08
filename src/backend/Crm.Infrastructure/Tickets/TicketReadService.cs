@@ -15,11 +15,14 @@ public sealed class TicketReadService(CrmDbContext database) : ITicketReadServic
     {
         var term = criteria.Q; var status = criteria.Status?.ToString(); var priority = criteria.Priority?.ToString();
         var offset = ((long)criteria.Page - 1) * criteria.PageSize;
-        // CHARINDEX is literal, respects the subject's CI/AS Unicode collation, and treats %_[] as text.
+        // Short needles use CHARINDEX; longer needles use the migration-managed literal matcher.
+        // Both respect the subject's CI/AS/SC collation and treat %_[] as text, not patterns.
         // Reference equality retains the configured binary collation. All values are SQL parameters.
         var tickets = database.Tickets.FromSqlInterpolated($"""
             SELECT * FROM dbo.Tickets
-            WHERE ({term} IS NULL OR [Reference]={term} OR CHARINDEX({term},[Subject])>0)
+            WHERE ({term} IS NULL OR [Reference]={term}
+              OR CHARINDEX(CASE WHEN DATALENGTH({term})<=8000 THEN {term} ELSE NULL END,[Subject])>0
+              OR (DATALENGTH({term})>8000 AND dbo.TicketSubjectContainsLiteral([Subject],{term})=1))
               AND ({status} IS NULL OR [Status]={status})
               AND ({criteria.CategoryId} IS NULL OR [CategoryId]={criteria.CategoryId})
               AND ({priority} IS NULL OR [Priority]={priority})

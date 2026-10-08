@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using System.Text.Json;
 using Crm.Domain.Tickets;
 using Crm.IntegrationTests.Fixtures;
@@ -8,6 +9,74 @@ namespace Crm.IntegrationTests.Tickets;
 [Collection("SQL")]
 public sealed class ListTicketsTests(SqlServerFixture sql)
 {
+    [Theory]
+    [InlineData(8000, true)] [InlineData(8000, false)]
+    [InlineData(8001, true)] [InlineData(8001, false)]
+    public async Task Long_literal_search_returns_matching_or_empty_success_without_truncation(int length, bool matches)
+    {
+        using var jwt = new TestJwtFactory(); await using var api = new CrmApiFactory(sql, jwt);
+        using var client = api.CreateClient(); client.DefaultRequestHeaders.Authorization = new("Bearer", jwt.Token());
+        var prefix = "LongSearch-" + Guid.NewGuid().ToString("N");
+        var term = prefix + new string('a', length - prefix.Length - 7) + "%_[]\\-Z";
+        Assert.Equal(length, term.Length);
+        var created = await client.PostAsJsonAsync("/api/tickets", new { subject = "before " + term.ToLowerInvariant() + " after", description = "Synthetic long-search regression" });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var ticket = await created.Content.ReadFromJsonAsync<JsonElement>();
+        var query = matches ? term.ToUpperInvariant() : term[..^1] + "Y";
+        var response = await client.GetAsync("/api/tickets?q=" + Uri.EscapeDataString(query));
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var page = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(matches ? [ticket.GetProperty("reference").GetString()] : Array.Empty<string?>(), page.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("reference").GetString()).ToArray());
+        Assert.False(page.GetProperty("hasMore").GetBoolean());
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public async Task Long_search_checks_complete_candidates_including_overlaps_and_supplementary_Unicode(bool supplementary)
+    {
+        using var jwt = new TestJwtFactory(); await using var api = new CrmApiFactory(sql, jwt);
+        using var client = api.CreateClient(); client.DefaultRequestHeaders.Authorization = new("Bearer", jwt.Token());
+        var repeated = supplementary ? string.Concat(Enumerable.Repeat("😀", 4500)) : new string('a', 8000);
+        var term = repeated + "مشكلة EnglishZ";
+        var created = await client.PostAsJsonAsync("/api/tickets", new { subject = (supplementary ? "😀" : "a") + term, description = "Overlapping long-search candidates" });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var ticket = await created.Content.ReadFromJsonAsync<JsonElement>();
+        var response = await client.GetAsync("/api/tickets?q=" + Uri.EscapeDataString(term));
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var page = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Contains(page.GetProperty("items").EnumerateArray(), item => item.GetProperty("reference").GetString() == ticket.GetProperty("reference").GetString());
+        response = await client.GetAsync("/api/tickets?q=" + Uri.EscapeDataString(term[..^1] + "Y"));
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        page = await response.Content.ReadFromJsonAsync<JsonElement>(); Assert.Empty(page.GetProperty("items").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task Long_search_preserves_all_match_filters_and_reference_tie_break_paging()
+    {
+        using var jwt = new TestJwtFactory(); await using var api = new CrmApiFactory(sql, jwt);
+        using var client = api.CreateClient(); client.DefaultRequestHeaders.Authorization = new("Bearer", jwt.Token());
+        var term = "LongPaging-" + Guid.NewGuid().ToString("N") + new string('a', 8001);
+        var references = new List<string>();
+        foreach (var priority in new[] { "Normal", "Normal", "High" })
+        {
+            var response = await client.PostAsJsonAsync("/api/tickets", new { subject = "before " + term + " after", description = "Synthetic paging", priority });
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+            var ticket = await response.Content.ReadFromJsonAsync<JsonElement>();
+            if (priority == "Normal") references.Add(ticket.GetProperty("reference").GetString()!);
+        }
+        await using var db = sql.OpenContext();
+        var tied = new DateTimeOffset(2026, 10, 9, 0, 0, 0, TimeSpan.Zero);
+        foreach (var reference in references) await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE dbo.Tickets SET UpdatedAtUtc={tied} WHERE Reference={reference}");
+        references.Sort(StringComparer.Ordinal);
+        var criteria = "q=" + Uri.EscapeDataString(term) + "&status=Open&priority=Normal&categoryId=00000000-0000-0000-0000-000000000001&assignment=unassigned&pageSize=1";
+        for (var index = 0; index < 3; index++)
+        {
+            var response = await client.GetAsync("/api/tickets?" + criteria + "&page=" + (index + 1)); Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var page = await response.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Equal(index < 2 ? [references[index]] : Array.Empty<string>(), page.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("reference").GetString()).ToArray());
+            Assert.Equal(index == 0, page.GetProperty("hasMore").GetBoolean()); Assert.Equal(1, page.GetProperty("pageSize").GetInt32());
+        }
+    }
     private static string Category => "30000000-0000-0000-0000-000000000002";
     private static string Agent => "20000000-0000-0000-0000-000000000002";
     private async Task<List<Ticket>> PrepareAsync()

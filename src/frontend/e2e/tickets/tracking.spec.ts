@@ -1,4 +1,23 @@
 import { test, expect, tokens } from '../fixtures/auth';
+
+test('an 8001-character literal search reaches the real API and renders matching and empty results', async ({ page, request }) => {
+  const prefix = `LongBrowser-${Date.now()}-`;
+  const term = prefix + 'a'.repeat(8000 - prefix.length) + 'Z';
+  expect(term.length).toBe(8001);
+  const created = await request.post('/api/tickets', { data: { subject: `before ${term} after`, description: 'Synthetic browser long-search regression' }, headers: { Authorization: `Bearer ${tokens().staffA}` } });
+  expect(created.status()).toBe(201); const ticket = await created.json();
+  await page.goto('/tickets');
+  await page.getByLabel('Search tickets').fill(term);
+  let loaded = page.waitForResponse(response => new URL(response.url()).pathname === '/api/tickets' && response.request().method() === 'GET' && new URL(response.url()).searchParams.get('q') === term);
+  await page.getByRole('button', { name: 'Apply filters' }).click(); expect((await loaded).status()).toBe(200);
+  await expect(page.locator('tbody tr')).toHaveCount(1);
+  await expect(page.getByRole('link', { name: ticket.reference, exact: true })).toBeVisible();
+  expect(new URL(page.url()).searchParams.get('q')).toBe(term);
+  const missing = term.slice(0, -1) + 'Y'; await page.getByLabel('Search tickets').fill(missing);
+  loaded = page.waitForResponse(response => new URL(response.url()).pathname === '/api/tickets' && response.request().method() === 'GET' && new URL(response.url()).searchParams.get('q') === missing);
+  await page.getByRole('button', { name: 'Apply filters' }).click(); expect((await loaded).status()).toBe(200);
+  await expect(page.getByText('No tickets match these filters.')).toBeVisible(); await expect(page.getByRole('alert')).toHaveCount(0);
+});
 import type { TicketSummary } from '../../src/app/features/tickets/models/ticket.models';
 
 const categoryA = '30000000-0000-0000-0000-000000000001';

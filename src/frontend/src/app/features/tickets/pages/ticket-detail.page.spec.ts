@@ -10,6 +10,53 @@ describe('TicketDetailPage', () => {
   let http: HttpTestingController;
   beforeEach(() => { TestBed.configureTestingModule({ imports: [TicketDetailPage], providers: [provideHttpClient(), provideHttpClientTesting(), { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ reference: 'TKT-TEST' })) } }] }); http = TestBed.inject(HttpTestingController); });
   afterEach(() => http.verify());
+  for (const outcome of ['success', 'failure'] as const) {
+    it(`cancels a previous-ticket retry before its late ${outcome} can alter the current ticket`, async () => {
+      const params = new Subject<ReturnType<typeof convertToParamMap>>();
+      Object.assign(TestBed.inject(ActivatedRoute), { paramMap: params.asObservable() });
+      const fixture = TestBed.createComponent(TicketDetailPage); fixture.detectChanges();
+      params.next(convertToParamMap({ reference: 'TKT-A' }));
+      http.expectOne('/api/tickets/TKT-A').flush({}, { status: 503, statusText: 'Unavailable' });
+      fixture.componentInstance.reload(); const obsolete = http.expectOne('/api/tickets/TKT-A');
+      params.next(convertToParamMap({ reference: 'TKT-B' }));
+      const current = { ...sampleTicket, reference: 'TKT-B', subject: 'Ticket B', editVersion: 'AAAAAAAAAAI=' };
+      http.expectOne('/api/tickets/TKT-B').flush(current);
+      http.expectOne('/api/tickets/TKT-B/history?page=1&pageSize=25').flush({ items: [], page: 1, pageSize: 25, hasMore: false });
+      http.expectOne('/api/ticket-reference-data/categories').flush([]); http.expectOne('/api/ticket-reference-data/agents').flush([]);
+      await fixture.whenStable(); fixture.detectChanges();
+      const input = fixture.nativeElement.querySelector('#edit-subject') as HTMLInputElement;
+      input.value = 'Unsaved B draft'; input.dispatchEvent(new Event('input'));
+      const cancelled = obsolete.cancelled;
+      if (!cancelled) {
+        if (outcome === 'success') obsolete.flush({ ...sampleTicket, reference: 'TKT-A' });
+        else obsolete.flush({}, { status: 404, statusText: 'Not found' });
+        // Consume only effects of the defective implementation so the regression fails on behavior.
+        for (const request of http.match(request => request.url.endsWith('/history') || request.url.includes('/ticket-reference-data/')))
+          request.flush(request.request.url.endsWith('/history') ? { items: [], page: 1, pageSize: 25, hasMore: false } : []);
+      }
+      await fixture.whenStable(); fixture.detectChanges();
+      expect(cancelled).toBe(true); expect(fixture.componentInstance.ticket()).toEqual(current);
+      expect(fixture.componentInstance.session.seed()).toEqual(current); expect(fixture.componentInstance.error()).toBe('');
+      expect(fixture.componentInstance.history()).toEqual({ items: [], page: 1, pageSize: 25, hasMore: false });
+      expect(input.value).toBe('Unsaved B draft'); expect(fixture.componentInstance.loading()).toBe(false);
+      http.expectNone('/api/tickets/TKT-A/history?page=1&pageSize=25');
+    });
+  }
+  it('keeps a normal same-ticket retry working and cancels an older retry when a newer one starts', async () => {
+    const fixture = TestBed.createComponent(TicketDetailPage); fixture.detectChanges();
+    http.expectOne('/api/tickets/TKT-TEST').flush({}, { status: 503, statusText: 'Unavailable' });
+    fixture.componentInstance.reload(); const obsolete = http.expectOne('/api/tickets/TKT-TEST');
+    fixture.componentInstance.reload(); const current = http.expectOne('/api/tickets/TKT-TEST');
+    const cancelled = obsolete.cancelled;
+    if (!cancelled) obsolete.flush({}, { status: 503, statusText: 'Unavailable' });
+    current.flush(sampleTicket);
+    http.expectOne('/api/tickets/TKT-TEST/history?page=1&pageSize=25').flush({ items: [], page: 1, pageSize: 25, hasMore: false });
+    http.expectOne('/api/ticket-reference-data/categories').flush([]); http.expectOne('/api/ticket-reference-data/agents').flush([]);
+    await fixture.whenStable(); fixture.detectChanges();
+    expect(cancelled).toBe(true); expect(fixture.componentInstance.ticket()).toEqual(sampleTicket);
+    expect(fixture.componentInstance.error()).toBe(''); expect(fixture.componentInstance.loading()).toBe(false);
+    expect(fixture.nativeElement.querySelector('h1').textContent).toBe(sampleTicket.reference);
+  });
   it('renders inactive references and user text safely and reads creation history', async () => {
     const fixture = TestBed.createComponent(TicketDetailPage); fixture.detectChanges();
     http.expectOne('/api/tickets/TKT-TEST').flush({ reference: 'TKT-TEST', subject: '<img src=x onerror=alert(1)>', description: 'وصف',

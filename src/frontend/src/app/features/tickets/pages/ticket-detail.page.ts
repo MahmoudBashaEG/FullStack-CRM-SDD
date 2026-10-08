@@ -34,12 +34,13 @@ import { switchMap, catchError, of, Subject } from 'rxjs';
       <app-ticket-status [ticket]="detail" [seed]="seed" [blocked]="session.statusBlocked()" (save)="session.saveStatus($event)" />
     }
     <app-ticket-history [page]="history()" [loading]="historyLoading()" [error]="historyError()" [retryPage]="historyRequestedPage()" (requested)="loadHistory($event)" />
-  }`, styles: `.description {white-space:pre-wrap;overflow-wrap:anywhere;} dl{display:grid;grid-template-columns:minmax(7rem, 1fr) 3fr;gap:.5rem;} dd{margin:0;overflow-wrap:anywhere;} h1{overflow-wrap:anywhere;}` })
+  }`, styles: `.description {white-space:pre-wrap;overflow-wrap:anywhere;} dl{display:grid;grid-template-columns:minmax(7rem, 1fr) 3fr;gap:.5rem;} dd{margin:0;overflow-wrap:anywhere;} h1,h2{overflow-wrap:anywhere;}` })
 export class TicketDetailPage implements OnInit {
   readonly statusLabels = ticketStatusLabels;
   readonly session = inject(TicketEditSession);
   private readonly service = inject(TicketsService); private readonly route = inject(ActivatedRoute); private readonly destroy = inject(DestroyRef);
   private reference = ''; readonly messages = ticketMessages;
+  private readonly detailRequests = new Subject<string>();
   private readonly historyRequests = new Subject<{ reference: string; page: number } | null>();
   readonly ticket = this.session.detail; readonly loading = signal(true); readonly error = signal('');
   readonly categories = signal<ReferenceChoice[]>([]); readonly agents = signal<ReferenceChoice[]>([]); readonly referencesReady = signal(false); readonly referenceError = signal('');
@@ -52,12 +53,14 @@ export class TicketDetailPage implements OnInit {
       return this.service.history(request.reference, request.page).pipe(catchError(() => { this.historyError.set(this.messages.historyFailed); return of(null); }));
     }), takeUntilDestroyed(this.destroy)).subscribe(history => { this.historyLoading.set(false); if (history) this.history.set(history); });
     this.session.saved.pipe(takeUntilDestroyed(this.destroy)).subscribe(() => { this.loadHistory(1); this.loadReferences(); });
-    this.route.paramMap.pipe(takeUntilDestroyed(this.destroy), switchMap(params => {
+    this.detailRequests.pipe(switchMap(reference => this.service.detail(reference).pipe(catchError((failure: HttpErrorResponse) => { this.handleFailure(failure); return of(null); }))), takeUntilDestroyed(this.destroy))
+      .subscribe(detail => { this.loading.set(false); if (detail) { this.session.accept(detail); this.loadHistory(1); this.loadReferences(); } });
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroy)).subscribe(params => {
       this.reference = params.get('reference') ?? ''; this.loading.set(true); this.error.set(''); this.session.reset(); this.historyRequests.next(null); this.historyRequestedPage.set(1); this.history.set(null); this.historyError.set('');
-      return this.service.detail(this.reference).pipe(catchError((failure: HttpErrorResponse) => { this.handleFailure(failure); return of(null); }));
-    })).subscribe(detail => { this.loading.set(false); if (detail) { this.session.accept(detail); this.loadHistory(1); this.loadReferences(); } });
+      this.detailRequests.next(this.reference);
+    });
   }
-  reload(): void { this.loading.set(true); this.error.set(''); this.service.detail(this.reference).pipe(takeUntilDestroyed(this.destroy)).subscribe({ next: detail => { this.session.accept(detail); this.loading.set(false); this.loadHistory(1); this.loadReferences(); }, error: error => this.handleFailure(error) }); }
+  reload(): void { this.loading.set(true); this.error.set(''); this.detailRequests.next(this.reference); }
   reloadForReview(): void { this.session.reload(); this.loadHistory(1); this.loadReferences(); }
   loadReferences(): void {
     const reference = this.reference; this.referencesReady.set(false); this.referenceError.set('');
