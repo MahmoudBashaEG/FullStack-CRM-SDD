@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Crm.Infrastructure.Identity;
 using Crm.Infrastructure.Authentication;
 using Crm.Application.Authentication.Ports;
+using Crm.Application.Accounts.Ports;
 
 namespace Crm.Infrastructure;
 
@@ -18,6 +19,7 @@ public static class DependencyInjection
         _ = CrmDatabaseSettings.Load(configuration);
         services.AddDbContext<CrmDbContext>(options => options.UseSqlServer(CrmDatabaseSettings.Load(configuration), sql => sql.MigrationsHistoryTable("__EFMigrationsHistory", "dbo")));
         services.AddCrmIdentity();
+        services.AddScoped<IInitialAdminBootstrapStore, InitialAdminBootstrapper>();
         services.TryAddSingleton(TimeProvider.System);
         // Lazy factories keep installation/design-time persistence independent of HTTP signing setup.
         services.AddSingleton(_ => JwtOptions.Load(configuration));

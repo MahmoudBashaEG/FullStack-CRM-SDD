@@ -1,6 +1,6 @@
 namespace Crm.Infrastructure.Identity;
 
-// Schema foundation only. No bootstrap handler, password seed or initial account creation.
+// Completion marker only; credentials are supplied separately by the installation operator.
 public sealed class InitialAdminSetup
 {
     public int Id { get; set; } = 1;

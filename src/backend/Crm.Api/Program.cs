@@ -7,10 +7,41 @@ using Crm.Infrastructure;
 using Crm.Infrastructure.Persistence;
 using Crm.Infrastructure.Tickets;
 using Crm.Infrastructure.Authentication;
+using Crm.Api.Installation;
+using Crm.Application.Accounts.Commands;
+using MediatR;
 
 var cli = args.Length > 0 && args[0] == "provision-ticket-references";
-var builder = WebApplication.CreateBuilder(cli ? [] : args);
+var bootstrap = args.Length > 0 && args[0] == "bootstrap-initial-admin";
+var builder = WebApplication.CreateBuilder(cli || bootstrap ? [] : args);
 builder.Services.AddSingleton(TimeProvider.System);
+if(bootstrap)
+{
+    builder.Logging.ClearProviders();
+    if(args.Length!=1 && !(args.Length==2 && args[1]=="--input-stdin")) {Console.Error.WriteLine("Invalid bootstrap invocation.");return 2;}
+    using var cancellation=new CancellationTokenSource();
+    ConsoleCancelEventHandler cancel=(_,signal)=>{signal.Cancel=true;cancellation.Cancel();};
+    Console.CancelKeyPress+=cancel;
+    try
+    {
+        // Installation has no HTTP actor: register only its approved command handler.
+        builder.Services.AddMediatR(configuration=>
+        {
+            configuration.RegisterServicesFromAssemblyContaining<BootstrapInitialAdminHandler>();
+            configuration.TypeEvaluator=type=>type==typeof(BootstrapInitialAdminHandler);
+        });
+        builder.Services.AddInfrastructure(builder.Configuration);
+        await using var host=builder.Build();await using var scope=host.Services.CreateAsyncScope();
+        var result=await scope.ServiceProvider.GetRequiredService<IMediator>().Send(new BootstrapInitialAdminCommand(ct=>AdminBootstrapInput.ReadAsync(args.Length==2,ct)),cancellation.Token);
+        if(!result.Succeeded){Console.Error.WriteLine("Invalid bootstrap input or identity conflict.");return 2;}
+        Console.WriteLine(JsonSerializer.Serialize(result.Value,new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+        return 0;
+    }
+    catch(Exception error) when(error is JsonException or IOException){Console.Error.WriteLine("Invalid bootstrap input or identity conflict.");return 2;}
+    catch(OperationCanceledException){Console.Error.WriteLine("Bootstrap cancelled; setup was not confirmed.");return 3;}
+    catch(Exception){Console.Error.WriteLine("Bootstrap database or dependency operation failed; setup was not confirmed.");return 3;}
+    finally{Console.CancelKeyPress-=cancel;}
+}
 if (cli)
 {
     // Keep installation-command stdout machine-readable in Development as well as Production.
