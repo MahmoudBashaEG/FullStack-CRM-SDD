@@ -10,6 +10,7 @@ using Crm.Infrastructure.Authentication;
 using Crm.Api.Installation;
 using Crm.Application.Accounts.Commands;
 using MediatR;
+using Crm.Api.Authentication;
 
 var cli = args.Length > 0 && args[0] == "provision-ticket-references";
 var bootstrap = args.Length > 0 && args[0] == "bootstrap-initial-admin";
@@ -67,6 +68,13 @@ builder.Services.AddScoped<ICurrentActor, CurrentActor>();
 builder.Services.AddQueueAuthentication(builder.Configuration, builder.Environment);
 builder.Logging.AddFilter("Microsoft.AspNetCore.Authentication.JwtBearer", LogLevel.None);
 builder.Services.AddCrmHttp(builder.Configuration);
+builder.Services.AddCrmDataProtection(builder.Configuration);
+builder.Services.AddAntiforgery(options=>
+{
+    options.HeaderName="X-CSRF-TOKEN";options.Cookie.Name="__Host-crm-csrf";options.Cookie.SecurePolicy=CookieSecurePolicy.Always;
+    options.Cookie.HttpOnly=true;options.Cookie.SameSite=SameSiteMode.Strict;options.Cookie.Path="/";
+});
+builder.Services.AddScoped<AuthCsrfProtection>();builder.Services.AddScoped<AuthCookieWriter>();builder.Services.AddAuthRateLimits();
 await using var app = builder.Build();
 // Fail before HTTP/migration startup if local signing configuration is unusable.
 _ = app.Services.GetRequiredService<SigningCertificateProvider>();

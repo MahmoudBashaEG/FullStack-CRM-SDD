@@ -1,12 +1,23 @@
 import { inject } from '@angular/core';
-import { HttpInterceptorFn } from '@angular/common/http';
+import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
+import { catchError, from, switchMap, throwError } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
-import { environment } from '../../../environments/environment';
 
-export const authInterceptor: HttpInterceptorFn = (request, next) => {
-  const api = new URL(environment.apiBaseUrl, location.origin);
-  const url = new URL(request.url, location.origin);
-  const token = inject(AuthService).accessToken();
-  const isApi = url.origin === api.origin && (url.pathname === api.pathname || url.pathname.startsWith(api.pathname.replace(/\/$/, '') + '/'));
-  return next(token && isApi ? request.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : request);
+export const authInterceptor: HttpInterceptorFn = (request,next) => {
+  const url=new URL(request.url,location.origin);
+  const isApi=url.origin===location.origin && (url.pathname==='/api' || url.pathname.startsWith('/api/'));
+  const publicAuth=['/api/auth/csrf','/api/auth/signin','/api/auth/signup','/api/auth/refresh'].includes(url.pathname);
+  if(!isApi || publicAuth) return next(request);
+  const auth=inject(AuthService);const token=auth.accessToken();const generation=auth.generation();
+  const authenticated=token?request.clone({setHeaders:{Authorization:`Bearer ${token}`}}):request;
+  const clear=(failure:HttpErrorResponse) => {if(generation===auth.generation() && [0,401,503].includes(failure.status))auth.loseAuthentication(failure);};
+  return next(authenticated).pipe(catchError((failure:HttpErrorResponse) => {
+    if(failure.status===401 && failure.error?.code==='token_expired' && token && url.pathname!=='/api/auth/signout') {
+      return from(auth.renewAfterExpiry(token,generation)).pipe(switchMap(fresh => {
+        if(generation!==auth.generation())return throwError(()=>failure);
+        return next(request.clone({setHeaders:{Authorization:`Bearer ${fresh}`}}));
+      }),catchError(error=>{clear(error);return throwError(()=>error);}));
+    }
+    clear(failure);return throwError(()=>failure);
+  }));
 };

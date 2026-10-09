@@ -1,2 +1,8 @@
-<header><span>Customer Support CRM</span><nav aria-label="Main"><a routerLink="/tickets">Tickets</a> · <a routerLink="/tickets/new">Create ticket</a></nav></header>
+<header><span>Customer Support CRM</span><nav aria-label="Main">
+@if(auth.allowed()){<a routerLink="/tickets">Tickets</a> · <a routerLink="/tickets/new">Create ticket</a> · }
+<a routerLink="/access">Account</a>
+@if(auth.authenticated()){<button type="button" [disabled]="signingOut()" (click)="signOut()">Sign out</button>}
+@else{<a routerLink="/auth/signin">Sign in</a>}
+</nav></header>
+@if(authMessage()){<p role="alert">{{authMessage()}}</p><button type="button" [disabled]="signingOut()" (click)="signOut()">Retry signout</button>}
 <main><router-outlet /></main>

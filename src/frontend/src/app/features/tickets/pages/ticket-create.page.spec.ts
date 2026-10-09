@@ -13,7 +13,7 @@ import { FALLBACK_CATEGORY } from '../models/ticket.models';
 
 describe('TicketCreatePage', () => {
   let http: HttpTestingController;
-  beforeEach(() => { TestBed.configureTestingModule({ imports: [TicketCreatePage], providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), { provide: AuthService, useValue: { allowed: () => false, authenticated: () => true } }] }); http = TestBed.inject(HttpTestingController); });
+  beforeEach(() => { TestBed.configureTestingModule({ imports: [TicketCreatePage], providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), { provide: AuthService, useValue: { allowed: () => false, authenticated: () => true, identity: () => null, status: () => 'authenticated' } }] }); http = TestBed.inject(HttpTestingController); });
   afterEach(() => http.verify());
   async function ready() {
     const fixture = TestBed.createComponent(TicketCreatePage); fixture.detectChanges();

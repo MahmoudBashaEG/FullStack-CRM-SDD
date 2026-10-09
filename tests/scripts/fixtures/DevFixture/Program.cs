@@ -1,3 +1,4 @@
+extern alias ApiApp;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
@@ -5,6 +6,68 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
+using Microsoft.AspNetCore.DataProtection;
+using Crm.Infrastructure;
+using Crm.Infrastructure.Identity;
+using Crm.Infrastructure.Persistence;
+using Crm.Domain.Accounts;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+
+if(args.FirstOrDefault()=="auth-api")
+{
+    var fixtureRoot=new DirectoryInfo(AppContext.BaseDirectory);while(fixtureRoot is not null&&!File.Exists(Path.Combine(fixtureRoot.FullName,"Crm.slnx")))fixtureRoot=fixtureRoot.Parent;
+    await using var api=new WebApplicationFactory<ApiApp::Program>().WithWebHostBuilder(builder=>builder.UseEnvironment("Testing").UseContentRoot(Path.Combine(fixtureRoot!.FullName,"src/backend/Crm.Api")));
+    api.UseKestrel(options=>options.ListenLocalhost(int.Parse(args[1]),listen=>listen.UseHttps()));
+    api.StartServer();Console.WriteLine("Owned authentication API ready.");
+    _ = await Console.In.ReadLineAsync(); // private control pipe closes host normally, no product endpoint.
+    return 0;
+}
+if(args.FirstOrDefault()=="prepare-local-auth")
+{
+    var builder=Host.CreateApplicationBuilder();builder.Logging.ClearProviders();builder.Services.AddInfrastructure(builder.Configuration);
+    using var host=builder.Build();using var scope=host.Services.CreateScope();
+    var db=scope.ServiceProvider.GetRequiredService<CrmDbContext>();
+    var settings=new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(CrmDatabaseSettings.Load(builder.Configuration));
+    if(!settings.InitialCatalog.StartsWith("CrmTicketsE2E_",StringComparison.Ordinal)||!Guid.TryParseExact(settings.InitialCatalog["CrmTicketsE2E_".Length..],"N",out _) || !Guid.TryParseExact(args[2],"N",out _))throw new InvalidOperationException("Unsafe owned fixture.");
+    var owner=await db.Database.SqlQuery<string>($"SELECT CONVERT(nvarchar(128),value) AS [Value] FROM sys.extended_properties WHERE class=0 AND name=N'CrmFixtureOwner'").SingleAsync();
+    if(owner!=args[2])throw new InvalidOperationException("Fixture owner mismatch.");
+    var identities=new Dictionary<string,object>();var manager=scope.ServiceProvider.GetRequiredService<UserManager<LocalUser>>();
+    foreach(var kind in new[]{"admin","agent","customer","disabled"})
+    {
+        var email=kind+"@owned-fixture.test";var password=Guid.NewGuid().ToString("N");identities[kind]=new{email,password};
+        if(kind!="admin")
+        {
+            var user=new LocalUser{DisplayName=kind,Email=email,UserName=email,AccountRole=kind=="customer"?AccountRole.Customer:AccountRole.Agent,IsActive=kind!="disabled"};
+            if(!(await manager.CreateAsync(user,password)).Succeeded)throw new InvalidOperationException("Owned identity preparation failed.");
+        }
+    }
+    using var rsa=RSA.Create(3072);var request=new CertificateRequest("CN=CRM Owned Auth Browser "+args[2],rsa,HashAlgorithmName.SHA256,RSASignaturePadding.Pkcs1);
+    using var temporary=request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1),DateTimeOffset.UtcNow.AddDays(2));var secret=Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+    using var certificate=X509CertificateLoader.LoadPkcs12(temporary.Export(X509ContentType.Pkcs12,secret),secret,X509KeyStorageFlags.UserKeySet|X509KeyStorageFlags.PersistKeySet);
+    using var store=new X509Store(StoreName.My,StoreLocation.CurrentUser);store.Open(OpenFlags.ReadWrite);store.Add(certificate);
+    try {await File.WriteAllTextAsync(args[1],JsonSerializer.Serialize(new{owner=args[2],thumbprint=certificate.Thumbprint,identities}));}
+    catch {store.Remove(certificate);using var key=certificate.GetRSAPrivateKey();if(key is RSACng cng&&!cng.Key.IsEphemeral)cng.Key.Delete();throw;}
+    return 0;
+}
+if(args.FirstOrDefault()=="cleanup-local-auth")
+{
+    using var manifest=JsonDocument.Parse(await File.ReadAllTextAsync(args[1]));var owner=manifest.RootElement.GetProperty("owner").GetString();var thumbprint=manifest.RootElement.GetProperty("thumbprint").GetString();
+    if(!Guid.TryParseExact(owner,"N",out _)||string.IsNullOrWhiteSpace(thumbprint))throw new InvalidOperationException("Invalid owned certificate metadata.");
+    using var store=new X509Store(StoreName.My,StoreLocation.CurrentUser);store.Open(OpenFlags.ReadWrite);
+    foreach(var certificate in store.Certificates.Find(X509FindType.FindByThumbprint,thumbprint,false))
+    {if(certificate.Subject!="CN=CRM Owned Auth Browser "+owner)throw new InvalidOperationException("Certificate ownership mismatch.");store.Remove(certificate);using var key=certificate.GetRSAPrivateKey();if(key is RSACng cng&&!cng.Key.IsEphemeral)cng.Key.Delete();certificate.Dispose();}
+    return 0;
+}
+
+if(args.FirstOrDefault() is "protect-state" or "unprotect-state")
+{
+    if(!OperatingSystem.IsWindows())throw new InvalidOperationException("Windows protection required.");
+    var hostBuilder=Host.CreateApplicationBuilder();hostBuilder.Logging.ClearProviders();hostBuilder.Services.AddDataProtection().SetApplicationName("Crm").PersistKeysToFileSystem(new DirectoryInfo(args[1])).ProtectKeysWithDpapi();
+    using var host=hostBuilder.Build();var protector=host.Services.GetRequiredService<IDataProtectionProvider>().CreateProtector("Owned restart test");
+    var value=await Console.In.ReadToEndAsync();Console.Write(args[0]=="protect-state"?protector.Protect(value):protector.Unprotect(value));return 0;
+}
 
 if (args.FirstOrDefault() == "console-launch")
 {

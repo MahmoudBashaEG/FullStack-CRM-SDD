@@ -9,7 +9,7 @@ import { errorInterceptor } from '../../../core/http/error.interceptor';
 describe('TicketsService', () => {
   let service: TicketsService; let http: HttpTestingController;
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])), provideHttpClientTesting(), { provide: AuthService, useValue: { accessToken: () => 'synthetic-token' } }] });
+    TestBed.configureTestingModule({ providers: [provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])), provideHttpClientTesting(), { provide: AuthService, useValue: { accessToken: () => 'synthetic-token', generation: () => 0, loseAuthentication: () => {} } }] });
     service = TestBed.inject(TicketsService); http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => http.verify());

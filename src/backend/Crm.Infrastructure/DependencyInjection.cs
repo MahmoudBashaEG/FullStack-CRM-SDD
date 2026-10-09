@@ -19,6 +19,11 @@ public static class DependencyInjection
         _ = CrmDatabaseSettings.Load(configuration);
         services.AddDbContext<CrmDbContext>(options => options.UseSqlServer(CrmDatabaseSettings.Load(configuration), sql => sql.MigrationsHistoryTable("__EFMigrationsHistory", "dbo")));
         services.AddCrmIdentity();
+        services.AddSingleton<DummyPasswordHash>();
+        services.AddScoped<LocalAccountAuthenticator>();
+        services.AddScoped<AuthenticationSessionStore>();
+        services.AddScoped<IAuthenticationOperations>(provider=>provider.GetRequiredService<AuthenticationSessionStore>());
+        services.AddScoped<IRefreshSessionReader>(provider=>provider.GetRequiredService<AuthenticationSessionStore>());
         services.AddScoped<IInitialAdminBootstrapStore, InitialAdminBootstrapper>();
         services.TryAddSingleton(TimeProvider.System);
         // Lazy factories keep installation/design-time persistence independent of HTTP signing setup.

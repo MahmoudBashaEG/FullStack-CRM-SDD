@@ -8,6 +8,7 @@ public static class ProblemDetailsMapping
     public static ProblemDetails Create(Failure failure, HttpContext context)
     {
         var problem = new ProblemDetails { Type = "about:blank", Title = failure.Code.Replace('_', ' '), Status = failure.Status };
+        if(failure.Code=="invalid_credentials")problem.Title="Email or password is incorrect.";
         problem.Extensions["code"] = failure.Code;
         problem.Extensions["traceId"] = context.TraceIdentifier;
         if (failure.Errors is not null) problem.Extensions["errors"] = failure.Errors;

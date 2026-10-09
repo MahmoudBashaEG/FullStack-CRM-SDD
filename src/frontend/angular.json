@@ -78,12 +78,6 @@
               "sourceMap": true
             },
             "e2e": {
-              "fileReplacements": [
-                {
-                  "replace": "src/app/core/auth/auth.service.ts",
-                  "with": "src/app/core/auth/auth.e2e.ts"
-                }
-              ],
               "optimization": false,
               "sourceMap": false
             }
@@ -102,7 +96,7 @@
             },
             "e2e": {
               "buildTarget": "crm:build:e2e",
-              "proxyConfig": "proxy.e2e.json"
+              "proxyConfig": "proxy.development.json"
             }
           },
           "defaultConfiguration": "development"

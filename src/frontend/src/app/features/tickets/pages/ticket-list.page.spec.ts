@@ -16,7 +16,7 @@ describe('TicketListPage', () => {
     TestBed.configureTestingModule({ imports: [TicketListPage], providers: [provideHttpClient(), provideHttpClientTesting(),
       provideRouter([{ path: 'tickets', component: TicketListPage, canActivate: [supportQueueGuard] }, { path: 'access', component: AccessPage }]),
       { provide: ActivatedRoute, useFactory: () => ({ queryParamMap: params.asObservable(), snapshot: TestBed.inject(Router).routerState.snapshot.root }) },
-      { provide: AuthService, useValue: { allowed: () => allowed, authenticated: () => true } }] });
+      { provide: AuthService, useValue: { allowed: () => allowed, authenticated: () => true, identity: () => null, status: () => 'authenticated' } }] });
     http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => http.verify());
