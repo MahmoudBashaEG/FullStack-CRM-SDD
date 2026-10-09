@@ -10,6 +10,8 @@ public sealed class AgentReferenceConfiguration : IEntityTypeConfiguration<Agent
     {
         builder.ToTable("AgentReferences", "dbo");
         builder.HasKey(x => x.Id);
+        builder.HasOne<Crm.Infrastructure.Identity.LocalUser>().WithMany().HasForeignKey(x => x.LocalUserId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(x => x.LocalUserId).IsUnique().HasFilter("[LocalUserId] IS NOT NULL");
         builder.Property(x => x.Issuer).IsRequired().HasColumnType("nvarchar(max)").UseCollation("Latin1_General_100_BIN2");
         builder.Property(x => x.Subject).IsRequired().HasColumnType("nvarchar(max)").UseCollation("Latin1_General_100_BIN2");
         builder.Property(x => x.DisplayName).IsRequired().HasColumnType("nvarchar(max)");

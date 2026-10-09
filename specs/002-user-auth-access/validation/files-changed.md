@@ -1,0 +1,66 @@
+# Files changed for T001–T027
+
+Implementation source/test/package files; existing Feature002 planning/shared architecture files were preserved:
+
+- Directory.Packages.props
+- src/backend/Crm.Api/Authorization/AuthenticationConfiguration.cs
+- src/backend/Crm.Api/Authorization/CrmPolicies.cs
+- src/backend/Crm.Api/Authorization/SupportQueuePolicy.cs
+- src/backend/Crm.Api/Crm.Api.csproj
+- src/backend/Crm.Api/packages.lock.json
+- src/backend/Crm.Api/Program.cs
+- src/backend/Crm.Application/Accounts/Contracts/AccountDtos.cs
+- src/backend/Crm.Application/Accounts/Ports/IAccountRegistrationStore.cs
+- src/backend/Crm.Application/Accounts/Validation/AccountValidation.cs
+- src/backend/Crm.Application/Authentication/Contracts/AuthenticationDtos.cs
+- src/backend/Crm.Application/Authentication/Ports/AuthenticationPorts.cs
+- src/backend/Crm.Domain/Accounts/AccountRole.cs
+- src/backend/Crm.Domain/Accounts/AccountRules.cs
+- src/backend/Crm.Infrastructure/Authentication/AuthenticationSession.cs
+- src/backend/Crm.Infrastructure/Authentication/CurrentAuthenticationReader.cs
+- src/backend/Crm.Infrastructure/Authentication/JwtIssuer.cs
+- src/backend/Crm.Infrastructure/Authentication/JwtOptions.cs
+- src/backend/Crm.Infrastructure/Authentication/RefreshCredential.cs
+- src/backend/Crm.Infrastructure/Authentication/SigningCertificateProvider.cs
+- src/backend/Crm.Infrastructure/Crm.Infrastructure.csproj
+- src/backend/Crm.Infrastructure/DependencyInjection.cs
+- src/backend/Crm.Infrastructure/Identity/IdentityConfiguration.cs
+- src/backend/Crm.Infrastructure/Identity/InitialAdminSetup.cs
+- src/backend/Crm.Infrastructure/Identity/LocalAccountValidator.cs
+- src/backend/Crm.Infrastructure/Identity/LocalUser.cs
+- src/backend/Crm.Infrastructure/Identity/ScalarPasswordValidator.cs
+- src/backend/Crm.Infrastructure/packages.lock.json
+- src/backend/Crm.Infrastructure/Persistence/Configurations/AgentReferenceConfiguration.cs
+- src/backend/Crm.Infrastructure/Persistence/Configurations/AuthenticationConfiguration.cs
+- src/backend/Crm.Infrastructure/Persistence/Configurations/LocalUserConfiguration.cs
+- src/backend/Crm.Infrastructure/Persistence/CrmDbContext.cs
+- src/backend/Crm.Infrastructure/Persistence/Migrations/20261009124742_LocalCrmAuthentication.cs
+- src/backend/Crm.Infrastructure/Persistence/Migrations/20261009124742_LocalCrmAuthentication.Designer.cs
+- src/backend/Crm.Infrastructure/Persistence/Migrations/20261009131155_RefreshSessionLookupIndex.cs
+- src/backend/Crm.Infrastructure/Persistence/Migrations/20261009131155_RefreshSessionLookupIndex.Designer.cs
+- src/backend/Crm.Infrastructure/Persistence/Migrations/CrmDbContextModelSnapshot.cs
+- src/backend/Crm.Infrastructure/Tickets/AgentReference.cs
+- src/backend/Crm.Infrastructure/Tickets/ReferenceProvisioner.cs
+- src/backend/Crm.Infrastructure/Tickets/ReferenceProvisioningInput.cs
+- src/frontend/src/app/core/auth/account-validation.spec.ts
+- src/frontend/src/app/core/auth/account-validation.ts
+- tests/backend/Crm.Application.Tests/Accounts/AccountValidationTests.cs
+- tests/backend/Crm.ArchitectureTests/DependencyBoundaryTests.cs
+- tests/backend/Crm.ArchitectureTests/packages.lock.json
+- tests/backend/Crm.Domain.Tests/Accounts/AccountRulesTests.cs
+- tests/backend/Crm.IntegrationTests/Fixtures/AuthLogCapture.cs
+- tests/backend/Crm.IntegrationTests/Fixtures/CrmApiFactory.cs
+- tests/backend/Crm.IntegrationTests/Fixtures/LocalAccountFixture.cs
+- tests/backend/Crm.IntegrationTests/Fixtures/TestJwtFactory.cs
+- tests/backend/Crm.IntegrationTests/Identity/AccountSchemaTests.cs
+- tests/backend/Crm.IntegrationTests/Identity/AgentReferenceOwnershipTests.cs
+- tests/backend/Crm.IntegrationTests/Identity/FoundationMigrationStartupTests.cs
+- tests/backend/Crm.IntegrationTests/Identity/IdentityMigrationTests.cs
+- tests/backend/Crm.IntegrationTests/Identity/IdentityPersistenceTests.cs
+- tests/backend/Crm.IntegrationTests/Identity/ReferenceProvisioningFoundationTests.cs
+- tests/backend/Crm.IntegrationTests/packages.lock.json
+- tests/backend/Crm.IntegrationTests/Security/AuthConfidentialityTests.cs
+- tests/backend/Crm.IntegrationTests/Security/LocalAuthorizationFoundationTests.cs
+- tests/backend/Crm.IntegrationTests/Security/LocalJwtTests.cs
+
+New validation files: foundation.md, implementation-baseline.md, feature001-artifact-baseline.json, schema-transition.md, integration-regressions.md and this file. Only T001–T027 task markers changed. Local Windows signing certificate/user-secret references remain outside Git; no private key or password file added.

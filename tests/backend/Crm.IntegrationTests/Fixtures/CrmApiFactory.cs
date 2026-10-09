@@ -4,17 +4,16 @@ using Microsoft.Extensions.Configuration;
 
 namespace Crm.IntegrationTests.Fixtures;
 
-public sealed class CrmApiFactory(SqlServerFixture sql, TestJwtFactory jwt) : WebApplicationFactory<Program>
+public sealed class CrmApiFactory(SqlServerFixture sql, TestJwtFactory jwt, IReadOnlyDictionary<string,string?>? overrides = null) : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
-        builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        jwt.Bind(sql.Connection);
+        builder.ConfigureAppConfiguration((_, configuration) =>
         {
-            ["ConnectionStrings:Crm"] = sql.Connection,
-            ["Authentication:TestPublicKeyPath"] = jwt.PublicKeyPath,
-            ["Authentication:TestIssuer"] = "https://example.test",
-            ["Authentication:TestAudience"] = "crm-tickets-tests"
-        }));
+            configuration.AddInMemoryCollection(jwt.Configuration(sql.Connection).AsEnumerable());
+            if (overrides is not null) configuration.AddInMemoryCollection(overrides);
+        });
     }
 }

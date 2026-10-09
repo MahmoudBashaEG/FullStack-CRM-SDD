@@ -19,6 +19,7 @@ public sealed class ReferenceProvisioningInput
         var input = JsonSerializer.Deserialize<ReferenceProvisioningInput>(text, new JsonSerializerOptions(JsonSerializerDefaults.Web) { PropertyNameCaseInsensitive = false, UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow }) ?? throw new JsonException();
         var categories = input.Categories ?? [];
         var agents = input.Agents ?? [];
+        if (agents.Length > 0) throw new JsonException();
         if (input.SchemaVersion != 1 || categories.Length + agents.Length == 0 || categories.Any(x => x is null || x.Id == Guid.Empty || string.IsNullOrWhiteSpace(x.DisplayName)) ||
             agents.Any(x => x is null || x.Id == Guid.Empty || string.IsNullOrWhiteSpace(x.DisplayName) || string.IsNullOrWhiteSpace(x.Subject) || !Uri.TryCreate(x.Issuer, UriKind.Absolute, out var uri) || uri.Scheme != "https") ||
             categories.Select(x => x.Id).Distinct().Count() != categories.Length || agents.Select(x => x.Id).Distinct().Count() != agents.Length ||

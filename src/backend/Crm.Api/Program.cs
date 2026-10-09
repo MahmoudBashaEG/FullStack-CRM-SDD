@@ -6,6 +6,7 @@ using Crm.Application.Common;
 using Crm.Infrastructure;
 using Crm.Infrastructure.Persistence;
 using Crm.Infrastructure.Tickets;
+using Crm.Infrastructure.Authentication;
 
 var cli = args.Length > 0 && args[0] == "provision-ticket-references";
 var builder = WebApplication.CreateBuilder(cli ? [] : args);
@@ -33,8 +34,11 @@ builder.Services.AddApplication().AddInfrastructure(builder.Configuration);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentActor, CurrentActor>();
 builder.Services.AddQueueAuthentication(builder.Configuration, builder.Environment);
+builder.Logging.AddFilter("Microsoft.AspNetCore.Authentication.JwtBearer", LogLevel.None);
 builder.Services.AddCrmHttp(builder.Configuration);
 await using var app = builder.Build();
+// Fail before HTTP/migration startup if local signing configuration is unusable.
+_ = app.Services.GetRequiredService<SigningCertificateProvider>();
 if (app.Environment.IsDevelopment())
 {
     // ConsoleLifetime registers at RunAsync, so also honour Ctrl+C during awaited startup.

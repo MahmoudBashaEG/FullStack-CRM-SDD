@@ -1,0 +1,110 @@
+[
+  {
+    "Path": "specs/001-core-ticket-management/checklists/requirements.md",
+    "Hash": "2EE24AC5697C2B749CE60BF3199A8CFD8D3DF59F7193124FDF9837CC6327B7B5"
+  },
+  {
+    "Path": "specs/001-core-ticket-management/contracts/database-principals.md",
+    "Hash": "DAA61702B808891203E7A162594ED037F3254BAAE501122CAE1E3E77B3C8112B"
+  },
+  {
+    "Path": "specs/001-core-ticket-management/contracts/local-development.md",
+    "Hash": "81C3154BFA3B3DEFC61F527364B7E56A3310F2DACAE9BEE23EA868ED24E6295F"
+  },
+  {
+    "Path": "specs/001-core-ticket-management/contracts/reference-provisioning.md",
+    "Hash": "A57DADE10C39E0C28F59FB7E0874B350820889EA7748E44E337C7C6D5AE7BDA0"
+  },
+  {
+    "Path": "specs/001-core-ticket-management/contracts/tickets-rest.md",
+    "Hash": "3F0C4BBE1364362BCFA1E2742A45362C7CB18DA70E2564B64663BAB425063A0A"
+  },
+  {
+    "Path": "specs/001-core-ticket-management/data-model.md",
+    "Hash": "85F8544F7C26FDEADC148B9EC2AA8F59826F0E9FE1725C72CA387188EFFAF2EC"
+  },
+  {
+    "Path": "specs/001-core-ticket-management/plan.md",
+    "Hash": "76B9481F7B5EBE3E5B859E51286794038EE9398A2049FABA3A31A01DDB122725"
+  },
+  {
+    "Path": "specs/001-core-ticket-management/quickstart.md",
+    "Hash": "7B017A77DCC6217267284BED04F755A68FD3795A0336DDA190DEFA19E17C0476"
+  },
+  {
+    "Path": "specs/001-core-ticket-management/research.md",
+    "Hash": "195D39691EE5A9146084C30F8D80287E961B2F407E66FBA86BB569306AE78C2D"
+  },
+  {
+    "Path": "specs/001-core-ticket-management/spec.md",
+    "Hash": "253ADDEC25BDD6784E9D1C5B1B8D8E9181C71FCACC4EFA428F78B82DC32CDABA"
+  },
+  {
+    "Path": "specs/001-core-ticket-management/tasks.md",
+    "Hash": "411B623C658996795E01DE5DC69FE41612F933394A10ABEF6471D63CE0453E9D"
+  },
+  {
+    "Path": "specs/001-core-ticket-management/validation/advisory-benchmark.md",
+    "Hash": "4A8DEECD20F29B6A9EC943846D0A8DC33C33CB669E3B680603D9774388C33182"
+  },
+  {
+    "Path": "specs/001-core-ticket-management/validation/automated.md",
+    "Hash": "E5598DE787AD911907986B1138E1CD1780494BFD15B074B771300245EA8101A9"
+  },
+  {
+    "Path": "specs/001-core-ticket-management/validation/completion.md",
+    "Hash": "28886EE87615E76832AB0CC6289FE5633821D584A6B4B1A57D065739694089AA"
+  },
+  {
+    "Path": "specs/001-core-ticket-management/validation/convergence.md",
+    "Hash": "46D0E76411B42B7256CAB07014A21FF60A32FCF32C7C30E99FA67896C944B3B2"
+  },
+  {
+    "Path": "specs/001-core-ticket-management/validation/files.md",
+    "Hash": "6B1FAB8DA91168E31C683F8BCFF79058D5CB6637354B596A7355E2A2077C3EDC"
+  },
+  {
+    "Path": "specs/001-core-ticket-management/validation/local-development.md",
+    "Hash": "6782F76450B873915D09F244641E250BD7072E7C0AD1B3A4FBC845BC76701482"
+  },
+  {
+    "Path": "specs/001-core-ticket-management/validation/migration-startup-implementation.md",
+    "Hash": "8FD57C9CBC7F103F849AB4F016444F9252152AACA0918C9790C0D8460B3508D2"
+  },
+  {
+    "Path": "specs/001-core-ticket-management/validation/migration-startup-test-first.md",
+    "Hash": "4A4202C754A509CE563D4187EC1F7B9C423BE32FE3C3F8A7198FDA56E7B3DB32"
+  },
+  {
+    "Path": "specs/001-core-ticket-management/validation/migration-startup.md",
+    "Hash": "2BE7DFEF635ADFEA2C79579F6C39CB46B8B0556A8913349F40A8C3319F62F329"
+  },
+  {
+    "Path": "specs/001-core-ticket-management/validation/setup.md",
+    "Hash": "9B5F4FD0042D0C76BC77ED6C4844F56C54C4158B7052E3BDD65208329BC5BB7F"
+  },
+  {
+    "Path": "specs/001-core-ticket-management/validation/staff-evaluation.md",
+    "Hash": "7A022403106C4A453E8A41541DC658682C682FFDEC06BA146228D1700F1F0557"
+  },
+  {
+    "Path": "specs/001-core-ticket-management/validation/us1.md",
+    "Hash": "4CE0D52CE040D098F6C4F9EFB13150A7E6595E124DD6FCCC15814B6E2C321D30"
+  },
+  {
+    "Path": "specs/001-core-ticket-management/validation/us2.md",
+    "Hash": "FE6BC8F50800B01486A051458DA4AFCD0EEB9DD18BE1A4FF694D32D5C78B36A4"
+  },
+  {
+    "Path": "specs/001-core-ticket-management/validation/us3.md",
+    "Hash": "D371EB5129E4DFB25E0C8CB8E98D49081B0010F815B0D81A9C8355A3A3CCDD8B"
+  },
+  {
+    "Path": "specs/001-core-ticket-management/validation/us4.md",
+    "Hash": "ED5BB1423378E7999416F047E034064D4AF1EC9BA9875C56588A9C769D36F7E0"
+  },
+  {
+    "Path": "specs/001-core-ticket-management/validation/us5.md",
+    "Hash": "B0ABD9117C14CA5BCE7A49DCF56B714DDA28427067828908FEA77EACF0A29C9F"
+  }
+]

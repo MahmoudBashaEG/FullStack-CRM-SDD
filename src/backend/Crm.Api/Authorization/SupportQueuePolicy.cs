@@ -7,8 +7,7 @@ public static class SupportQueuePolicy
 {
     public const string Name = "SupportQueue";
     public static bool HasAccess(ClaimsPrincipal user) => user.Identity?.IsAuthenticated == true &&
-        !string.IsNullOrWhiteSpace(user.FindFirstValue("iss")) && !string.IsNullOrWhiteSpace(user.FindFirstValue("sub")) &&
-        user.HasClaim("crm_support_queue", "shared");
-    public static void Configure(AuthorizationOptions options) => options.AddPolicy(Name, policy =>
-        policy.RequireAuthenticatedUser().RequireAssertion(context => HasAccess(context.User)));
+        !string.IsNullOrWhiteSpace(user.FindFirstValue("iss")) && Guid.TryParse(user.FindFirstValue("sub"), out _) &&
+        (user.IsInRole("Agent") || user.IsInRole("Admin"));
+    public static void Configure(AuthorizationOptions options) => CrmPolicies.Configure(options);
 }

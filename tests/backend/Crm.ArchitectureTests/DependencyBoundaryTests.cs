@@ -12,6 +12,13 @@ namespace Crm.ArchitectureTests;
 
 public sealed class DependencyBoundaryTests
 {
+    [Fact]
+    public void Shared_local_account_store_exists_only_in_infrastructure()
+    {
+        Assert.NotNull(typeof(CrmDbContext).Assembly.GetType("Crm.Infrastructure.Identity.LocalUser"));
+        Assert.DoesNotContain(typeof(Actor).Assembly.GetReferencedAssemblies(), value => value.Name!.Contains("Identity", StringComparison.Ordinal));
+        Assert.DoesNotContain(typeof(Ticket).Assembly.GetReferencedAssemblies(), value => value.Name!.Contains("Identity", StringComparison.Ordinal));
+    }
     public static TheoryData<Assembly, string[]> Boundaries => new()
     {
         { typeof(Ticket).Assembly, ["Crm.Application", "Crm.Infrastructure", "Crm.Api", "Microsoft.EntityFrameworkCore", "Microsoft.AspNetCore", "System.Net.Http"] },
