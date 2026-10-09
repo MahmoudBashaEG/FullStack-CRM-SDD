@@ -9,15 +9,24 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Crm.Application.Accounts.Commands;
 namespace Crm.Api.Controllers;
 
 public sealed record SignInRequest(string? Email,string? Password);
+public sealed record SignupRequest(string? DisplayName,string? Email,string? Password);
 public sealed record EmptyAuthRequest;
 [ApiController,Route("api/auth"),ServiceFilter(typeof(AuthCsrfProtection)),ServiceFilter(typeof(AuthCookieWriter))]
 public sealed class AuthController(ISender sender) : ControllerBase
 {
     // Antiforgery transport filter supplies this public transport response.
     [HttpGet("csrf"),AllowAnonymous] public IActionResult Csrf()=>Ok();
+    [HttpPost("signup"),AllowAnonymous,EnableRateLimiting("signup")]
+    public async Task<IActionResult> Signup(SignupRequest request,CancellationToken ct)
+    {
+        var result=await sender.Send(new RegisterCustomerCommand(request.DisplayName,request.Email,request.Password),ct);
+        if(!result.Succeeded)return ProblemDetailsMapping.Result(result.Error!,HttpContext);
+        return StatusCode(StatusCodes.Status201Created,new{message="Registration complete. Sign in to continue."});
+    }
     [HttpPost("signin"),AllowAnonymous,EnableRateLimiting("signin")]
     public async Task<IActionResult> SignIn(SignInRequest request,CancellationToken ct)
     {

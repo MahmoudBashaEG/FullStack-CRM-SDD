@@ -8,6 +8,7 @@ export class AuthTransport {
   private readonly http: HttpClient;
   constructor(backend: HttpBackend) { this.http = new HttpClient(backend); }
   csrf() { return firstValueFrom(this.http.get<{requestToken:string}>('/api/auth/csrf')); }
+  signup(displayName:string,email:string,password:string,csrf:string) { return firstValueFrom(this.http.post<{message:string}>('/api/auth/signup',{displayName,email,password},{headers:{'X-CSRF-TOKEN':csrf},withCredentials:true})); }
   signIn(email:string,password:string,csrf:string) { return firstValueFrom(this.http.post<TokenEnvelope>('/api/auth/signin',{email,password},{headers:{'X-CSRF-TOKEN':csrf},withCredentials:true})); }
   refresh(csrf:string) { return firstValueFrom(this.http.post<TokenEnvelope>('/api/auth/refresh',{}, {headers:{'X-CSRF-TOKEN':csrf},withCredentials:true})); }
   me(token:string) { return firstValueFrom(this.http.get<CrmIdentity>('/api/auth/me',{headers:{Authorization:`Bearer ${token}`}})); }

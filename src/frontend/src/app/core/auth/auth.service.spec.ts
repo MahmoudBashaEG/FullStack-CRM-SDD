@@ -52,4 +52,17 @@ describe('local auth state and restoration', () => {
     const unexpected=http.match('/api/auth/me');for(const request of unexpected)request.flush({code:'authentication_invalid'},{status:401,statusText:'Unauthorized'});await rejected;
     expect(unexpected.length).toBe(0);expect(auth.accessToken()).toBeNull();expect(auth.status()).toBe('unavailable');
   });
+  it('signup sends only Customer inputs with CSRF and preserves the current authenticated context',async()=>{
+    await restore();const generation=auth.generation();const registration=auth.registerCustomer('Customer','customer@fixture.test','  عربي password  ');
+    for(let i=0;i<8;i++)await Promise.resolve();const request=http.expectOne('/api/auth/signup');
+    expect(request.request.body).toEqual({displayName:'Customer',email:'customer@fixture.test',password:'  عربي password  '});expect(request.request.headers.get('Authorization')).toBeNull();expect(request.request.headers.get('X-CSRF-TOKEN')).toBe('csrf');expect(request.request.withCredentials).toBe(true);
+    request.flush({message:'Registration complete. Sign in to continue.'},{status:201,statusText:'Created'});await registration;
+    expect(auth.generation()).toBe(generation);expect(auth.accessToken()).toBe(envelope.accessToken);expect(auth.identity()).toEqual(identity);http.expectNone('/api/auth/me');http.expectNone('/api/auth/refresh');
+  });
+  it('anonymous signup success or rejection never authenticates or retries',async()=>{
+    const registration=auth.registerCustomer('Customer','customer@fixture.test','123456789012345');
+    for(let i=0;i<8;i++)await Promise.resolve();http.expectOne('/api/auth/csrf').flush({requestToken:'csrf'});await Promise.resolve();await Promise.resolve();
+    http.expectOne('/api/auth/signup').flush({message:'Registration complete. Sign in to continue.'},{status:201,statusText:'Created'});await registration;expect(auth.accessToken()).toBeNull();expect(auth.identity()).toBeNull();
+    const duplicate=auth.registerCustomer('Customer','customer@fixture.test','123456789012345');const rejected=expect(duplicate).rejects.toBeDefined();for(let i=0;i<8;i++)await Promise.resolve();http.expectOne('/api/auth/signup').flush({code:'registration_failed'},{status:400,statusText:'Bad Request'});await rejected;expect(auth.authenticated()).toBe(false);http.expectNone('/api/auth/refresh');
+  });
 });

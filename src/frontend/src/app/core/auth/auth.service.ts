@@ -68,6 +68,13 @@ export class AuthService {
     if(this.token && this.token !== oldToken) return this.token;
     const token=await this.refresh();this.current(generation);return token;
   }
+  async registerCustomer(displayName:string,email:string,password:string):Promise<void> {
+    // Signup is not an authentication transition. Preserve the existing session and
+    // wait for cookie transitions before obtaining its anonymous-bound CSRF pair.
+    await this.mutationQueue;await this.coordinator.settle();const generation=this.generation();
+    const response=await this.transport.signup(displayName,email,password,await this.requestToken(generation));this.current(generation);
+    if(response?.message!=='Registration complete. Sign in to continue.')throw new Error('Registration unavailable.');
+  }
   signIn(email?:string,password?:string):Promise<void> {return this.mutate(async generation=>{
     const previous={token:this.token,identity:this.identity(),status:this.status()};let issued=false;
     try {
