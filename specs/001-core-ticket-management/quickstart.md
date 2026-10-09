@@ -1,8 +1,9 @@
 # Quickstart Validation: Core Ticket Management
 
-Revised prospective guide, 2026-10-08. Referenced implementation/scripts do not exist yet.
-No setup, build, migration, provisioning, server or test commands were executed during planning.
-After tasks and implementation, the steps below must run as documented.
+Revised validation guide, 2026-10-09. Development startup migrations are implemented and verified
+in validation/migration-startup.md. The one-command launcher/proxy is implemented;
+launcher verification is recorded in validation/local-development.md. Real
+external-provider browser sign-in and SC-005 human acceptance remain separately pending.
 
 ## Prerequisites
 
@@ -147,21 +148,143 @@ At each mutation checkpoint, verify new entries through both GET history and the
 page, not solely database row inspection. The shared component/query evolves with the producing
 story; the REST payload shape remains unchanged. Failure/no-op attempts still add no history.
 
-## Manual Development Usage (Separate from Browser Harness)
+## One-Command Local Development
 
 Supply external issuer/client configuration through normal development settings, secrets through
 user-secrets/environment, and approved reference input following
-[reference-provisioning.md](contracts/reference-provisioning.md). From repository root:
+[reference-provisioning.md](contracts/reference-provisioning.md). Perform one-time setup using
+the restore/certificate/OIDC prerequisites in docs/development/core-ticket-management.md:
+PowerShell 7, pinned SDK/Node/npm, restored tools/backend/frontend dependencies, local SQL access,
+trusted browser certificates, backend HTTPS Authority/Audience and registered frontend public
+issuer/client/scopes. NODE_EXTRA_CA_CERTS must name the exported public API certificate if Node
+does not otherwise trust it; do not store private certificates or secrets in the proxy.
+No eligible accounts/issuer/client were supplied for this training project. The launcher does
+not create them or replace normal authentication with test identities. These are prerequisites
+for manual authenticated use, not additional commands to run on every normal startup.
+
+Configure the existing ConnectionStrings:Crm via normal environment/user-secrets/configuration
+(the example shows a credential-free environment value). Remove Authentication__Test* settings.
+Complete the private PEM export setup in the development guide once; the launcher uses
+.local/dev-certs/localhost.pem and localhost.key for Angular HTTPS. Alternative PEM paths use
+CRM_DEV_SSL_CERT/CRM_DEV_SSL_KEY. The public certificate supplies child-only NODE_EXTRA_CA_CERTS
+unless already configured; no key is bundled or committed. The single repeatable start command is:
 
 ```powershell
-# Use the shared ConnectionStrings:Crm and current Windows account for both commands.
+$env:ConnectionStrings__Crm = 'Server=localhost;Database=CustomerSupportCrm;Integrated Security=True;Encrypt=True;TrustServerCertificate=True'
+# Once the normal configuration is set, each startup requires only:
+./scripts/run-dev.ps1
+```
+
+Expected: before HTTP listens, Development startup awaits MigrateAsync against the configured local
+catalog and applies only pending migrations already compiled from reviewed source-controlled files.
+This includes schema/fallback and SQL-only migrations, not just model changes. A repeat start applies
+nothing already recorded in migration history. Failed/cancelled migration or pending model changes
+without a generated migration prevents startup; do not bypass the failure with EnsureCreated.
+
+Verified launcher behavior: reuse scripts/environment.ps1; start dotnet watch in Development on
+https://localhost:7043 and normal Angular development serve on https://localhost:4200 in the same
+console, with both live log streams. Browse to the frontend URL. Requests use relative /api and
+the development proxy forwards them unchanged to 7043 with API certificate validation enabled.
+No backend URL is added to ticket feature code. The e2e proxy/auth configuration is not used.
+Initial HTTP readiness requires categories 401 and Angular HTML 200 within 120 seconds; this is
+server availability, not authenticated DB acceptance. After sign-in, categories must return 200
+with the fallback and the normal ticket journey must work through the frontend origin.
+
+Ctrl+C gives both owned services one shared five-second grace budget from the shutdown request,
+then force-stops any remaining owned descendants. Report graceful exits and forced cleanup
+separately; cooperative and uncooperative fixtures must exercise both outcomes. Partial start,
+timeout or child exit requests owned-child shutdown where safely supported with the same budget;
+waiting alone is not evidence of a graceful stop. Partial start, startup timeout or
+terminal child exit also cleans up the other child. Ports already in use fail before launch;
+never attach to or stop their owners. A failed API build may leave dotnet watch alive, so a watch
+banner alone is not startup success. Logs remain visible through rebuilds/restarts. Restarting
+after Ctrl+C must reuse the same ports with no owned process left. Abrupt terminal closure is
+outside the graceful-stop guarantee. No launcher action removes the development database.
+See [local-development.md](contracts/local-development.md) for the lifecycle boundary.
+
+Use the normal external OIDC settings, not Testing authentication. Once migration startup has completed, an operator may run
+the provisioning CLI in a separate shell using the same ConnectionStrings__Crm/Windows account.
+Alternatively, explicitly apply existing migrations before provisioning if the API has not started:
+
+```powershell
+# Same validated ConnectionStrings:Crm and Windows account in this shell.
+# Optional explicit setup when provisioning before the first Development API start:
 dotnet ef database update --project src/backend/Crm.Infrastructure --startup-project src/backend/Crm.Api
 dotnet run --project src/backend/Crm.Api --no-launch-profile -- provision-ticket-references --input $env:CRM_REFERENCE_INPUT
 ```
 
-Start API under that same Windows account and connection with normal development configuration, and Angular via npm start in separate terminals.
-Use production-style OIDC sign-in. No Testing identity fallback or administration UI is required.
-The provisioning command exits without starting HTTP, and failure leaves all references unchanged.
+CLI mode always exits before normal HTTP startup and never automatically migrates, even in Development.
+Its applied-schema/fallback prerequisite remains; failures leave reference upserts unchanged. Other
+environments require explicit migration application before normal usage. Testing fixtures and browser
+preparation retain their existing explicit, guarded migration step; do not switch them to Development.
+
+### Explicit Model Changes
+
+After deliberately changing the model, generate and review a migration before committing/building:
+
+```powershell
+$taskMigrationName = Read-Host 'Name for the deliberate model change'
+dotnet ef migrations add $taskMigrationName --project src/backend/Crm.Infrastructure --startup-project src/backend/Crm.Api --output-dir Persistence/Migrations
+dotnet ef migrations has-pending-model-changes --project src/backend/Crm.Infrastructure --startup-project src/backend/Crm.Api
+```
+
+Version the migration, designer and updated snapshot as applicable. Rebuild to include them, then
+Development startup applies the pending migrations. These are explicit developer commands; the
+API never runs migration-generation tools, rewrites migration files or infers schema from the model.
+
+### Startup Migration Validation After Implementation
+
+Use exclusively owned disposable local SQL catalogs and the existing isolation rules. Do not reset
+the development catalog or infer cleanup permission from a name prefix.
+
+| Scenario | Required observation |
+| --- | --- |
+| Development, fresh catalog | Existing compiled migrations create schema/fallback/search function before protected readiness |
+| Development, catalog at an older migration | Pending compiled migrations apply; existing ticket/history data remains readable |
+| Repeated Development start | No duplicate migrations, reference provisioning or new ticket activity |
+| Model changed without a generated migration | Startup fails; no inferred schema or new migration/source files |
+| Migration/connection failure or cancellation | Startup fails before HTTP readiness; scope is disposed; sanitized setup diagnostics |
+| Production, Staging, Testing and another non-Development environment | No automatic migration invocation or migration-history/schema change, even with pending migrations |
+| CLI/design-time operation under Development | No HTTP startup hook; CLI still requires applied migrations; EF generation/update occurs only when explicitly invoked |
+
+Inspect applied migration history and necessary schema objects rather than interpreting a 401 as
+database readiness. After successful Development migration, use the same categories readiness URL
+as the browser harness, including an authorized 200/fallback probe. Keep authentication configuration
+valid during environment-isolation checks so an unrelated auth failure cannot falsely prove the guard.
+Inspect migration/source files before/after startup to verify no generation; no runtime Git checkout is
+required. Existing migration verification is recorded in validation/migration-startup.md;
+retain these checks when validating the launcher rather than rewriting the earlier evidence.
+
+### Launcher Validation After Implementation
+
+Use owned disposable local SQL catalogs for automated checks and preserve the existing
+Testing harness for business regressions. Do not provision test keys into normal Development.
+
+| Scenario | Required observation |
+| --- | --- |
+| One root command with valid prerequisites | Both URLs reachable; API categories 401 and frontend HTML 200; both live log streams visible |
+| Automated authenticated proxy/API journey | Private external HTTPS discovery/JWKS fixture supplies signed tokens directly to HTTP test client; normal Development Authority/Audience/JWT middleware validates them; frontend-origin /api categories and ticket lifecycle/history calls succeed |
+| Authenticated manual ticket journey | Frontend /api requests reach backend; authorized categories 200/fallback and create/view/edit/lifecycle/history work; missing/denied access still 401/403 |
+| API source edit requiring restart; frontend source edit | Watch rebuild/restart and Angular reload occur; existing compiled migrations are not reapplied |
+| Model change lacking explicit migration | Development API fails as before; launcher does not generate migrations or use EnsureCreated |
+| Occupied port or missing tool/dependencies | Actionable setup failure without spawning partial services or affecting an unrelated process |
+| Proxy certificate not trusted | TLS failure reported with trust setup guidance; no insecure automatic fallback |
+| API migration/build failure | No false-ready claim; bounded startup timeout/child exit cleans owned children |
+| Ctrl+C, partial launch, terminal child exit | One shared five-second grace budget; separate graceful/forced outcomes; cooperative exit and uncooperative owned-tree fallback; ports free, no orphan watcher/API/npm/Angular children; unrelated process survives |
+| Start again after cleanup | Both services start on the same fixed ports; caller environment/location unaffected if invoked in-process |
+| Production and Testing regressions | No new proxy/auth substitutions in production; no non-Development auto-migration; existing explicit E2E preparation unchanged |
+
+Observe descendant process ownership, not just parent PID exit. Do not reset the developer's
+catalog or kill processes by name/port. Record failures and final results in later launcher
+validation evidence; launcher results are in validation/local-development.md. External OIDC
+manual evidence remains a deployment prerequisite; SC-005/T079 and provisional T081 are unchanged.
+
+The automated authenticated journey uses HTTP calls through Angular's proxy, not browser PKCE
+sign-in. Discovery/JWKS alone does not implement login. Do not inject fixture tokens into SPA
+storage, replace the normal auth adapter or set API Authentication__Test* values. Separately
+check normal frontend HTML/routing/unauthenticated guard/reload. Genuine browser sign-in/callback
+and authenticated UI journeys require external registered client/accounts; record them as pending
+if unavailable. Existing Testing Playwright runs retain their separate scope and evidence.
 
 ## Required End-to-End Scenarios
 

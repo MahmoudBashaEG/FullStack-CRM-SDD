@@ -1,12 +1,14 @@
 # Implementation Plan: Core Ticket Management
 
-**Branch**: `master` (actual Git checkout) | **Date**: 2026-10-08 | **Spec**: [spec.md](spec.md)
+**Branch**: `master` (actual Git checkout) | **Date**: 2026-10-09 | **Spec**: [spec.md](spec.md)
 
 **Input**: `specs/001-core-ticket-management/spec.md` and project constitution v1.0.0.
 
 **Feature identifier**: `001-core-ticket-management`. Spec Kit reports this identifier as
 BRANCH from active feature state; it does not indicate a Git feature branch exists.
-This is a plan only; no solution, application, or migration has been implemented.
+This revision designs a one-command local Development launcher. The existing ticket feature
+and Development startup migration implementation (T084–T089) are retained. Launcher/proxy
+changes described here are prospective; no launcher implementation is performed by this revision.
 
 ## Summary
 
@@ -30,7 +32,8 @@ HttpClient, reactive forms, RxJS, `oidc-client-ts` for external identity integra
 See [research.md](research.md) for version and licensing decisions.
 
 **Storage**: Local SQL Server 2022 baseline, Windows Integrated Security with one connection/Windows identity for all database access; Unicode content; one transactional store for reads
-and writes; version-controlled EF migrations in Infrastructure. No event store.
+and writes; version-controlled EF migrations in Infrastructure. Development HTTP startup applies
+existing pending migrations; other environments require explicit application. No event store.
 
 **Testing**: xUnit backend tests; real SQL Server integration tests and WebApplicationFactory;
 architecture dependency checks; Angular TestBed/Vitest and HttpTestingController;
@@ -40,6 +43,11 @@ focused Playwright end-to-end tests.
 hosted on Windows using the same account as local EF/provisioning commands. No native mobile app or hosting deployment work.
 
 **Project Type**: Backend solution plus browser frontend in one repository.
+
+**Local Development**: Windows PowerShell 7 root launcher `scripts/run-dev.ps1`, existing
+`scripts/environment.ps1`, `dotnet watch` and the existing Angular CLI development server.
+HTTPS frontend 4200/backend 7043, relative `/api`, Development-only Angular proxy.
+External OIDC, local SQL access, restored dependencies and certificate trust are setup prerequisites.
 
 **Performance Goals**: Advisory benchmark, not a completion gate or business SLA: at 10,000
 tickets and 20 active staff, p95 reads under 1 second and mutations under 2 seconds, excluding
@@ -69,6 +77,16 @@ No constitutional exceptions. Review findings are resolved in the revised design
 Issuer configuration and approved reference inputs are fail-closed prerequisites. Research resolves
 technical choices. Technical baselines are inferred engineering decisions, not business input.
 
+For this amendment, all six gates remain PASS before/after design: the environment rule is an
+explicit project decision; no business scope changes; EF migration execution stays in Infrastructure
+and the API composition layer; frontend responsibilities are unchanged; source-controlled migrations
+and failure/environment checks remain required; platform compatibility is unaffected.
+
+For the launcher amendment, all six gates remain PASS before/after design: this is developer
+tooling for the active feature, not new business functionality. No layer dependency or feature
+ownership changes; existing migration, authorization and TLS boundaries remain. Validation
+must prove startup/proxy behavior and owned-process cleanup; no orchestration platform is added.
+
 ## Project Structure
 
 ### Documentation (this feature)
@@ -83,8 +101,9 @@ specs/001-core-ticket-management/
 ├── contracts/tickets-rest.md
 ├── contracts/reference-provisioning.md
 ├── contracts/database-principals.md
+├── contracts/local-development.md
 ├── checklists/requirements.md
-└── tasks.md                     # Future speckit-tasks output, not created here
+└── tasks.md                     # Existing tasks; launcher synchronization is a later step
 ```
 
 ### Source Code (repository root)
@@ -93,6 +112,7 @@ Planned structure only:
 
 ```text
 Crm.slnx
+scripts/{environment.ps1,run-dev.ps1}
 src/
 ├── backend/
 │   ├── Crm.Domain/Tickets/
@@ -115,6 +135,12 @@ tests/backend/
 **Structure Decision**: A frontend workspace under `src/frontend`; conceptual `src/app`
 is `src/frontend/src/app`. Feature routes and colocated frontend tests stay in tickets.
 Create only folders with actual responsibility, not empty generic containers.
+
+Launcher-specific touch points: new `scripts/run-dev.ps1` and
+`src/frontend/proxy.development.json`; wire only `serve.configurations.development.proxyConfig`
+in `src/frontend/angular.json`. Reuse `npm start`, `environment.ts` (`apiBaseUrl: '/api'`),
+the existing auth adapter and cache setup. Update the development guide during implementation.
+No ticket model, persistence, REST contract, production build or Testing runner changes are needed.
 
 ## Design and Requirement Mapping
 
@@ -216,7 +242,8 @@ Infrastructure validates the shared connection with SqlConnectionStringBuilder: 
 security required, local server/catalog present, no User ID/Password keys or alternative auth
 mode. All entry points load this one key; do not override identity via impersonation, SqlCredential
 or access-token authentication. EF design-time context construction shares this configuration
-without starting HTTP. Migration and CLI modes remain explicit invocations, not startup side effects.
+without starting HTTP. Migration generation and provisioning CLI remain explicit invocations.
+Normal HTTP startup applies existing migrations only in Development, as defined below.
 
 [database-principals.md](contracts/database-principals.md) now documents the single-identity
 connection contract and its application boundaries. HTTP still requires JWT shared-queue access;
@@ -235,6 +262,129 @@ Integration/E2E tests use the same local Windows account and shared connection f
 processes in a run; change only the catalog to a guarded isolated test database. Verify integrated
 configuration and matching Windows/SQL identity across entry points; exercise actual allowed
 operations and rejected application/CLI operations. Remove three-principal/effective-denial tests.
+
+### Local Database Migration Startup
+
+Normal API startup MUST await EF Core `Database.MigrateAsync()` (or equivalent migration APIs)
+when the resolved host environment is Development. Use `IsDevelopment()`, not a broad
+"not Production" condition. Production, Staging, Testing and any other environment MUST NOT
+automatically apply migrations during normal HTTP startup. There is no bypass that enables
+automatic migration in those environments.
+
+The API composition root selects this behavior after the existing provisioning-command dispatch
+has exited, after building the HTTP application, and before starting/listening for requests.
+An Infrastructure migration helper resolves CrmDbContext inside a short-lived async DI scope,
+awaits MigrateAsync with startup cancellation, then disposes the scope/context. Keep EF APIs out
+of Domain/Application/controllers; do not migrate inside shared AddInfrastructure registration,
+in a background fire-and-forget task, or after marking the HTTP host ready.
+
+Only reviewed, source-controlled migrations compiled into the Infrastructure migration assembly
+are applied, using __EFMigrationsHistory to skip already-applied migrations. Include SQL-only
+migrations such as LongTicketSubjectSearch as well as entity/schema migrations. Startup does not
+read Git state, generate source files or invoke migration-generation tools; source-control inclusion
+is enforced by review/build inputs, not by requiring a Git checkout at runtime. New model changes
+still require an explicitly generated/reviewed/versioned migration and rebuilt application.
+Never use EnsureCreated/EnsureCreatedAsync or suppress pending-model-change checks to bypass this.
+
+Migration failure, cancellation, missing migration artifacts or model/snapshot mismatch aborts
+Development startup before HTTP readiness; report a sanitized setup failure, never a healthy API
+against an unmigrated schema. Do not silently continue, generate a migration, reset/drop the DB,
+or provision category/agent inputs as recovery. EF owns migration transactions/locking; do not wrap
+MigrateAsync in a ticket transaction or add a custom retry/lock framework. Existing command retry
+and transaction rules are unaffected.
+
+Use the same validated ConnectionStrings:Crm, local SQL Server, Integrated Security and existing
+Windows identity as runtime, EF tooling and provisioning. No SQL credentials, separate principals
+or new permission-grant scripts. Applying migrations is automatic only for local Development HTTP
+startup; explicit EF migration application remains available for setup/diagnostics, all other
+environments, and provisioning that must run before starting the API. CLI mode and the design-time
+factory do not trigger the HTTP startup hook. Testing fixtures/browser preparation continue their
+explicit guarded migration step and isolated ownership checks.
+
+### One-Command Local Development
+
+After one-time prerequisites, run `pwsh -NoProfile -File ./scripts/run-dev.ps1` from the
+repository root. Resolve repository paths from the script location and reuse environment.ps1.
+Launch the API with `dotnet watch --non-interactive --project src/backend/Crm.Api run --no-launch-profile`
+and Angular with `npm run start --prefix src/frontend -- --configuration development --port 4200 --ssl --host localhost`.
+Rebuild normally rather than passing --no-build; watch can rebuild/restart changed sources.
+Set both .NET environment variables to Development, ASPNETCORE_URLS to https://localhost:7043
+and suppress dotnet-watch browser auto-launch in the children. No generated launch-profile ports.
+Keep frontend HTTPS at https://localhost:4200 to preserve the registered OIDC callback origin.
+
+`proxy.development.json` forwards `/api/**` unchanged to https://localhost:7043 with
+`secure: true`; Angular's current Vite-based builder needs this pattern for nested API routes.
+Enable it only for the normal development serve configuration; retain the independent e2e
+configuration/proxy and production settings. The normal environment already uses `/api`;
+do not introduce absolute API URLs into ticket data access or duplicate environment files.
+Bearer headers pass through the proxy; JWT queue authorization remains enforced by the API.
+Use trusted local certificates. If Node does not trust the API certificate, configure
+NODE_EXTRA_CA_CERTS with its exported public PEM certificate before starting the launcher,
+as in the existing manual guide. No secure:false, global TLS bypass or test-key fallback.
+
+Validate SDK/Node/npm availability, restored frontend dependencies, certificates and free
+ports before spawning children. Require normal connection/authentication setup; let the
+existing API startup/configuration validation enforce those sources, rather than duplicating
+user-secrets/config parsing in PowerShell.
+Do not install dependencies, generate/trust certificates, change user secrets, seed references,
+create principals or migrate a database from the launcher. Load normal API configuration/user
+secrets/environment; do not create a second configuration parser or copy credentials into args.
+Reject inherited Authentication__Test* settings; normal auth configuration must also retain its
+existing fail-closed validation. Frontend public issuer/client/scopes remain in the existing
+environment approach. Missing real OIDC means manual authenticated testing is unavailable;
+starting servers is not evidence of successful sign-in or SC-005.
+
+API startup alone owns Development application of compiled pending migrations using the shared
+ConnectionStrings:Crm and Windows identity. This hook runs on each actual API process restart;
+an already-current database makes no migration writes. Hot reload is not migration generation:
+model changes still require explicitly generated/reviewed/committed migrations and rebuild/restart.
+The launcher never uses EnsureCreated or EF generation/update as a startup workaround.
+
+Run both children concurrently in the launcher's console with live inherited stdout/stderr,
+retaining owned process handles/trees. No detached/visible extra windows or log-only files.
+Use structured process arguments; Windows npm.cmd may need an owned cmd wrapper with fixed
+arguments, not a command assembled from secrets/user input. Wait in interruptible polling,
+not blocking Start-Process -Wait for the first child. Monitor terminal child exit and unwind
+both processes on launcher failure, partial launch or user Ctrl+C. Shared-console Ctrl+C
+allows watchers/server processes to shut down; use one five-second grace budget shared by
+both services, measured from the shutdown request, before terminating remaining owned trees.
+For partial launch, timeout or child exit, request shutdown of owned children where safely
+supported, then apply the same budget. Waiting alone does not count as a graceful shutdown
+request. Record each service's exit as graceful (no forced termination) or forced cleanup;
+uncooperative fixtures must prove the fallback, and cooperative fixtures must exit within grace.
+Track owned descendants sufficiently to clean them even
+if a wrapper/root exits first. Never kill all dotnet/node processes or take over occupied ports.
+Restore caller environment/location if invoked in-process; cleanup touches processes only,
+never development databases or developer files. Forced terminal closure is outside graceful
+Ctrl+C guarantees and must be documented without claiming orphan-proof shutdown.
+
+Report both URLs and startup progress. A bounded initial readiness check (120 seconds) verifies
+API categories HTTP 401 and Angular HTML 200, stopping owned processes on timeout. A 401 proves
+HTTP availability only; authenticated categories 200/fallback and ticket journeys verify DB
+and authorization in manual validation. Do not manufacture tokens for this check. dotnet watch
+may remain alive after an API build/startup failure; logs and readiness timeout must prevent a
+false success. During subsequent watch rebuilds, allow transient unavailability and visible
+diagnostics without adding an orchestration/restart service or health-monitor framework.
+
+Authenticated launcher automation exercises HTTP requests through the running Angular /api
+proxy, not the SPA sign-in flow. A test-only HTTPS issuer fixture outside product code serves
+discovery metadata/JWKS and issues signed fixture tokens directly to the test client. Configure
+the real Development API with normal Authority/Audience; validate issuer, audience, signature
+and lifetime through its normal middleware. Keep keys/tokens private and ephemeral; do not
+inject tokens into Angular session storage, substitute auth.e2e.ts or set Authentication__Test*.
+Run categories and the complete ticket mutation/history journey through frontend-origin /api
+HTTP calls. Independently verify normal frontend HTML, routing/unauthenticated guard and reload.
+Discovery/JWKS supplies bearer-validation metadata, not an authorization-code/PKCE login service.
+Real browser sign-in/callback and an authenticated UI journey require actual registered OIDC
+client/accounts and remain manual interoperability checks, honestly pending if unavailable.
+Existing Playwright journeys retain their explicit Testing harness and distinct evidence.
+
+Validation must cover live logs, actual watch rebuild/restart, proxy forwarding without path
+rewriting, normal auth, migration guards, Ctrl+C/partial-launch/child-exit cleanup, occupied ports
+without disturbing their owners, and restart of the launcher after cleanup. Use owned disposable
+catalogs for automated checks. Keep existing backend/Angular/Playwright regressions and Testing
+fixture migration preparation intact. See [launcher contract](contracts/local-development.md)
+and [quickstart](quickstart.md#one-command-local-development-after-launcher-implementation).
 
 ### REST, Validation and Cancellation
 
@@ -327,6 +477,14 @@ help during the scored attempt, and per-participant outcome/assistance records. 
 four-of-five success threshold remains unchanged; the protocol is evaluation guidance only.
 
 Build/test relevant backend and frontend projects and verify migrations before completion.
+For this startup amendment, add real SQL verification for a fresh owned Development catalog and
+an existing catalog with pending compiled migrations, before protected readiness. Check repeat
+startup makes no new migration/history/reference changes; schema/fallback and SQL search-function
+migrations are applied. Verify no startup migration in Production/Staging/Testing/other environments
+by checking migration history/schema is unchanged, including a database with pending migrations.
+Verify CLI/design-time paths retain explicit behavior, migration failure/cancellation prevents HTTP
+readiness, model changes without a generated migration fail, and no migration/source files are
+created or rewritten at runtime. Keep SQL isolation and existing authorization tests intact.
 The [quickstart](quickstart.md) defines prospective commands and expected validation outcomes.
 
 ## Delivery Boundaries

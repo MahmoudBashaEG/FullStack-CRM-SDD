@@ -254,3 +254,100 @@ status answers. See quickstart.md. No extra speed target or new product requirem
 
 **Alternatives considered**: Deferring projection until US5 hides earlier emitted changes;
 uncontrolled coaching or simulated users cannot make the four-of-five evaluation repeatable.
+
+## 11. Development-Only Application of Existing Migrations
+
+**Decision (2026-10-09)**: Normal Development API startup awaits Database.MigrateAsync before
+serving HTTP. Production, Staging, Testing and other environments do not migrate automatically.
+The API composition root uses IsDevelopment after explicit CLI dispatch; Infrastructure executes
+migration APIs in an awaited async scope using the existing CrmDbContext/shared Integrated Security
+connection and Windows account. Design-time EF and provisioning CLI retain explicit behavior.
+This replaces the previous design statement that HTTP startup never applies migrations.
+
+**Rationale**: The user explicitly requests convenient local migration application while retaining
+reviewed, source-controlled schema evolution. Apply only migrations included in the compiled
+Infrastructure assembly; no runtime Git dependency, source generation or schema inference is needed.
+A model change still needs an explicit developer-generated/reviewed/versioned migration. Preserve
+EF's pending-model-change failure rather than suppressing it. Migration failures/cancellation stop
+Development startup before readiness and dispose resources; earlier applied migrations may remain,
+so do not promise all migration files roll back or reset/drop the database as recovery.
+
+EF migration APIs manage migration locking/transactions. Use that mechanism without an outer ticket
+transaction, a background migration job or new retry/lock framework. No environment gains new DB
+credentials or principal separation, and HTTP startup never performs operator reference upserts.
+The existing guarded Testing fixture/runner migration step remains explicit. Startup checks must
+cover environment exclusion, pending/fresh/repeated migrations, missing migration/model drift,
+failure/cancellation, and CLI/design-time isolation. This is a technical design amendment, not a
+new business requirement or evidence that the startup behavior has been implemented.
+
+**Alternatives considered**: Manual-only Development application is superseded by the user's
+request, but remains an optional explicit setup path. EnsureCreated bypasses migration history
+and is excluded. Automatic migration generation, model-based schema creation, non-Development
+startup migration and a custom migration service/admin endpoint are excluded. Applying schema in
+shared DI registration is rejected because CLI/design-time consumers must not inherit that side effect.
+
+Sources: [EF runtime migration application](https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/applying),
+[pending model changes](https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/managing).
+
+## 12. One-Command Windows Development Launcher
+
+**Decision (2026-10-09)**: Plan scripts/run-dev.ps1 as a small PowerShell 7 supervisor for
+dotnet watch and the existing npm/Angular development server. Reuse environment.ps1, use
+Development/--no-launch-profile on API HTTPS 7043 and normal Angular HTTPS 4200. Use
+non-interactive watch to restart unsupported hot-reload edits without competing console input.
+Allow builds; suppress backend browser auto-launch. API migration startup remains unchanged.
+
+Use the existing environment.apiBaseUrl '/api' and a separate normal-development proxy with
+/api/**, target https://localhost:7043 and secure:true, wired to development serve only.
+The current Vite-based builder's nested-route pattern is /api/**. E2E retains its own Testing
+adapter/proxy; production is unchanged. Reuse public OIDC configuration and local certificate
+trust setup, including NODE_EXTRA_CA_CERTS when necessary. Do not silently bypass TLS validation
+or provide training identities. One command starts configured services; external OIDC registration,
+restores, certificate trust and SQL access remain one-time setup prerequisites.
+
+**Rationale**: Existing ports/origins, REST paths and public frontend environment already support
+the desired topology. A launcher removes repeated two-terminal startup work without changing
+feature code, authentication, SQL identity or schema ownership. API owns migration application;
+generation remains explicit. No new entities, REST operations or business assumptions are needed.
+
+Inherited live console stdout/stderr avoids duplicated log files/stream relays. Retain owned
+process handles/descendants; Ctrl+C reaches console children and cleanup provides bounded grace
+then owned-tree termination. A root can exit before its descendants; verify that failure path,
+not just root HasExited. Avoid Start-Process -Wait, process-name kills, detached windows and
+arguments whose quoting loses paths with spaces. A native npm.cmd wrapper, if required, must
+be owned and use fixed safely quoted arguments. Abrupt console closure is outside graceful
+Ctrl+C guarantees; no general orchestration platform or service is introduced.
+
+Availability probes distinguish running watchers from ready hosts: categories 401 and frontend
+HTML 200, bounded to 120 seconds during initial startup. SQL/authenticated readiness still needs
+the existing authorized 200/fallback check; launcher probes do not mint tokens. Child exit/partial
+launch/timeout cleans owned services. During normal watch rebuilds, visible diagnostics may
+temporarily replace availability; no automatic custom restart framework is needed.
+
+**Alternatives considered**: Two independent manual terminals remain useful for diagnostics but
+do not satisfy the requested repeatable entry point. Docker Compose and Aspire add excluded
+orchestration. Reusing the e2e launcher would introduce Testing keys/data/reset behavior into
+manual Development. Hardcoded frontend backend URLs duplicate configuration and defeat the
+same-origin proxy. secure:false/global TLS bypass weakens the existing normal-development
+trust rule. A general log multiplexer, job platform or additional launcher dependency is unnecessary.
+
+Sources: [dotnet watch options and forwarding](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-watch),
+[Angular dev proxy and path matching](https://angular.dev/tools/cli/serve),
+[PowerShell process launch](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/start-process),
+[owned process-tree termination](https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.process.kill?view=net-10.0).
+
+Research resolves the launcher design choices; this amendment implements no script/configuration
+and reports no runtime test results. Migration-startup validation already exists separately.
+
+**Analysis refinements**: Authenticated launcher automation is an HTTP API journey through
+Angular's actual proxy, using tokens issued directly to the test client by a private external
+HTTPS discovery/JWKS fixture. Normal Development API JWT validation stays enabled. Verify normal
+frontend HTML/routing/guard/reload separately; no SPA token injection, Testing adapter or PKCE
+login simulation is required. Real external OIDC browser sign-in/UI interoperability remains a
+separate manual check and can be pending without invalidating automated fixture evidence.
+
+Use one shared five-second shutdown grace budget measured from the stop request, followed by
+owned-tree termination if needed. Request owned-child shutdown where safely supported on
+non-Ctrl+C failures; waiting alone is not graceful signaling. Evidence distinguishes cooperative
+graceful exit from forced cleanup and exercises both. This is a tooling timeout, not a new
+product SLA or a substitute for descendant ownership verification.

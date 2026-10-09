@@ -7,6 +7,11 @@ namespace Crm.IntegrationTests.Fixtures;
 
 public sealed class SqlServerFixture : IAsyncLifetime
 {
+    private readonly bool applyMigrations;
+    private readonly string? connectionOverride;
+    public SqlServerFixture() : this(true, null) { }
+    internal SqlServerFixture(bool applyMigrations, string? connectionOverride)
+    { this.applyMigrations = applyMigrations; this.connectionOverride = connectionOverride; }
     public string Connection { get; private set; } = "";
     public string Login { get; private set; } = "";
     public string CurrentLogin { get; private set; } = "";
@@ -18,7 +23,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
     public CrmDbContext OpenContext() => new(new DbContextOptionsBuilder<CrmDbContext>().UseSqlServer(Connection, sql => sql.MigrationsHistoryTable("__EFMigrationsHistory", "dbo")).Options);
     public async Task InitializeAsync()
     {
-        Connection = CrmDatabaseSettings.Validate(Environment.GetEnvironmentVariable("CRM_TEST_SQL_CONNECTION") ?? throw new InvalidOperationException("CRM_TEST_SQL_CONNECTION is required; SQL tests cannot be skipped."));
+        Connection = CrmDatabaseSettings.Validate(connectionOverride ?? Environment.GetEnvironmentVariable("CRM_TEST_SQL_CONNECTION") ?? throw new InvalidOperationException("CRM_TEST_SQL_CONNECTION is required; SQL tests cannot be skipped."));
         var settings = new SqlConnectionStringBuilder(Connection);
         catalog = settings.InitialCatalog;
         if (!catalog.StartsWith("CrmTicketsIntegration_", StringComparison.Ordinal) || catalog.Length > 128 || catalog.Any(character => !char.IsAsciiLetterOrDigit(character) && character != '_')) throw new InvalidOperationException("Unsafe integration catalog.");
@@ -38,7 +43,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
         created = true;
         await using var database = OpenContext();
         await database.Database.ExecuteSqlInterpolatedAsync($"EXEC sys.sp_addextendedproperty @name=N'CrmFixtureOwner', @value={owner}");
-        await database.Database.MigrateAsync();
+        if (applyMigrations) await database.Database.MigrateAsync();
     }
     public async Task DisposeAsync()
     {

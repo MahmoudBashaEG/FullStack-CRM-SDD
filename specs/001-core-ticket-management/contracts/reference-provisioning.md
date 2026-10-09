@@ -20,6 +20,11 @@ identity switch. Validate integrated security before opening the connection. Run
 requests cannot invoke provisioning; only explicit CLI mode accepts the bounded input and exits
 before HTTP. See [database-principals.md](database-principals.md) for the shared connection contract.
 
+CLI mode bypasses the Development-only HTTP startup migration hook, even when the environment
+is Development. Apply existing migrations explicitly before invoking this command, or start the
+Development API once to apply them first. Provisioning does not generate/apply migrations,
+create schema through EnsureCreated, or start the HTTP host as a side effect.
+
 ## JSON Input Version 1
 
 Object properties: schemaVersion=1, categories (array, optional), agents (array, optional).

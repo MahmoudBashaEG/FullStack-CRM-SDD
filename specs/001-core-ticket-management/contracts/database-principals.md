@@ -1,6 +1,6 @@
 # Single Windows-Authenticated Database Connection
 
-Revised project decision, 2026-10-08. This design uses local SQL Server and one existing
+Revised project decision, 2026-10-09. This design uses local SQL Server and one existing
 Windows identity for all database access. No separate SQL/database principals are created,
 mapped, granted or verified by the project. This file retains its path for existing links;
 it now specifies shared connection configuration and application boundaries, not principal ACLs.
@@ -28,7 +28,16 @@ local DataSource and InitialCatalog, no User ID/Password keys (even empty), and 
 Authentication mode. Do not set SqlCredential/AccessToken, EXECUTE AS or staff impersonation.
 Windows host identity is independent of the JWT-authenticated staff actor recorded in history.
 The design-time factory uses the same validated configuration without starting HTTP. CLI mode
-exits before HTTP startup; HTTP startup does not implicitly migrate or provision.
+exits before HTTP startup and does not automatically migrate or provision omitted inputs.
+Normal HTTP startup awaits existing pending EF migrations only in Development; Production,
+Staging, Testing and other environments retain explicit migration application. This uses the
+same connection/Windows identity, not separate migration credentials. See the
+[startup design](../plan.md#local-database-migration-startup).
+
+Automatic application means MigrateAsync over the source-controlled migrations included in the
+build, never EnsureCreated or startup migration generation. Model changes still need an explicitly
+generated/reviewed/versioned migration. Development migration failure prevents HTTP readiness.
+No application startup performs reference provisioning beyond data explicitly defined in migrations.
 
 ## Supported Application Boundaries and Trade-off
 

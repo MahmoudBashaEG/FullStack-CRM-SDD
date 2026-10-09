@@ -17,7 +17,7 @@ public sealed class ReferenceProvisioningTests(SqlServerFixture sql)
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Crm.slnx"))) directory = directory.Parent;
         return directory?.FullName ?? throw new InvalidOperationException("Repository root not found.");
     }
-    public static async Task<(int Exit, string Output)> RunCliAsync(string connection, string input)
+    public static async Task<(int Exit, string Output)> RunCliAsync(string connection, string input, string? environment = null)
     {
         var file = Path.Combine(Path.GetTempPath(), $"crm-input-{Guid.NewGuid():N}.json");
         await File.WriteAllTextAsync(file, input);
@@ -28,6 +28,11 @@ public sealed class ReferenceProvisioningTests(SqlServerFixture sql)
             settings.ArgumentList.Add(Path.Combine(root, "src/backend/Crm.Api/bin/Debug/net10.0/Crm.Api.dll"));
             foreach (var argument in new[] { "provision-ticket-references", "--input", file }) settings.ArgumentList.Add(argument);
             settings.Environment["ConnectionStrings__Crm"] = connection;
+            if (environment is not null)
+            {
+                settings.Environment["DOTNET_ENVIRONMENT"] = environment;
+                settings.Environment["ASPNETCORE_ENVIRONMENT"] = environment;
+            }
             // No username/password or alternate process identity; child inherits this Windows account.
             using var process = Process.Start(settings)!;
             var output = process.StandardOutput.ReadToEndAsync(); var error = process.StandardError.ReadToEndAsync();

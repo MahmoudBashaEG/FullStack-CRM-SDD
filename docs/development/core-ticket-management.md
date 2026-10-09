@@ -40,8 +40,81 @@ dotnet ef database update --no-build --project src/backend/Crm.Infrastructure --
 dotnet ef migrations has-pending-model-changes --no-build --project src/backend/Crm.Infrastructure --startup-project src/backend/Crm.Api
 ```
 
-This explicitly applies migrations to the chosen development catalog; HTTP startup does not
-migrate. Adapt the local instance/catalog before executing. Never supply User ID/Password,
+The update command explicitly applies existing migrations to the chosen catalog. It is
+optional before normal Development API startup, but required if you want to provision
+references before that first startup. Production, Staging, Testing and other non-Development
+hosts require explicit migration preparation; they never migrate during normal API startup.
+Testing fixtures and the browser runner keep their explicit, ownership-checked preparation.
+
+## One-command local startup
+
+Configure the external OIDC prerequisites below and remove all Authentication__Test* settings.
+One-time HTTPS setup: reuse the existing trusted API development certificate for Angular,
+so both browser HTTPS and the secure:true proxy validate it. Exporting a certificate's private
+key is sensitive; perform this deliberate setup only on your own development machine. The
+launcher never exports/generates certificates or changes machine trust.
+
+```powershell
+. ./scripts/environment.ps1
+$devCertDirectory = Join-Path $pwd '.local/dev-certs'
+New-Item -ItemType Directory -Path $devCertDirectory -Force | Out-Null
+$devCertAccount = [Security.Principal.WindowsIdentity]::GetCurrent().Name
+icacls $devCertDirectory /inheritance:r /grant:r "${devCertAccount}:(OI)(CI)F"
+dotnet dev-certs https --check --trust
+# If not valid/trusted, deliberately complete dotnet dev-certs https --trust first.
+dotnet dev-certs https --export-path (Join-Path $devCertDirectory 'localhost.pem') --format PEM --no-password
+```
+
+Keep localhost.key private and ignored; do not copy it into source, logs or the frontend
+bundle. Re-export deliberately when the certificate changes. You may instead provide existing
+PEM paths through CRM_DEV_SSL_CERT and CRM_DEV_SSL_KEY. The default paths are the two files
+under .local/dev-certs; NODE_EXTRA_CA_CERTS defaults to the public PEM in the children and is
+restored on exit. Set it explicitly to the API's public CA if using a different frontend cert.
+
+After that setup, the exact PowerShell 7 command from the repository root is:
+
+```powershell
+./scripts/run-dev.ps1
+```
+
+The launcher reuses environment.ps1 and starts dotnet watch plus the normal Angular development
+server concurrently in the same terminal. Backend https://localhost:7043, frontend
+https://localhost:4200. Angular uses relative /api and proxy.development.json (secure:true).
+Child-only Development variables and no launch profile fix the API URL; telemetry consent
+is disabled for the Angular child so first startup does not wait for a prompt. Logs stay live.
+Both HTTP endpoints must become available in 120 seconds. A categories 401 and frontend HTML
+200 prove availability; sign-in and authorized categories 200/fallback prove actual access.
+
+Ctrl+C requests shutdown. Both services share a five-second grace period; remaining owned
+trees are force-cleaned and the outcomes are reported distinctly. Windows job ownership also
+cleans descendants when a wrapper exits first. The launcher never kills by name/port, reuses
+occupied ports or removes databases. A forced terminal close is outside the graceful guarantee.
+In a non-console automation host, graceful console signaling may be unavailable; the same
+five-second owned-tree fallback still applies. Restart after cleanup uses the same two ports.
+
+The API awaits existing pending compiled EF migrations before listening. A fresh or older
+schema receives only those migrations; an already-current schema skips migration execution.
+Migration failure, cancellation, missing artifacts or model/snapshot drift stops startup.
+The protected fallback is migration-seeded; startup does not provision agents/categories.
+The CLI exits before this HTTP hook and still requires an explicitly prepared schema.
+Applying migrations requires deployed compiled artifacts, not a runtime Git checkout.
+
+After an intentional model change, generate a migration explicitly:
+
+```powershell
+$migrationName = 'DescribeYourModelChange' # Replace with the reviewed change's name.
+dotnet ef migrations add $migrationName --project src/backend/Crm.Infrastructure --startup-project src/backend/Crm.Api --output-dir Persistence/Migrations
+dotnet build Crm.slnx
+dotnet ef migrations has-pending-model-changes --no-build --project src/backend/Crm.Infrastructure --startup-project src/backend/Crm.Api
+```
+
+Choose an appropriate migration name. Review the generated migration,
+designer and snapshot, verify it against owned disposable catalogs, and version-control
+all artifacts. Rebuild before using --no-build. Startup never generates migrations,
+infers a schema with EnsureCreated, rewrites source or suppresses pending-model checks.
+For non-Development deployment apply reviewed migrations explicitly before starting the API
+using the same configured connection and Windows identity.
+Adapt the local instance/catalog before executing. Never supply User ID/Password,
 alternate migration/provisioning connection keys, DB access tokens or impersonation.
 TrustServerCertificate is the approved local self-signed SQL exception; use false when a
 trusted SQL certificate is installed. It does not disable HTTP/OIDC certificate validation.
@@ -120,24 +193,16 @@ require an external OIDC provider and are not claimed as tested by signed test J
 3. Set public authority/clientId/scope in `src/frontend/src/environments/environment.ts`,
    keeping redirectPath `/auth/callback` and apiBaseUrl `/api`. Use only values from the
    registered provider. No SPA secret or SQL string belongs in this file.
-4. Start the API with explicit HTTPS rather than the generated launch profile:
+4. Start both normal Development services from the configured repository-root PowerShell 7
+   shell (the launcher sets the environments and HTTPS binding without a generated profile):
 
    ```powershell
-   $env:ASPNETCORE_URLS = 'https://localhost:7043'
-   dotnet run --no-build --no-launch-profile --project src/backend/Crm.Api
+   ./scripts/run-dev.ps1
    ```
 
-5. Serve the normal frontend on HTTPS 4200 with a same-origin `/api` proxy to HTTPS 7043.
-   For local Angular development create ignored `.local/proxy.manual.json` containing
-   `{ "/api": { "target": "https://localhost:7043", "secure": true } }`, then in another
-   configured repository-root shell run:
-
-   ```powershell
-   npm run start --prefix src/frontend -- --port 4200 --ssl --proxy-config ../../.local/proxy.manual.json
-   ```
-
-   Trust the local certificates for browser and Node proxy verification (use NODE_EXTRA_CA_CERTS
-   with the exported public development certificate if needed). Do not use proxy.e2e.json,
+5. The launcher serves the normal frontend on HTTPS 4200 with the development-only
+   `/api/**` proxy to HTTPS 7043; no second terminal or handwritten proxy file is needed.
+   Trust the local certificates for browser and Node proxy verification. Do not use proxy.e2e.json,
    the e2e adapter or a production certificate-validation bypass for manual OIDC usage.
    Deployment serves the production bundle and trusted HTTPS certificates at its registered
    origin; adjust public redirects accordingly. Cross-origin hosting requires the approved
@@ -151,3 +216,14 @@ Follow [the canonical SC-005 protocol](../../specs/001-core-ticket-management/qu
 only after deployment readiness and automated gates. Preparation and pending status are in
 [staff-evaluation.md](../../specs/001-core-ticket-management/validation/staff-evaluation.md).
 No real participants are currently available; full acceptance remains pending.
+
+Startup migration verification is recorded in
+[migration-startup.md](../../specs/001-core-ticket-management/validation/migration-startup.md).
+
+Launcher, proxy, watch/reload, shutdown and normal JWT fixture results are recorded in
+[local-development.md](../../specs/001-core-ticket-management/validation/local-development.md).
+Run `pwsh -NoProfile -File tests/scripts/run-dev.tests.ps1` for native lifecycle cases and
+`pwsh -NoProfile -File tests/scripts/run-dev.integration.ps1` (optionally `-InitialSchema`)
+for real launcher/owned SQL/proxy/normal-JWT checks. The latter issues tokens privately to an
+HTTP client using an external test discovery/JWKS fixture; it does not simulate SPA PKCE sign-in,
+inject browser tokens or use the Testing adapter. Real external-provider sign-in remains pending.

@@ -97,7 +97,8 @@
               "buildTarget": "crm:build:production"
             },
             "development": {
-              "buildTarget": "crm:build:development"
+              "buildTarget": "crm:build:development",
+              "proxyConfig": "proxy.development.json"
             },
             "e2e": {
               "buildTarget": "crm:build:e2e",
