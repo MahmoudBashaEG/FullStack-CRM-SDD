@@ -1,4 +1,6 @@
-import { test, expect, tokens } from '../fixtures/auth';
+import { restoreTicketIdentity,closeTicketContext } from '../fixtures/ticket-local.fixture';
+import { actorId,fixtureReference,createAgentReference } from '../fixtures/ticket-local.fixture';
+import { test, expect, tokens, navigateTicket } from '../fixtures/auth';
 
 test('an 8001-character literal search reaches the real API and renders matching and empty results', async ({ page, request }) => {
   const prefix = `LongBrowser-${Date.now()}-`;
@@ -6,7 +8,7 @@ test('an 8001-character literal search reaches the real API and renders matching
   expect(term.length).toBe(8001);
   const created = await request.post('/api/tickets', { data: { subject: `before ${term} after`, description: 'Synthetic browser long-search regression' }, headers: { Authorization: `Bearer ${tokens().staffA}` } });
   expect(created.status()).toBe(201); const ticket = await created.json();
-  await page.goto('/tickets');
+  await navigateTicket(page,'/tickets');
   await page.getByLabel('Search tickets').fill(term);
   let loaded = page.waitForResponse(response => new URL(response.url()).pathname === '/api/tickets' && response.request().method() === 'GET' && new URL(response.url()).searchParams.get('q') === term);
   await page.getByRole('button', { name: 'Apply filters' }).click(); expect((await loaded).status()).toBe(200);
@@ -23,8 +25,8 @@ import type { TicketSummary } from '../../src/app/features/tickets/models/ticket
 const categoryA = '30000000-0000-0000-0000-000000000001';
 const categoryB = '30000000-0000-0000-0000-000000000002';
 const fallback = '00000000-0000-0000-0000-000000000001';
-const agentA = '20000000-0000-0000-0000-000000000001';
-const agentB = '20000000-0000-0000-0000-000000000002';
+const agentA = fixtureReference('trackingA');
+const agentB = fixtureReference('trackingB');
 const reference = (index: number) => `TKT-10000000000000000000${String(index).padStart(12, '0')}`;
 const primary = [
   ['TrackingSeed Alpha Service', 'Open', 'Normal', categoryA, agentA, 12],
@@ -49,7 +51,7 @@ test.beforeEach(async ({ request }) => {
 });
 
 test('every search/filter combination matches the prepared-record oracle in API and browser', async ({ page, request }) => {
-  await page.goto('/tickets?q=TrackingSeed&pageSize=100'); await expect(page.locator('tbody tr')).toHaveCount(32);
+  await navigateTicket(page,'/tickets?q=TrackingSeed&pageSize=100'); await expect(page.locator('tbody tr')).toHaveCount(32);
   // US1 runs in the same owned queue and creates additional tickets. They must also match searches.
   const baselineResponse = await request.get('/api/tickets?pageSize=100', { headers: headers() });
   const baseline = await baselineResponse.json(); expect(baseline.hasMore).toBe(false);
@@ -90,7 +92,7 @@ test('every search/filter combination matches the prepared-record oracle in API 
 });
 
 test('paging retains criteria, handles ties, and navigates to readable ticket detail', async ({ page }) => {
-  await page.goto('/tickets?q=TrackingSeed'); await expect(page.locator('tbody tr')).toHaveCount(25);
+  await navigateTicket(page,'/tickets?q=TrackingSeed'); await expect(page.locator('tbody tr')).toHaveCount(25);
   expect(await page.locator('tbody td:first-child a').allTextContents()).toEqual(records.slice(0, 25).map(record => record.reference));
   await page.getByRole('button', { name: 'Next tickets' }).click(); await expect(page.locator('tbody tr')).toHaveCount(7);
   expect(await page.locator('tbody td:first-child a').allTextContents()).toEqual(records.slice(25).map(record => record.reference));
@@ -101,14 +103,14 @@ test('paging retains criteria, handles ties, and navigates to readable ticket de
 });
 
 test('invalid filters and server failures stay distinct from empty success; access remains protected', async ({ page, request, browser }) => {
-  await page.goto('/tickets?page=0x2'); await expect(page.getByRole('alert')).toContainText('Some filters are invalid');
-  await page.goto('/tickets?q=NoSuchPreparedTicket'); await expect(page.getByText('No tickets match these filters.')).toBeVisible();
+  await navigateTicket(page,'/tickets?page=0x2'); await expect(page.getByRole('alert')).toContainText('Some filters are invalid');
+  await navigateTicket(page,'/tickets?q=NoSuchPreparedTicket'); await expect(page.getByText('No tickets match these filters.')).toBeVisible();
   await page.route('**/api/tickets?*', route => route.fulfill({ status: 503, contentType: 'application/problem+json', body: JSON.stringify({ code: 'service_unavailable' }) }));
-  await page.goto('/tickets?q=TrackingSeed'); await expect(page.getByRole('alert')).toContainText('Tickets could not be loaded'); await expect(page.getByText('No tickets match these filters.')).toHaveCount(0);
+  await navigateTicket(page,'/tickets?q=TrackingSeed'); await expect(page.getByRole('alert')).toContainText('Tickets could not be loaded'); await expect(page.getByText('No tickets match these filters.')).toHaveCount(0);
   await page.unroute('**/api/tickets?*'); await page.getByRole('button', { name: 'Retry tickets' }).click(); await expect(page.locator('tbody tr')).toHaveCount(25);
   expect((await request.get('/api/tickets')).status()).toBe(401); expect((await request.get('/api/tickets', { headers: { Authorization: `Bearer ${tokens().denied}` } })).status()).toBe(403);
-  const denied = await browser.newContext({ ignoreHTTPSErrors: true });
-  try { await denied.addInitScript(fixture => Object.assign(window, { __CRM_TEST_AUTH: fixture }), { token: tokens().denied, allowed: false }); const deniedPage = await denied.newPage();
+  const denied = await browser.newContext({ baseURL: 'https://localhost:4200', ignoreHTTPSErrors: false });
+  try { const deniedPage = await denied.newPage(); await restoreTicketIdentity(deniedPage,'denied');
     await deniedPage.goto('https://localhost:4200/tickets'); await expect(deniedPage).toHaveURL(/\/access$/);
-  } finally { await denied.close(); }
+  } finally { await closeTicketContext(denied,'denied'); }
 });

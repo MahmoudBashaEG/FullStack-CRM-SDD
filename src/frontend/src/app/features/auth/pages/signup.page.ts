@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router,RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { SignupService } from '../data-access/signup.service';
-import { displayNameAccepted,normalizeEmail,passwordAccepted } from '../../../core/auth/account-validation';
+import { trimAccountWhitespace, displayNameAccepted,normalizeEmail,passwordAccepted } from '../../../core/auth/account-validation';
 @Component({imports:[FormsModule,RouterLink],template:`<h1>Create Customer account</h1>
   <p>Registration creates a Customer account. Sign in separately after registration.</p>
   <form (ngSubmit)="submit()" aria-label="Create Customer account" dir="auto">
@@ -24,7 +24,7 @@ export class SignupPage {
       this.message.set('Enter a nonblank display name of at most 200 characters, a valid email and a password of 15–128 characters.');return;
     }
     this.busy.set(true);
-    try{await this.signup.register(this.displayName.trim(),email,this.password);await this.router.navigateByUrl('/auth/signin');}
+    try{await this.signup.register(trimAccountWhitespace(this.displayName),email,this.password);await this.router.navigateByUrl('/auth/signin');}
     catch(error){this.message.set(error instanceof HttpErrorResponse && error.status===400?'Registration could not be completed.':'Registration is unavailable. Try again.');}
     finally{this.password='';this.busy.set(false);}
   }

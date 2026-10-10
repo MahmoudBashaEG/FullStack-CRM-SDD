@@ -1,5 +1,7 @@
+import { restoreTicketIdentity,closeTicketContext } from '../fixtures/ticket-local.fixture';
+import { actorId,fixtureReference,createAgentReference } from '../fixtures/ticket-local.fixture';
 import { randomUUID } from 'node:crypto';
-import { test, expect, tokens } from '../fixtures/auth';
+import { test, expect, tokens, navigateTicket } from '../fixtures/auth';
 import { provisionReferences } from '../fixtures/provision-references';
 
 const fallback = '00000000-0000-0000-0000-000000000001';
@@ -10,15 +12,15 @@ test.beforeEach(async ({ request }) => {
 });
 
 test('edits all fields, assigns/reassigns/clears, retains inactive references and reads exact history', async ({ page, request }) => {
-  const category = randomUUID(); const agent = randomUUID(); const replacement = randomUUID();
+  const category = randomUUID(); const agent = await createAgentReference(); const replacement = await createAgentReference();
   const provision = (active: boolean) => provisionReferences({ schemaVersion: 1, categories: [{ id: category, displayName: active ? 'Edit category' : 'Inactive edit category', isAvailable: active }], agents: [
     { id: agent, issuer: 'https://example.test', subject: agent, displayName: active ? 'Edit agent' : 'Inactive edit agent', isEligible: active },
     { id: replacement, issuer: 'https://example.test', subject: replacement, displayName: 'Replacement agent', isEligible: active }
   ] });
-  provision(true);
+  await provision(true);
   try {
     const created = await request.post('/api/tickets', { headers: headers(), data: { subject: 'Original edit issue', description: 'Original detail' } }); expect(created.status()).toBe(201); const initial = await created.json();
-    await page.goto(`/tickets/${initial.reference}`);
+    await navigateTicket(page,`/tickets/${initial.reference}`);
     await page.getByLabel('Subject', { exact: true }).fill(' Revised issue '); await page.getByLabel('Description', { exact: true }).fill(' تفاصيل جديدة ');
     await page.getByLabel('Category', { exact: true }).selectOption(category); await page.getByLabel('Priority', { exact: true }).selectOption('High');
     const detailSave = page.waitForResponse(r => r.request().method() === 'PATCH'); await page.getByRole('button', { name: 'Save ticket information', exact: true }).click(); expect((await detailSave).status()).toBe(200);
@@ -26,7 +28,7 @@ test('edits all fields, assigns/reassigns/clears, retains inactive references an
     const assign = async (id: string) => { await page.getByLabel('Assigned agent', { exact: true }).selectOption(id); const saving = page.waitForResponse(r => r.request().method() === 'PUT'); await page.getByRole('button', { name: 'Save assignment', exact: true }).click(); const response = await saving; expect(response.status()).toBe(200); await expect(page.getByRole('button', { name: 'Save assignment', exact: true })).toBeEnabled(); return response.json(); };
     await assign(agent); await assign(replacement); const assigned = await assign(agent);
     const historyBefore = await (await request.get(`/api/tickets/${initial.reference}/history`, { headers: headers() })).json();
-    provision(false);
+    await provision(false);
     const inactive = await (await request.get(`/api/tickets/${initial.reference}`, { headers: headers() })).json(); expect(inactive.editVersion).toBe(assigned.editVersion); expect(inactive.updatedAtUtc).toBe(assigned.updatedAtUtc);
     expect(await (await request.get(`/api/tickets/${initial.reference}/history`, { headers: headers() })).json()).toEqual(historyBefore);
     await page.reload(); await expect(page.getByLabel('Category', { exact: true })).toHaveValue(category); await expect(page.getByLabel('Assigned agent', { exact: true })).toHaveValue(agent);
@@ -42,20 +44,20 @@ test('edits all fields, assigns/reassigns/clears, retains inactive references an
     expect(history.items[1].previousValue).toBe('Original edit issue'); expect(history.items[1].newValue).toBe('Revised issue'); expect(history.items[3].newValue).toEqual({ id: category, displayName: 'Edit category' });
     expect(history.items[5].previousValue).toBeNull(); expect(history.items[5].newValue).toEqual({ id: agent, displayName: 'Edit agent' });
     expect(history.items[9].previousValue).toEqual({ id: agent, displayName: 'Inactive edit agent' }); expect(history.items[9].newValue).toBeNull(); expect(history.items[10].previousValue.displayName).toBe('Inactive edit category');
-    for (const entry of history.items) { expect(entry.actor.subject).toBe('staff-a'); expect(entry.actor.displayName).toBe('Test Staff'); expect(Date.parse(entry.occurredAtUtc)).not.toBeNaN(); }
+    for (const entry of history.items) { expect(entry.actor.subject).toBe(actorId()); expect(entry.actor.displayName).toBe('Test Staff'); expect(Date.parse(entry.occurredAtUtc)).not.toBeNaN(); }
     await expect(page.getByText('DetailsChanged — revision 2')).toHaveCount(4); await expect(page.getByText('AssignmentChanged — revision 7')).toBeVisible();
     const rows = page.locator('app-ticket-history li'); await expect(rows).toHaveCount(11); await expect(rows.nth(9)).toContainText('Inactive edit agent'); await expect(rows.nth(9)).toContainText('Unassigned'); await expect(rows.nth(1)).toContainText('Original edit issue');
-    await page.goto('/tickets'); await page.getByLabel('Search tickets').fill(initial.reference); await page.getByRole('button', { name: 'Apply filters', exact: true }).click();
+    await navigateTicket(page,'/tickets'); await page.getByLabel('Search tickets').fill(initial.reference); await page.getByRole('button', { name: 'Apply filters', exact: true }).click();
     await expect(page.getByRole('link', { name: initial.reference, exact: true })).toBeVisible(); await expect(page.locator('tbody tr').filter({ hasText: initial.reference })).toContainText('Unrelated edit with inactive references');
-  } finally { provision(false); }
+  } finally { await provision(false); }
 });
 
 test('concurrent staff preserve their drafts and explicitly reload review and retry', async ({ page, request, browser }) => {
   const ticket = await (await request.post('/api/tickets', { headers: headers(), data: { subject: 'Concurrent issue', description: 'Original detail' } })).json();
-  const second = await browser.newContext({ ignoreHTTPSErrors: true });
+  const second = await browser.newContext({ baseURL: 'https://localhost:4200', ignoreHTTPSErrors: false });
   try {
-    await second.addInitScript(fixture => Object.assign(window, { __CRM_TEST_AUTH: fixture }), { token: tokens().staffB, allowed: true }); const other = await second.newPage();
-    await page.goto(`/tickets/${ticket.reference}`); await other.goto(`https://localhost:4200/tickets/${ticket.reference}`);
+    const other = await second.newPage(); await restoreTicketIdentity(other,'staffB');
+    await navigateTicket(page,`/tickets/${ticket.reference}`); await other.goto(`https://localhost:4200/tickets/${ticket.reference}`);
     await expect(other.getByLabel('Subject', { exact: true })).toHaveValue('Concurrent issue'); await page.getByLabel('Subject', { exact: true }).fill('First writer'); await other.getByLabel('Subject', { exact: true }).fill('Preserved draft');
     const firstSave = page.waitForResponse(r => r.request().method() === 'PATCH'); await page.getByRole('button', { name: 'Save ticket information', exact: true }).click(); expect((await firstSave).status()).toBe(200);
     const stale = other.waitForResponse(r => r.request().method() === 'PATCH'); await other.getByRole('button', { name: 'Save ticket information', exact: true }).click(); expect((await stale).status()).toBe(409);
@@ -63,13 +65,13 @@ test('concurrent staff preserve their drafts and explicitly reload review and re
     await other.getByRole('button', { name: 'Reload latest ticket', exact: true }).click(); await expect(other.getByRole('heading', { level: 2, name: 'First writer', exact: true })).toBeVisible(); await expect(other.getByLabel('Subject', { exact: true })).toHaveValue('Preserved draft');
     await other.getByRole('button', { name: 'I reviewed the latest ticket', exact: true }).click(); const retry = other.waitForResponse(r => r.request().method() === 'PATCH'); await other.getByRole('button', { name: 'Save ticket information', exact: true }).click(); expect((await retry).status()).toBe(200);
     await expect(other.getByRole('heading', { level: 2, name: 'Preserved draft', exact: true })).toBeVisible();
-    const history = await (await request.get(`/api/tickets/${ticket.reference}/history`, { headers: headers() })).json(); expect(history.items).toHaveLength(3); expect(history.items[1].actor.subject).toBe('staff-a'); expect(history.items[2].actor.subject).toBe('staff-b'); expect(history.items[2].previousValue).toBe('First writer'); expect(history.items[2].newValue).toBe('Preserved draft');
-  } finally { await second.close(); }
+    const history = await (await request.get(`/api/tickets/${ticket.reference}/history`, { headers: headers() })).json(); expect(history.items).toHaveLength(3); expect(history.items[1].actor.subject).toBe(actorId()); expect(history.items[2].actor.subject).toBe(actorId('staffB')); expect(history.items[2].previousValue).toBe('First writer'); expect(history.items[2].newValue).toBe('Preserved draft');
+  } finally { await closeTicketContext(second,'staffB'); }
 });
 
 test('lost save response requires refresh and review before a deliberate no-op retry', async ({ page, request }) => {
   const ticket = await (await request.post('/api/tickets', { headers: headers(), data: { subject: 'Lost response', description: 'Original detail' } })).json();
-  await page.goto(`/tickets/${ticket.reference}`); await page.getByLabel('Subject', { exact: true }).fill('Actually committed');
+  await navigateTicket(page,`/tickets/${ticket.reference}`); await page.getByLabel('Subject', { exact: true }).fill('Actually committed');
   let attempts = 0; await page.route(`**/api/tickets/${ticket.reference}/details`, async route => { attempts++; await route.fetch(); await route.abort('failed'); }, { times: 1 });
   await page.getByRole('button', { name: 'Save ticket information', exact: true }).click(); await expect(page.getByRole('alert')).toContainText('uncertain'); expect(attempts).toBe(1); await expect(page.getByLabel('Subject', { exact: true })).toHaveValue('Actually committed');
   const committed = await (await request.get(`/api/tickets/${ticket.reference}`, { headers: headers() })).json(); expect(committed.subject).toBe('Actually committed');

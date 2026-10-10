@@ -14,6 +14,60 @@ using Crm.Domain.Accounts;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using System.Net.Http.Json;
+using System.Text.Json.Nodes;
+using Crm.Infrastructure.Authentication;
+using Crm.Infrastructure.Tickets;
+using Crm.Domain.Tickets;
+using System.IdentityModel.Tokens.Jwt;
+
+if(args.FirstOrDefault()=="ticket-auth")
+{
+    var manifest=JsonNode.Parse(await File.ReadAllTextAsync(args[1]))!.AsObject();var owner=manifest["owner"]!.GetValue<string>();
+    var settings=new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(Environment.GetEnvironmentVariable("ConnectionStrings__Crm"));
+    if(!settings.IntegratedSecurity||!settings.InitialCatalog.StartsWith("CrmTicketsE2E_",StringComparison.Ordinal)||!Guid.TryParseExact(settings.InitialCatalog["CrmTicketsE2E_".Length..],"N",out _)||!Guid.TryParseExact(owner,"N",out _))throw new InvalidOperationException("Unsafe owned ticket authentication fixture.");
+    await using(var connection=new Microsoft.Data.SqlClient.SqlConnection(settings.ConnectionString)){await connection.OpenAsync();await using var check=new Microsoft.Data.SqlClient.SqlCommand("SELECT CONVERT(nvarchar(128),value) FROM sys.extended_properties WHERE class=0 AND name=N'CrmFixtureOwner'",connection);if((string?)await check.ExecuteScalarAsync()!=owner)throw new InvalidOperationException("Fixture owner mismatch.");}
+    var root=new DirectoryInfo(AppContext.BaseDirectory);while(root is not null&&!File.Exists(Path.Combine(root.FullName,"Crm.slnx")))root=root.Parent;
+    await using var api=new WebApplicationFactory<ApiApp::Program>().WithWebHostBuilder(builder=>builder.UseEnvironment("Testing").UseContentRoot(Path.Combine(root!.FullName,"src/backend/Crm.Api")).ConfigureLogging(logging=>logging.ClearProviders()));
+    HttpClient Client()=>api.CreateClient(new(){BaseAddress=new("https://localhost:4200")});
+    var restoredCookies=new Dictionary<string,JsonArray>();
+    async Task<string> SignIn(HttpClient client,JsonNode credential,string? kind=null)
+    {
+        client.DefaultRequestHeaders.Add("Origin","https://localhost:4200");using var csrf=await client.GetAsync("/api/auth/csrf");csrf.EnsureSuccessStatusCode();var pair=(await csrf.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("requestToken").GetString();client.DefaultRequestHeaders.Add("X-CSRF-TOKEN",pair);
+        using var response=await client.PostAsJsonAsync("/api/auth/signin",new{email=credential["email"]!.GetValue<string>(),password=credential["password"]!.GetValue<string>()});response.EnsureSuccessStatusCode();
+        if(kind is not null){var cookie=Microsoft.Net.Http.Headers.SetCookieHeaderValue.ParseList(response.Headers.GetValues("Set-Cookie").ToList()).Single(x=>x.Name=="__Host-crm-refresh");restoredCookies[kind]=new JsonArray(new JsonObject{["name"]=cookie.Name.ToString(),["value"]=cookie.Value.ToString(),["domain"]="localhost",["path"]="/",["expires"]=cookie.Expires!.Value.ToUnixTimeSeconds(),["secure"]=true,["httpOnly"]=true,["sameSite"]="Strict"});}
+        return(await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("accessToken").GetString()!;
+    }
+    using var admin=Client();var adminToken=await SignIn(admin,manifest["identities"]!["admin"]!,"admin");admin.DefaultRequestHeaders.Authorization=new("Bearer",adminToken);
+    if(manifest["usersPrepared"]?.GetValue<bool>()==false)
+    {
+        using var signup=Client();signup.DefaultRequestHeaders.Add("Origin","https://localhost:4200");using var anti=await signup.GetAsync("/api/auth/csrf");anti.EnsureSuccessStatusCode();signup.DefaultRequestHeaders.Add("X-CSRF-TOKEN",(await anti.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("requestToken").GetString());
+        using var registered=await signup.PostAsJsonAsync("/api/auth/signup",new{displayName="customer",email=manifest["identities"]!["customer"]!["email"]!.GetValue<string>(),password=manifest["identities"]!["customer"]!["password"]!.GetValue<string>()});registered.EnsureSuccessStatusCode();manifest["usersPrepared"]=true;
+    }
+    var references=manifest["agentRefs"]?.AsObject()??new JsonObject();var fixtureRefs=manifest["fixtureRefs"]?.AsObject()??new JsonObject();
+    if(manifest["ticketTokens"] is null)
+    {
+        foreach(var (key,name,active) in new[]{("staffA","Test Staff",true),("staffB","Second Staff",true),("trackingA","Test Agent",true),("trackingB","Inactive Agent",false),("historyA","Current history agent one",false),("historyB","Current history agent two",false)})
+        {
+            var credential=new JsonObject{["email"]=Guid.NewGuid().ToString("N")+"@owned-fixture.test",["password"]=Guid.NewGuid().ToString("N")};
+            using var create=await admin.PostAsJsonAsync("/api/agents",new{displayName=name,email=credential["email"]!.GetValue<string>(),password=credential["password"]!.GetValue<string>()});create.EnsureSuccessStatusCode();var dto=await create.Content.ReadFromJsonAsync<JsonElement>();var userId=dto.GetProperty("userId").GetString()!;var referenceId=dto.GetProperty("assignmentReferenceId").GetString()!;
+            if(!active){using var disable=await admin.PutAsJsonAsync($"/api/agents/{userId}/availability",new{isActive=false,version=dto.GetProperty("version").GetString()});disable.EnsureSuccessStatusCode();}
+            manifest["identities"]![key]=credential;references[referenceId]=userId;fixtureRefs[key]=referenceId;
+        }
+    }
+    var tokens=new JsonObject{["admin"]=adminToken};var actors=new JsonObject();
+    foreach(var (key,identity) in new[]{("staffA","staffA"),("staffB","staffB"),("denied","customer")})
+    {using var client=Client();var token=await SignIn(client,manifest["identities"]![identity]!,key);client.DefaultRequestHeaders.Authorization=new("Bearer",token);using var me=await client.GetAsync("/api/auth/me");me.EnsureSuccessStatusCode();var user=await me.Content.ReadFromJsonAsync<JsonElement>();tokens[key]=token;actors[key]=JsonNode.Parse(user.GetRawText());}
+    foreach(var negative in new[]{"expired","wrongAudience"}){
+        var parsed=new JwtSecurityTokenHandler().ReadJwtToken(tokens["staffA"]!.GetValue<string>());if(negative=="expired"){parsed.Payload["nbf"]=DateTimeOffset.UtcNow.AddMinutes(-10).ToUnixTimeSeconds();parsed.Payload["exp"]=DateTimeOffset.UtcNow.AddMinutes(-1).ToUnixTimeSeconds();}else parsed.Payload["aud"]="wrong";
+        tokens[negative]=new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken(new JwtHeader(api.Services.GetRequiredService<SigningCertificateProvider>().Credentials),parsed.Payload));
+    }
+    if(manifest["legacyTicket"] is null){
+        using var scope=api.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<CrmDbContext>();var legacy=new AgentReference{Id=Guid.NewGuid(),Issuer="urn:legacy",Subject="saved-legacy-agent",DisplayName="Saved legacy Agent",IsEligible=false};db.Agents.Add(legacy);
+        var actor=new ActorSnapshot("urn:legacy","saved-actor","Saved legacy actor");var ticket=Ticket.Create("Saved legacy Ticket","Preserved legacy fixture",new(Guid.Parse("00000000-0000-0000-0000-000000000001"),"Uncategorised"),TicketPriority.Normal,actor,DateTimeOffset.UtcNow);ticket.Assign(null,new(legacy.Id,legacy.DisplayName),actor,DateTimeOffset.UtcNow);db.Tickets.Add(ticket);db.History.AddRange(ticket.PendingHistory);await db.SaveChangesAsync();manifest["legacyTicket"]=ticket.Reference;manifest["legacyReference"]=legacy.Id.ToString("D");
+    }
+    if(manifest["agentRefs"] is null)manifest["agentRefs"]=references;if(manifest["fixtureRefs"] is null)manifest["fixtureRefs"]=fixtureRefs;manifest["ticketTokens"]=tokens;manifest["ticketActors"]=actors;manifest["ticketCookies"]=JsonSerializer.SerializeToNode(restoredCookies);await File.WriteAllTextAsync(args[1],manifest.ToJsonString());return 0;
+}
 
 if(args.FirstOrDefault()=="auth-api")
 {
@@ -37,7 +91,7 @@ if(args.FirstOrDefault()=="prepare-local-auth")
     foreach(var kind in new[]{"admin","agent","customer","disabled"})
     {
         var email=kind+"@owned-fixture.test";var password=Guid.NewGuid().ToString("N");identities[kind]=new{email,password};
-        if(kind!="admin")
+        if(kind!="admin"&&!(args.Length>3&&args[3]=="signing-only"))
         {
             var user=new LocalUser{DisplayName=kind,Email=email,UserName=email,AccountRole=kind=="customer"?AccountRole.Customer:AccountRole.Agent,IsActive=kind!="disabled"};
             if(!(await manager.CreateAsync(user,password)).Succeeded)throw new InvalidOperationException("Owned identity preparation failed.");
@@ -47,7 +101,7 @@ if(args.FirstOrDefault()=="prepare-local-auth")
     using var temporary=request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1),DateTimeOffset.UtcNow.AddDays(2));var secret=Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
     using var certificate=X509CertificateLoader.LoadPkcs12(temporary.Export(X509ContentType.Pkcs12,secret),secret,X509KeyStorageFlags.UserKeySet|X509KeyStorageFlags.PersistKeySet);
     using var store=new X509Store(StoreName.My,StoreLocation.CurrentUser);store.Open(OpenFlags.ReadWrite);store.Add(certificate);
-    try {await File.WriteAllTextAsync(args[1],JsonSerializer.Serialize(new{owner=args[2],thumbprint=certificate.Thumbprint,identities}));}
+    try {await File.WriteAllTextAsync(args[1],JsonSerializer.Serialize(new{owner=args[2],thumbprint=certificate.Thumbprint,identities,usersPrepared=!(args.Length>3&&args[3]=="signing-only")}));}
     catch {store.Remove(certificate);using var key=certificate.GetRSAPrivateKey();if(key is RSACng cng&&!cng.Key.IsEphemeral)cng.Key.Delete();throw;}
     return 0;
 }
@@ -105,25 +159,6 @@ if (args.FirstOrDefault() is "signal" or "break")
     SetConsoleCtrlHandler(IntPtr.Zero, true);
     var delivered = GenerateConsoleCtrlEvent(args[0] == "break" ? 1u : 0u, args[0] == "break" ? uint.Parse(args[1]) : 0u); Thread.Sleep(200); FreeConsole(); return delivered ? 0 : 1;
 }
-if (args.FirstOrDefault() == "issuer")
-{
-    var certificate = Certificate();
-    using var rsa = RSA.Create(2048);
-    var key = rsa.ExportParameters(false); var issuer = "https://localhost:7443";
-    string Token(bool allowed, string subject = "launcher-staff", int expiry = 300, string audience = "crm-dev-fixture")
-    {
-        var header = Base64(JsonSerializer.SerializeToUtf8Bytes(new { alg = "RS256", kid = "dev-fixture", typ = "JWT" }));
-        var payload = Base64(JsonSerializer.SerializeToUtf8Bytes(new { iss = issuer, aud = audience, sub = subject, name = "Synthetic Staff", crm_support_queue = allowed ? "shared" : "denied", exp = DateTimeOffset.UtcNow.AddSeconds(expiry).ToUnixTimeSeconds() }));
-        var message = header + "." + payload;
-        return message + "." + Base64(rsa.SignData(System.Text.Encoding.UTF8.GetBytes(message), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1));
-    }
-    File.WriteAllText(args[1], JsonSerializer.Serialize(new { staff = Token(true), denied = Token(false), expired = Token(true, expiry: -600), wrongAudience = Token(true, audience: "wrong") }));
-    var builder = WebApplication.CreateBuilder(); builder.Logging.ClearProviders(); builder.WebHost.ConfigureKestrel(k => k.ListenLocalhost(7443, listen => listen.UseHttps(certificate)));
-    var app = builder.Build();
-    app.MapGet("/.well-known/openid-configuration", () => Results.Json(new { issuer, jwks_uri = issuer + "/jwks" }));
-    app.MapGet("/jwks", () => Results.Json(new { keys = new[] { new { kty = "RSA", use = "sig", alg = "RS256", kid = "dev-fixture", n = Base64(key.Modulus!), e = Base64(key.Exponent!) } } }));
-    app.MapGet("/health", () => "issuer fixture"); app.Run(); return 0;
-}
 // Native tool stand-ins, selected only by the isolated test PATH. Product code knows nothing about these flags.
 var isApi = args.FirstOrDefault() == "watch";
 if (isApi || args.FirstOrDefault()?.EndsWith("npm-cli.js") == true)
@@ -144,7 +179,6 @@ static X509Certificate2 Certificate()
     using var store = new X509Store(StoreName.My, StoreLocation.CurrentUser); store.Open(OpenFlags.ReadOnly);
     return store.Certificates.Cast<X509Certificate2>().Where(c => c.Subject == "CN=localhost" && c.HasPrivateKey && c.NotAfter > DateTime.Now && c.Extensions.Cast<X509Extension>().Any(e => e.Oid?.Value == "1.3.6.1.4.1.311.84.1.1")).OrderByDescending(c => c.NotBefore).First();
 }
-static string Base64(byte[] bytes) => Convert.ToBase64String(bytes).TrimEnd('=').Replace('+','-').Replace('/','_');
 static int ConsoleTests(string launcher, string repo, string shell)
 {
     AllocConsole(); ShowWindow(GetConsoleWindow(), 0);
@@ -153,7 +187,8 @@ static int ConsoleTests(string launcher, string repo, string shell)
     Directory.CreateDirectory(temporary);
     var fixtureRepo = Path.Combine(temporary, "repo with spaces"); var bin = Path.Combine(temporary, "tools with spaces");
     Directory.CreateDirectory(bin); Directory.CreateDirectory(Path.Combine(bin,"node_modules/npm/bin")); File.WriteAllText(Path.Combine(bin,"node_modules/npm/bin/npm-cli.js"), "fixture");
-    foreach (var file in Directory.GetFiles(AppContext.BaseDirectory)) File.Copy(file, Path.Combine(bin,Path.GetFileName(file)), true);
+    foreach (var file in Directory.EnumerateFiles(AppContext.BaseDirectory,"*",SearchOption.AllDirectories))
+    {var destination=Path.Combine(bin,Path.GetRelativePath(AppContext.BaseDirectory,file));Directory.CreateDirectory(Path.GetDirectoryName(destination)!);File.Copy(file,destination,true);}
     File.Copy(Environment.ProcessPath!, Path.Combine(bin,"dotnet.exe")); File.Copy(Environment.ProcessPath!,Path.Combine(bin,"node.exe")); File.WriteAllText(Path.Combine(bin,"npm.cmd"),"@echo fixture");
     Directory.CreateDirectory(Path.Combine(fixtureRepo,"scripts"));
     foreach (var name in new[]{"run-dev.ps1","environment.ps1","DevProcess.cs"}) File.Copy(Path.Combine(repo,"scripts",name),Path.Combine(fixtureRepo,"scripts",name));

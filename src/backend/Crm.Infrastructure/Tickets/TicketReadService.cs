@@ -6,6 +6,7 @@ using Crm.Application.Tickets.Queries;
 using Crm.Domain.Tickets;
 using Crm.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Crm.Domain.Accounts;
 namespace Crm.Infrastructure.Tickets;
 
 public sealed class TicketReadService(CrmDbContext database) : ITicketReadService
@@ -37,7 +38,7 @@ public sealed class TicketReadService(CrmDbContext database) : ITicketReadServic
                           from agent in assignments.DefaultIfEmpty()
                           orderby ticket.UpdatedAtUtc descending, ticket.Reference
                           select new TicketSummaryDto(ticket.Reference, ticket.Subject, new(category.Id, category.DisplayName, category.IsAvailable),
-                              ticket.Priority.ToString(), ticket.Status.ToString(), agent == null ? null : new TicketAgentDto(agent.Id, agent.DisplayName, agent.IsEligible), ticket.UpdatedAtUtc)).ToListAsync(cancellationToken);
+                              ticket.Priority.ToString(), ticket.Status.ToString(), agent == null ? null : new TicketAgentDto(agent.Id, agent.DisplayName, agent.IsEligible&&database.Users.Any(user=>user.Id==agent.LocalUserId&&user.IsActive&&user.AccountRole==AccountRole.Agent)), ticket.UpdatedAtUtc)).ToListAsync(cancellationToken);
         return new(rows.Take(criteria.PageSize).ToArray(), criteria.Page, criteria.PageSize, rows.Count > criteria.PageSize);
     }
     public Task<TicketDetailDto?> GetAsync(string reference, CancellationToken cancellationToken) => DatabaseOperation.RunAsync(() => ReadDetailAsync(reference, cancellationToken));
@@ -50,7 +51,7 @@ public sealed class TicketReadService(CrmDbContext database) : ITicketReadServic
                       where ticket.Reference == reference
                       select new TicketDetailDto(ticket.Reference, ticket.Subject, ticket.Description,
                           new(category.Id, category.DisplayName, category.IsAvailable), ticket.Priority.ToString(), ticket.Status.ToString(),
-                          agent == null ? null : new TicketAgentDto(agent.Id, agent.DisplayName, agent.IsEligible), ticket.CreatedAtUtc, ticket.UpdatedAtUtc,
+                          agent == null ? null : new TicketAgentDto(agent.Id, agent.DisplayName, agent.IsEligible&&database.Users.Any(user=>user.Id==agent.LocalUserId&&user.IsActive&&user.AccountRole==AccountRole.Agent)), ticket.CreatedAtUtc, ticket.UpdatedAtUtc,
                           Convert.ToBase64String(EF.Property<byte[]>(ticket, "RowVersion")))).SingleOrDefaultAsync(cancellationToken);
     }
     public Task<TicketPageDto<TicketHistoryDto>?> GetHistoryAsync(string reference, int page, int pageSize, CancellationToken cancellationToken) => DatabaseOperation.RunAsync(() => ReadHistoryAsync(reference, page, pageSize, cancellationToken));

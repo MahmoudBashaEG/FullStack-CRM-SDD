@@ -5,6 +5,14 @@ import { describe, expect, it, vi } from 'vitest';
 import { SignupPage } from './signup.page';
 import { AuthService } from '../../../core/auth/auth.service';
 describe('Customer signup',()=>{
+  it.each([' \t','\u0085','\u00a0\u202f'])('submits a normalized boundary name after %j',whitespace=>{
+    return (async()=>{const {page,registerCustomer}=setup();page.displayName=whitespace+'😀'.repeat(200)+whitespace;page.email='\ufeffuser@example.test\ufeff';page.password='  عربي password  ';await page.submit();expect(registerCustomer).toHaveBeenCalledWith('😀'.repeat(200),page.email,'  عربي password  ');})();
+  });
+  it.each(['\u0085','\u0085'+'a'.repeat(201)+'\u0085','\ud800'])('rejects invalid normalized names %j',async name=>{const {page,registerCustomer}=setup();page.displayName=name;page.email='user@example.test';page.password='123456789012345';await page.submit();expect(registerCustomer).not.toHaveBeenCalled();});
+  it.each(['  ','\u0085','\u00a0\u202f'])('submits a quoted address intact after trimming %j and still requires explicit signin',async whitespace=>{
+    const {page,registerCustomer,navigate}=setup();page.displayName='Customer';page.email=whitespace+'"multi part"@example.test'+whitespace;page.password='  عربي password  ';await page.submit();
+    expect(registerCustomer).toHaveBeenCalledWith('Customer','"multi part"@example.test','  عربي password  ');expect(navigate).toHaveBeenCalledWith('/auth/signin');
+  });
   function setup(registerCustomer=vi.fn(async():Promise<void>=>undefined)) {
     TestBed.configureTestingModule({imports:[SignupPage],providers:[provideRouter([]),{provide:AuthService,useValue:{registerCustomer}}]});
     const navigate=vi.spyOn(TestBed.inject(Router),'navigateByUrl').mockResolvedValue(true);

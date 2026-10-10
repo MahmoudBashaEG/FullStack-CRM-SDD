@@ -2,6 +2,7 @@ using Crm.Application.Tickets.Contracts;
 using Crm.Application.Tickets.Ports;
 using Crm.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Crm.Domain.Accounts;
 
 namespace Crm.Infrastructure.Tickets;
 
@@ -10,5 +11,5 @@ public sealed class TicketReferenceData(CrmDbContext database) : ITicketReferenc
     public async Task<IReadOnlyList<ReferenceChoice>> GetCategoriesAsync(CancellationToken cancellationToken) =>
         await DatabaseOperation.RunAsync(async () => await database.Categories.AsNoTracking().Where(x => x.IsAvailable).OrderBy(x => x.DisplayName).ThenBy(x => x.Id).Select(x => new ReferenceChoice(x.Id, x.DisplayName)).ToListAsync(cancellationToken));
     public async Task<IReadOnlyList<ReferenceChoice>> GetAgentsAsync(CancellationToken cancellationToken) =>
-        await DatabaseOperation.RunAsync(async () => await database.Agents.AsNoTracking().Where(x => x.IsEligible).OrderBy(x => x.DisplayName).ThenBy(x => x.Id).Select(x => new ReferenceChoice(x.Id, x.DisplayName)).ToListAsync(cancellationToken));
+        await DatabaseOperation.RunAsync(async () => await database.Agents.AsNoTracking().Where(x => x.IsEligible && database.Users.Any(user=>user.Id==x.LocalUserId&&user.IsActive&&user.AccountRole==AccountRole.Agent)).OrderBy(x => x.DisplayName).ThenBy(x => x.Id).Select(x => new ReferenceChoice(x.Id, x.DisplayName)).ToListAsync(cancellationToken));
 }

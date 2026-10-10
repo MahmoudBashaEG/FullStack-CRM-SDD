@@ -1,6 +1,7 @@
 <header><span>Customer Support CRM</span><nav aria-label="Main">
 @if(auth.allowed()){<a routerLink="/tickets">Tickets</a> · <a routerLink="/tickets/new">Create ticket</a> · }
 <a routerLink="/access">Account</a>
+@if(auth.managesAgents()){ · <a routerLink="/agents">Agents</a>}
 @if(auth.authenticated()){<button type="button" [disabled]="signingOut()" (click)="signOut()">Sign out</button>}
 @else{<a routerLink="/auth/signin">Sign in</a>}
 </nav></header>

@@ -1,6 +1,6 @@
 import { test as base, expect, Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-export type LocalRole='admin'|'agent'|'customer'|'disabled';
+export type LocalRole='admin'|'agent'|'customer'|'disabled'|'staffA'|'staffB';
 export interface LocalCredential {email:string;password:string;}
 export const credentials=():Record<LocalRole,LocalCredential>=>{
   if(!process.env.CRM_AUTH_FIXTURE)throw new Error('Owned local-auth fixture required.');

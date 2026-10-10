@@ -29,7 +29,7 @@ describe('App', () => {
     const fixture=TestBed.createComponent(App);fixture.detectChanges();expect(fixture.nativeElement.querySelector('a[href="/tickets"]')).toBeNull();
   });
   it('keeps an explicit signout retry available after an unconfirmed failure',async()=>{
-    TestBed.overrideProvider(AuthService,{useValue:{allowed:()=>false,authenticated:()=>false,signOut:async()=>{throw new Error('Unavailable');}}});
+    TestBed.overrideProvider(AuthService,{useValue:{allowed:()=>false,managesAgents:()=>false,authenticated:()=>false,signOut:async()=>{throw new Error('Unavailable');}}});
     const fixture=TestBed.createComponent(App);await fixture.componentInstance.signOut();fixture.detectChanges();expect(fixture.nativeElement.textContent).toContain('Signout could not be confirmed.');expect(fixture.nativeElement.querySelector('button')?.textContent).toContain('Retry signout');
   });
 });

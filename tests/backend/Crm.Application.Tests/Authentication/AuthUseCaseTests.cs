@@ -6,6 +6,12 @@ namespace Crm.Application.Tests.Authentication;
 
 public sealed class AuthUseCaseTests
 {
+    [Theory] [InlineData(" user@example.test ","user@example.test")] [InlineData("\u0085user@example.test\u0085","user@example.test")] [InlineData("\ufeffuser@example.test\ufeff","\ufeffuser@example.test\ufeff")] [InlineData(" \"multi part\"@example.test ","\"multi part\"@example.test")]
+    public async Task Signin_uses_canonical_email_without_changing_password(string input,string expected)
+    {
+        var port=new Operations();const string password="  exact عربي password  ";var result=await new SignInHandler(port).Handle(new(input,password,null),default);
+        Assert.Equal(expected,port.Email);Assert.Equal(password,port.Password);Assert.Equal("invalid_credentials",result.Error!.Code);
+    }
     private sealed class Operations : IAuthenticationOperations
     {
         public string? Email,Password,Credential;public TrustedAuthentication? Bearer;public int Calls;

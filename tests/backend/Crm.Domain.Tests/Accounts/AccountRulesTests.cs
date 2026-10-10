@@ -3,6 +3,13 @@ namespace Crm.Domain.Tests.Accounts;
 
 public sealed class AccountRulesTests
 {
+    [Theory] [InlineData(" \t")] [InlineData("\u0085")] [InlineData("\u00a0\u202f")]
+    public void Display_name_vectors_count_normalized_scalars(string whitespace)
+    {
+        Assert.True(AccountRules.DisplayNameAccepted(whitespace+string.Concat(Enumerable.Repeat("😀",200))+whitespace));
+        Assert.False(AccountRules.DisplayNameAccepted(whitespace+string.Concat(Enumerable.Repeat("😀",201))+whitespace));Assert.False(AccountRules.DisplayNameAccepted(whitespace));
+        Assert.True(AccountRules.DisplayNameAccepted("\ufeff"));Assert.False(AccountRules.DisplayNameAccepted("\ud800"));
+    }
     [Fact] public void Exactly_three_fixed_roles() => Assert.Equal(["Customer", "Agent", "Admin"], Enum.GetNames<AccountRole>());
     [Theory]
     [InlineData(14, false)] [InlineData(15, true)] [InlineData(128, true)] [InlineData(129, false)]

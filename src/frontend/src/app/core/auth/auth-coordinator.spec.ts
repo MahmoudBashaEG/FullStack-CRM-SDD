@@ -2,6 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { AuthCoordinator } from './auth-coordinator';
 
 describe('single application refresh coordination', () => {
+  it.each([false,true])('retains outstanding transport after invalidation (failure=%s)',async failure=>{
+    const coordinator=new AuthCoordinator();let finish!:(value:number)=>void;let fail!:(error:Error)=>void;let calls=0;
+    const pending=coordinator.run(()=>{calls++;return new Promise<number>((resolve,reject)=>{finish=resolve;fail=reject;});});
+    const result=pending.catch(()=>undefined);coordinator.invalidate();let settled=false;const drain=coordinator.settle().then(()=>settled=true);
+    const joined=coordinator.run(async()=>{calls++;return 2;}).catch(()=>undefined);
+    await Promise.resolve();const settledEarly=settled;
+    if(failure)fail(new Error('late failure'));else finish(1);
+    await Promise.all([result,joined,drain]);expect(settledEarly).toBe(false);expect(calls).toBe(1);
+    expect(await coordinator.run(async()=>3)).toBe(3);
+  });
   it('joins one operation through completion and permits a later fresh operation', async () => {
     const coordinator = new AuthCoordinator(); let calls = 0; let finish!: (value: number) => void;
     const operation = () => { calls++; return new Promise<number>(resolve => finish = resolve); };

@@ -1,6 +1,6 @@
 # Core Ticket Management development and validation
 
-Validated implementation guide, 2026-10-09. Run commands from the repository root in
+Validated implementation guide, 2026-10-10. Run commands from the repository root in
 PowerShell 7. The authoritative behavior is in [the specification](../../specs/001-core-ticket-management/spec.md);
 see [REST](../../specs/001-core-ticket-management/contracts/tickets-rest.md),
 [reference provisioning](../../specs/001-core-ticket-management/contracts/reference-provisioning.md)
@@ -26,9 +26,8 @@ Pop-Location
 ```
 
 If a development HTTPS certificate is missing, create it with `dotnet dev-certs https`;
-trust it for manual browser usage with `dotnet dev-certs https --trust`. Browser automation
-permits the local self-signed API/Angular certificates only in its test configuration.
-Production OIDC metadata and HTTP clients use ordinary TLS certificate validation.
+trust it for manual browser usage with `dotnet dev-certs https --trust`.
+Browser HTTPS, API HTTPS and the development proxy use ordinary TLS certificate validation.
 
 ## One database connection and Windows identity
 
@@ -48,7 +47,7 @@ Testing fixtures and the browser runner keep their explicit, ownership-checked p
 
 ## One-command local startup
 
-Configure the external OIDC prerequisites below and remove all Authentication__Test* settings.
+Configure the shared local authentication prerequisites below and remove all Authentication__Test* settings.
 One-time HTTPS setup: reuse the existing trusted API development certificate for Angular,
 so both browser HTTPS and the secure:true proxy validate it. Exporting a certificate's private
 key is sensitive; perform this deliberate setup only on your own development machine. The
@@ -117,7 +116,7 @@ using the same configured connection and Windows identity.
 Adapt the local instance/catalog before executing. Never supply User ID/Password,
 alternate migration/provisioning connection keys, DB access tokens or impersonation.
 TrustServerCertificate is the approved local self-signed SQL exception; use false when a
-trusted SQL certificate is installed. It does not disable HTTP/OIDC certificate validation.
+trusted SQL certificate is installed. It does not disable HTTP certificate validation.
 
 Database least-privilege separation is intentionally absent. The same Windows identity may
 have schema/DML authority while running the API. Supported application operations keep history
@@ -128,9 +127,9 @@ WindowsConnectionTests verifies the shared identity/configuration through actual
 
 ## Reference provisioning
 
-Use only approved category/agent input matching schema version 1 in the linked contract.
+Use only approved category input matching schema version 1. Nonempty agents input is rejected.
 Keep real input outside version control, for example an ignored .local path. Supply existing
-external issuer/subject identities; no passwords, permissions or account creation fields.
+category IDs and availability; no passwords, permissions or account creation fields.
 
 ```powershell
 $env:CRM_REFERENCE_INPUT = Join-Path $pwd '.local/provisioning.local.json'
@@ -142,7 +141,7 @@ CLI exits before HTTP startup. Exit 0 reports counts only; 2 is invalid invocati
 3 is a database/configuration failure. Repeated identical input is a no-op; omitted records
 remain. Agent identity is immutable. Protected Uncategorised cannot be changed/deactivated
 and has no supported deletion path. References do not rewrite tickets or history. Runtime
-HTTP has no reference provisioning, category/user administration or history edit/delete route.
+HTTP has no category provisioning or history edit/delete route. Admin-only Agent management creates and maintains local assignment identities; it cannot modify legacy references.
 
 ## Automated checks and safe cleanup
 
@@ -164,10 +163,10 @@ npm run e2e --prefix src/frontend
 The browser runner owns API HTTPS 7043 and Angular HTTPS 4200; occupied ports fail rather
 than reusing hosts. It migrates, provisions synthetic data, starts both servers and checks
 `/api/ticket-reference-data/categories`: unauthenticated 401, then signed authorized 200 with
-the available fallback. That readiness endpoint works from the MVP onward. Ephemeral RS256
-tokens exercise real issuer/audience/signature/expiry validation in exact Testing environment.
-The production Angular build excludes the test adapter. Tests use one worker, zero retries
-and no saved auth state, traces, screenshots or videos.
+the available fallback. That readiness endpoint works from the MVP onward. Actual local
+signin and isolated dedicated signing configuration exercise normal JWT/session validation.
+Browser tests use actual signin and HttpOnly cookie restoration, with no injected Angular JWT.
+They use one worker, zero retries, private owned temporary cookie state and no traces/screenshots/videos.
 
 Normal fixture disposal/runner finally removes owned catalogs and private temporary inputs.
 After a hard process interruption, inspect remaining resources first. An E2E catalog can be
@@ -177,40 +176,26 @@ derive ownership from a prefix or drop all matching databases. Integration owner
 by its fixture; absent that evidence, retain the catalog for operator inspection. Stop only
 known test processes if ports remain occupied. Do not delete source data or the development DB.
 
-## Manual external OIDC usage (deployment prerequisite)
+## Shared local CRM authentication
 
-No actual issuer/client/accounts have been supplied for this training project. These steps
-require an external OIDC provider and are not claimed as tested by signed test JWTs.
+Use the dedicated protected RS256 signing-certificate setup in [Feature 002 quickstart](../../specs/002-user-auth-access/quickstart.md), distinct from the HTTPS certificate. Configuration contains Jwt issuer/audience/thumbprint/key-ID references and the trusted frontend Origin, never a private key or password. Windows Data Protection keys remain durable and protected for normal restarts. Remove obsolete external authority/client/discovery settings; the application uses one shared local account/session infrastructure.
 
-1. Register a public SPA authorization-code/PKCE client, HTTPS redirect
-   `https://localhost:4200/auth/callback`, permitted origin and appropriate API access scopes.
-   Configure the API audience and HTTPS authority. Authorized staff must receive stable
-   issuer/subject and `crm_support_queue=shared` in API access tokens; the SPA profile must
-   also include that claim for its convenience guard. Assignment never grants authorization.
-2. Set Authentication__Authority and Authentication__Audience for the API. Remove every
-   Authentication__Test* variable; normal hosts reject them. Set DOTNET_ENVIRONMENT and
-   ASPNETCORE_ENVIRONMENT to Development for local usage, or Production for deployment.
-3. Set public authority/clientId/scope in `src/frontend/src/environments/environment.ts`,
-   keeping redirectPath `/auth/callback` and apiBaseUrl `/api`. Use only values from the
-   registered provider. No SPA secret or SQL string belongs in this file.
-4. Start both normal Development services from the configured repository-root PowerShell 7
-   shell (the launcher sets the environments and HTTPS binding without a generated profile):
+After schema preparation, an installation operator establishes the initial Admin with hidden input:
 
-   ```powershell
-   ./scripts/run-dev.ps1
-   ```
+```powershell
+dotnet run --no-build --no-launch-profile --project src/backend/Crm.Api -- bootstrap-initial-admin
+./scripts/run-dev.ps1
+```
 
-5. The launcher serves the normal frontend on HTTPS 4200 with the development-only
-   `/api/**` proxy to HTTPS 7043; no second terminal or handwritten proxy file is needed.
-   Trust the local certificates for browser and Node proxy verification. Do not use proxy.e2e.json,
-   the e2e adapter or a production certificate-validation bypass for manual OIDC usage.
-   Deployment serves the production bundle and trusted HTTPS certificates at its registered
-   origin; adjust public redirects accordingly. Cross-origin hosting requires the approved
-   API origin and Cors:Origins; tokens are sent only to that configured API origin/path.
-6. Verify actual sign-in/callback, an authorized categories read and a ticket journey with
-   two authorized accounts, and denied/missing access. Verify issuer/audience claims without
-   copying tokens or personal identity data into evidence. Sign-out/session expiry and
-   production IdP interoperability are provider deployment checks, not simulated acceptance.
+Bootstrap is separate from startup. It accepts no default password, password argument or config password; repeated completed setup changes nothing. Automation must explicitly use --input-stdin and an operator-controlled private input pipe. Passwords follow the exact 15–128 Unicode-scalar policy, including spaces.
+
+The frontend runs at https://localhost:4200 and API at https://localhost:7043 with the shared relative /api development proxy. Sign in at /auth/signin. Admins manage Agents at /agents; Agents/Admins share the whole Ticket queue regardless of assignment. Public /auth/signup creates only Customers and requires subsequent explicit signin. Customers and visitors cannot access internal Tickets; only Admins manage Agents. No Customer Portal or external redirect/callback is present.
+
+Angular holds the five-minute access JWT only in memory. Secure HttpOnly refresh cookies rotate through the same-origin HTTPS transport and restore authentication on reload. Server-side account/session checks apply to every protected request. Disablement invalidates existing Agent sessions immediately; re-enable requires fresh signin. One active browser tab per session is supported; concurrent same-instance requests share one refresh.
+
+Active locally managed Agents are assignment choices. Admin/Customer roles alone are not assignable. Saved legacy/inactive references remain readable, retainable and clearable, while new selection requires current eligibility. Historical actor snapshots retain their original identifiers/names; future mutations use the trusted local UserId. Ordinary Ticket network/503 errors require explicit recovery/review without automatic mutation replay; invalid sessions and failed refresh/restoration clear shared authentication state.
+
+See [shared architecture](../architecture/authentication-authorization.md), [Ticket integration evidence](../../specs/002-user-auth-access/validation/ticket-integration.md), [final authentication verification](../../specs/002-user-auth-access/validation/final-validation.md) and [local role/restart reproduction](../../specs/002-user-auth-access/validation/local-development-auth.md) for current behavior. Failed refresh invalidates its generation so delayed expiry responses cannot rotate again; ordinary feature failures still require deliberate recovery without replaying uncertain writes. Historical Feature 001 validation documents describe the earlier implementation and remain unchanged.
 
 Follow [the canonical SC-005 protocol](../../specs/001-core-ticket-management/quickstart.md#repeatable-sc-005-evaluation-protocol)
 only after deployment readiness and automated gates. Preparation and pending status are in
@@ -224,6 +209,8 @@ Launcher, proxy, watch/reload, shutdown and normal JWT fixture results are recor
 [local-development.md](../../specs/001-core-ticket-management/validation/local-development.md).
 Run `pwsh -NoProfile -File tests/scripts/run-dev.tests.ps1` for native lifecycle cases and
 `pwsh -NoProfile -File tests/scripts/run-dev.integration.ps1` (optionally `-InitialSchema`)
-for real launcher/owned SQL/proxy/normal-JWT checks. The latter issues tokens privately to an
-HTTP client using an external test discovery/JWKS fixture; it does not simulate SPA PKCE sign-in,
-inject browser tokens or use the Testing adapter. Real external-provider sign-in remains pending.
+for real launcher/owned SQL/proxy/local-auth checks. The latter performs operator-only Admin
+bootstrap with private stdin credentials, actual local HTTP signin and rotating-cookie proxy
+verification. It creates Agents through real Admin APIs and exercises the complete Ticket
+lifecycle. Both fresh-schema and older-schema runs retain migration, watch/reload, secure TLS,
+repeat-start and owned-process cleanup checks; no external issuer or token-injection adapter remains.

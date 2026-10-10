@@ -27,10 +27,13 @@ public sealed class MigrationEnvironmentBoundaryTests
         Assert.True(options.TokenValidationParameters.ValidateIssuer); Assert.True(options.TokenValidationParameters.ValidateAudience);
         Assert.True(options.TokenValidationParameters.ValidateLifetime);
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/ticket-reference-data/categories")).StatusCode);
+        // A genuine JWT issued from an updated isolated schema must still fail closed
+        // against this unmigrated host: local account/session validation requires schema.
+        await using var credentials=await MigrationStartupFixture.CreateAsync(StartupSchema.Current);jwt.Bind(credentials.Connection);
         client.DefaultRequestHeaders.Authorization = new("Bearer", jwt.Token());
-        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/ticket-reference-data/categories")).StatusCode);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, (await client.GetAsync("/api/ticket-reference-data/categories")).StatusCode);
         client.DefaultRequestHeaders.Authorization = new("Bearer", jwt.Token(allowed: false));
-        Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/api/ticket-reference-data/categories")).StatusCode);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, (await client.GetAsync("/api/ticket-reference-data/categories")).StatusCode);
         Assert.DoesNotContain(api.Probe.Commands, MigrationStartupProbe.IsMigrationWrite);
         Assert.Equal([MigrationStartupFixture.InitialMigration], await sql.AppliedMigrationsAsync());
         Assert.Equal(0, await sql.ObjectExistsAsync("dbo.TicketSubjectContainsLiteral"));
@@ -75,7 +78,7 @@ public sealed class MigrationEnvironmentBoundaryTests
             Assert.Equal(0, await sql.ObjectExistsAsync("dbo.TicketSubjectContainsLiteral"));
             AssertSourcesUnchanged(sources);
             await context.Database.MigrateAsync(); // Explicit tooling-equivalent operation, not host startup.
-            Assert.Equal([MigrationStartupFixture.InitialMigration, MigrationStartupFixture.SearchMigration], await sql.AppliedMigrationsAsync());
+            Assert.Equal(MigrationStartupFixture.CurrentMigrations, await sql.AppliedMigrationsAsync());
             Assert.Equal(1, await sql.ObjectExistsAsync("dbo.TicketSubjectContainsLiteral"));
             AssertSourcesUnchanged(sources);
         }

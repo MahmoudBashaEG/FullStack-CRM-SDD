@@ -30,9 +30,12 @@ try{
   if(JSON.parse(bootstrap.stdout.toString()).status!=='created')throw new Error('Real bootstrap did not create the initial Admin.');
   env.Jwt__SigningCertificateThumbprint=env.Jwt__SigningKeyId=setup.thumbprint;env.Jwt__CertificateStoreLocation='CurrentUser';env.Jwt__Issuer='urn:crm:local';env.Jwt__Audience='crm-api';
   env.CRM_AUTH_FIXTURE=manifest;env.DataProtection__KeyDirectory=join(directory,'data-protection');
+  run('dotnet',[fixture,'ticket-auth',manifest]);
+  const ticketSetup=JSON.parse(readFileSync(manifest,'utf8'));
+  for(const [mode,first,second] of [['SeedTracking','trackingA','trackingB'],['SeedHistory','historyA','historyB']])
+    run('pwsh',['-NoProfile','-File','scripts/e2e-database.ps1','-Mode',mode,'-Owner',owner,'-AgentOne',ticketSetup.fixtureRefs[first],'-AgentTwo',ticketSetup.fixtureRefs[second]]);
   const selection=process.argv.slice(2);
-  // Full discovery remains the default; this checkpoint explicitly selects auth specs.
-  // Existing Ticket fixture adaptation is still T111, never silently excluded here.
+  // Full discovery is the default. Any scoped rerun must be explicitly selected.
   run(process.execPath,['node_modules/@playwright/test/cli.js','test',...selection],frontend);
 }catch(error){console.error(error.message);exitCode=1;}
 finally{

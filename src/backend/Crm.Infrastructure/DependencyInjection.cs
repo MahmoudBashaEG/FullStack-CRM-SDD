@@ -26,6 +26,7 @@ public static class DependencyInjection
         services.AddScoped<IRefreshSessionReader>(provider=>provider.GetRequiredService<AuthenticationSessionStore>());
         services.AddScoped<IInitialAdminBootstrapStore, InitialAdminBootstrapper>();
         services.AddScoped<IAccountRegistrationStore, CustomerRegistrationStore>();
+        services.AddScoped<IAgentAccountStore, AgentAccountStore>();
         services.TryAddSingleton(TimeProvider.System);
         // Lazy factories keep installation/design-time persistence independent of HTTP signing setup.
         services.AddSingleton(_ => JwtOptions.Load(configuration));

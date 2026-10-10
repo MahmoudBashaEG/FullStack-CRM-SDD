@@ -3,8 +3,17 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { AuthService } from './auth.service';
+import { HttpErrorResponse } from '@angular/common/http';
 
 describe('local auth state and restoration', () => {
+  it.each(['\ufeffuser@example.test','\ufeffuser@example.test\ufeff','\u0085"multi part"@example.test\u0085'])('signin preserves the canonical identifier %j and publishes its own stable identity',async input=>{
+    const canonical=input.replace(/^\p{White_Space}+|\p{White_Space}+$/gu,'');const expectedId='20000000-0000-0000-0000-000000000002';
+    const pending=auth.signIn(input,'  exact password  ');for(let i=0;i<8;i++)await Promise.resolve();http.expectOne('/api/auth/csrf').flush({requestToken:'csrf'});for(let i=0;i<8;i++)await Promise.resolve();
+    const signin=http.expectOne('/api/auth/signin');const sent=signin.request.body.email;expect(signin.request.body.password).toBe('  exact password  ');signin.flush(envelope);
+    for(let i=0;i<8;i++)await Promise.resolve();http.expectOne('/api/auth/me').flush({...identity,userId:sent===canonical?expectedId:identity.userId,role:'Customer'});
+    for(let i=0;i<8;i++)await Promise.resolve();http.expectOne('/api/auth/csrf').flush({requestToken:'next'});await pending;
+    expect(sent).toBe(canonical);expect(auth.identity()?.userId).toBe(expectedId);
+  });
   let auth: AuthService; let http: HttpTestingController;
   const identity = { userId: '10000000-0000-0000-0000-000000000001', displayName: 'Admin', role: 'Admin' };
   const envelope = { accessToken: 'private-memory-token', tokenType: 'Bearer', expiresAtUtc: new Date(Date.now() + 300000).toISOString() };
@@ -17,6 +26,29 @@ describe('local auth state and restoration', () => {
     const me = http.expectOne('/api/auth/me'); expect(me.request.headers.get('Authorization')).toBe('Bearer private-memory-token'); me.flush(identity);
     await Promise.all([first, second]);
   }
+  it.each([200,503,0])('drains invalidated refresh before newer signin, including late %i results',async status=>{
+    await restore();const old=auth.refresh();const waiter=auth.refresh();const rejected=Promise.all([expect(old).rejects.toBeDefined(),expect(waiter).rejects.toBeDefined()]);await Promise.resolve();const pending=http.expectOne('/api/auth/refresh');
+    auth.loseAuthentication(new HttpErrorResponse({status:401}));const signin=auth.signIn('next@example.test','  exact password  ');
+    for(let i=0;i<15;i++)await Promise.resolve();const early=http.match('/api/auth/signin');
+    if(status===200)pending.flush({...envelope,accessToken:'late-old'});else if(status===0)pending.error(new ProgressEvent('error'));else pending.flush({code:'service_unavailable'},{status,statusText:'Unavailable'});
+    await rejected;for(let i=0;i<15;i++)await Promise.resolve();const request=early[0]??http.expectOne('/api/auth/signin');request.flush({...envelope,accessToken:'new-session'});
+    for(let i=0;i<5;i++)await Promise.resolve();http.expectOne('/api/auth/me').flush({...identity,displayName:'New session',role:'Customer'});
+    for(let i=0;i<5;i++)await Promise.resolve();http.expectOne('/api/auth/csrf').flush({requestToken:'new-csrf'});await signin;
+    expect(early).toHaveLength(0);expect(auth.accessToken()).toBe('new-session');expect(auth.identity()?.displayName).toBe('New session');expect(auth.status()).toBe('authenticated');http.expectNone('/api/auth/me');
+  });
+  it('drains refresh after invalidation before signout and permits later explicit recovery',async()=>{
+    await restore();const pendingOperation=auth.refresh();const rejected=expect(pendingOperation).rejects.toBeDefined();await Promise.resolve();const pending=http.expectOne('/api/auth/refresh');auth.loseAuthentication(new HttpErrorResponse({status:401}));const signout=auth.signOut();
+    for(let i=0;i<15;i++)await Promise.resolve();const early=http.match('/api/auth/signout');pending.flush(envelope);await rejected;for(let i=0;i<15;i++)await Promise.resolve();(early[0]??http.expectOne('/api/auth/signout')).flush(null,{status:204,statusText:'No Content'});
+    for(let i=0;i<5;i++)await Promise.resolve();http.expectOne('/api/auth/csrf').flush({requestToken:'next'});await signout;expect(early).toHaveLength(0);expect(auth.authenticated()).toBe(false);
+    const recovery=auth.refresh();await Promise.resolve();http.expectOne('/api/auth/refresh').flush({...envelope,accessToken:'recovered'});await Promise.resolve();await Promise.resolve();http.expectOne('/api/auth/me').flush(identity);await recovery;expect(auth.accessToken()).toBe('recovered');
+  });
+  it('explicit recovery during invalidated transport joins it without starting another rotation',async()=>{
+    await restore();const first=auth.refresh();const firstRejected=expect(first).rejects.toBeDefined();await Promise.resolve();const pending=http.expectOne('/api/auth/refresh');
+    auth.loseAuthentication(new HttpErrorResponse({status:401}));const recovery=auth.refresh();const recoveryRejected=expect(recovery).rejects.toBeDefined();
+    for(let i=0;i<8;i++)await Promise.resolve();http.expectNone('/api/auth/refresh');pending.flush({...envelope,accessToken:'stale'});
+    await Promise.all([firstRejected,recoveryRejected]);expect(auth.accessToken()).toBeNull();expect(auth.identity()).toBeNull();http.expectNone('/api/auth/me');
+    const fresh=auth.refresh();await Promise.resolve();http.expectOne('/api/auth/refresh').flush({...envelope,accessToken:'fresh'});await Promise.resolve();await Promise.resolve();http.expectOne('/api/auth/me').flush(identity);await fresh;expect(auth.accessToken()).toBe('fresh');
+  });
   it('restores identity and joins refresh only until identity is published', async () => {
     expect(auth.authenticated()).toBe(false); await restore(); expect(auth.authenticated()).toBe(true); expect(auth.allowed()).toBe(true); expect(auth.accessToken()).toBe(envelope.accessToken);
     expect(localStorage.getItem('accessToken')).toBeNull(); expect(sessionStorage.getItem('accessToken')).toBeNull();
@@ -31,6 +63,14 @@ describe('local auth state and restoration', () => {
     http.expectOne('/api/auth/refresh').flush(envelope); await Promise.resolve(); await Promise.resolve();
     http.expectOne('/api/auth/me').flush({code:'authentication_invalid'},{status:401,statusText:'Unauthorized'}); await initialization;
     expect(auth.accessToken()).toBeNull(); expect(auth.authenticated()).toBe(false);
+  });
+  it.each([503,0])('rejects a late old-token expiry after a failed %i refresh without another rotation',async status=>{
+    await restore();const generation=auth.generation();const failed=auth.renewAfterExpiry(envelope.accessToken,generation);const rejection=expect(failed).rejects.toBeDefined();await Promise.resolve();
+    const pending=http.expectOne('/api/auth/refresh');if(status===0)pending.error(new ProgressEvent('error'));else pending.flush({code:'service_unavailable'},{status,statusText:'Unavailable'});await rejection;
+    const late=auth.renewAfterExpiry(envelope.accessToken,generation);const lateRejection=expect(late).rejects.toBeDefined();await Promise.resolve();await Promise.resolve();
+    // Drain an unexpected request so the failing-first run is a precise behavioral failure.
+    const repeated=http.match('/api/auth/refresh');for(const request of repeated)request.flush({code:'service_unavailable'},{status:503,statusText:'Unavailable'});await lateRejection;
+    expect(repeated).toHaveLength(0);expect(auth.accessToken()).toBeNull();expect(auth.identity()).toBeNull();expect(auth.status()).toBe('unavailable');
   });
   it('ignores a late refresh completion after successful signout', async () => {
     await restore(); const refresh = auth.refresh(); const rejection = expect(refresh).rejects.toBeDefined(); await Promise.resolve(); const pending = http.expectOne('/api/auth/refresh');

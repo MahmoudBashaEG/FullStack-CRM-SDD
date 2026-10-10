@@ -6,6 +6,8 @@ export class AuthCoordinator {
     const shared = operation().finally(() => { if (this.flight === shared) this.flight = null; });
     this.flight = shared; return shared;
   }
-  invalidate(): void { this.generation++; this.flight = null; }
+  // Reject stale memory state immediately, but drain the transport before another
+  // cookie transition: generation checks cannot undo a browser-applied Set-Cookie.
+  invalidate(): void { this.generation++; }
   settle():Promise<void> { return this.flight ? this.flight.then(()=>undefined,()=>undefined) : Promise.resolve(); }
 }

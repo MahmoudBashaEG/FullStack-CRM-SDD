@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { AuthStatus, CrmIdentity, TokenEnvelope } from './auth.models';
 import { AuthCoordinator } from './auth-coordinator';
 import { AuthTransport } from './auth.transport';
+import { trimAccountWhitespace } from './account-validation';
 
 @Injectable({providedIn:'root'})
 export class AuthService {
@@ -11,6 +12,7 @@ export class AuthService {
   readonly identity = signal<CrmIdentity | null>(null);
   readonly authenticated = computed(() => this.status() === 'authenticated' && this.identity() !== null);
   readonly allowed = computed(() => this.authenticated() && ['Agent','Admin'].includes(this.identity()!.role));
+  readonly managesAgents = computed(() => this.authenticated() && this.identity()!.role==='Admin');
   private token: string | null = null;
   private csrf: string | null = null;
   private readonly coordinator = new AuthCoordinator();
@@ -58,7 +60,12 @@ export class AuthService {
         const identity=await this.transport.me(envelope.accessToken);this.current(generation);this.validate(envelope,identity);
         this.token=envelope.accessToken;this.identity.set(identity);this.status.set('authenticated');this.ready.set(true);return this.token;
       } catch(error) {
-        if(generation===this.generation()) this.clear(error instanceof HttpErrorResponse && error.status===401 ? 'anonymous':'unavailable');
+        if(generation===this.generation()) {
+          // Delayed expiry responses from this failed credential generation must
+          // not start another automatic refresh after the shared flight ends.
+          this.coordinator.invalidate();
+          this.clear(error instanceof HttpErrorResponse && error.status===401 ? 'anonymous':'unavailable');
+        }
         throw error;
       }
     });
@@ -79,7 +86,7 @@ export class AuthService {
     const previous={token:this.token,identity:this.identity(),status:this.status()};let issued=false;
     try {
       const csrf=await this.requestToken(generation);
-      const envelope=await this.transport.signIn(email?.trim() ?? '',password ?? '',csrf);issued=true;this.current(generation);this.validateEnvelope(envelope);
+      const envelope=await this.transport.signIn(trimAccountWhitespace(email ?? ''),password ?? '',csrf);issued=true;this.current(generation);this.validateEnvelope(envelope);
       const identity=await this.transport.me(envelope.accessToken);this.current(generation);this.validate(envelope,identity);
       this.csrf=null;await this.requestToken(generation);this.current(generation);
       this.token=envelope.accessToken;this.identity.set(identity);this.status.set('authenticated');this.ready.set(true);

@@ -1,7 +1,9 @@
-import { test, expect, tokens } from '../fixtures/auth';
+import { restoreTicketIdentity,closeTicketContext } from '../fixtures/ticket-local.fixture';
+import { actorId,fixtureReference,createAgentReference } from '../fixtures/ticket-local.fixture';
+import { test, expect, tokens, navigateTicket } from '../fixtures/auth';
 
 test('keyboard-only creation preserves Arabic/English text and exposes visible focus', async ({ page }) => {
-  await page.goto('/tickets/new');
+  await navigateTicket(page,'/tickets/new');
   const subject = page.getByLabel('Subject', { exact: true });
   for (let index = 0; index < 12 && !(await subject.evaluate(element => element === document.activeElement)); index++) await page.keyboard.press('Tab');
   await expect(subject).toBeFocused();
@@ -26,14 +28,14 @@ test('keyboard-only creation preserves Arabic/English text and exposes visible f
 
 for (const direction of ['ltr', 'rtl'] as const) {
   test(`narrow ${direction} pages retain content and controls without document overflow; branding is configurable`, async ({ page, request }) => {
-    await page.addInitScript(dir => { document.addEventListener('DOMContentLoaded', () => { document.documentElement.dir = dir; }); }, direction);
+    await page.evaluate(dir => { document.documentElement.dir = dir; }, direction);
     const subject = 'بلاغ'.repeat(100) + 'English'.repeat(30);
     const created = await request.post('/api/tickets', { data: { subject, description: 'نص طويل محفوظ\nEnglish description' }, headers: { Authorization: `Bearer ${tokens().staffA}` } });
     expect(created.status()).toBe(201); const ticket = await created.json();
     for (const width of [320, 375, 768]) {
       await page.setViewportSize({ width, height: 900 });
       for (const route of ['/tickets/new', `/tickets/${ticket.reference}`, '/tickets']) {
-        await page.goto(route);
+        await navigateTicket(page,route);
         await expect(page.locator('html')).toHaveAttribute('dir', direction);
         if (route.endsWith(ticket.reference)) await expect(page.getByText('Created — revision 1')).toBeVisible();
         else if (route === '/tickets/new') await expect(page.getByRole('button', { name: 'Create ticket', exact: true })).toBeEnabled();

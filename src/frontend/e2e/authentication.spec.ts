@@ -35,7 +35,7 @@ test('real five-minute expiry coalesces concurrent same-page protected requests'
   let refreshes=0;let expired=0;page.on('request',request=>{if(request.url().endsWith('/api/auth/refresh'))refreshes++;});page.on('response',response=>{if(response.status()===401&&(response.url().includes('/api/tickets')||response.url().includes('/api/ticket-reference-data/')))expired++;});
   // Wait for the real server JWT lifetime; no shortened lifetime, forged token or clock bypass.
   await page.waitForTimeout(Math.max(0,Date.parse(envelope.expiresAtUtc)-Date.now()+1200));
-  await page.getByRole('link',{name:'Tickets',exact:true}).click();await expect(page.getByText('No tickets match these filters.')).toBeVisible();await expect(page.getByRole('alert')).toHaveCount(0);expect(expired).toBeGreaterThanOrEqual(2);expect(refreshes).toBe(1);
+  await page.getByRole('link',{name:'Tickets',exact:true}).click();await expect(page.locator('tbody tr')).toHaveCount(25);await expect(page.getByRole('alert')).toHaveCount(0);expect(expired).toBeGreaterThanOrEqual(2);expect(refreshes).toBe(1);
 });
 test('strict local development proxy preserves auth transport and revocation',async()=>{
   const result=spawnSync(process.execPath,[resolve('../../tests/scripts/local-auth-proxy.tests.mjs')],{env:process.env,stdio:'inherit'});expect(result.status).toBe(0);

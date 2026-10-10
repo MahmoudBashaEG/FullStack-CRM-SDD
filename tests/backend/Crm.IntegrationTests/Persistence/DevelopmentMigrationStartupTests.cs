@@ -11,7 +11,7 @@ namespace Crm.IntegrationTests.Persistence;
 [Collection("SQL")]
 public sealed class DevelopmentMigrationStartupTests
 {
-    private static readonly string[] ExpectedMigrations = [MigrationStartupFixture.InitialMigration, MigrationStartupFixture.SearchMigration];
+    private static readonly string[] ExpectedMigrations = MigrationStartupFixture.CurrentMigrations;
 
     [Theory]
     [InlineData(StartupSchema.Fresh)] [InlineData(StartupSchema.InitialStorage)] [InlineData(StartupSchema.Current)]
@@ -65,7 +65,7 @@ public sealed class DevelopmentMigrationStartupTests
             // Signature validation is real; the fixture never installs an always-successful scheme.
             client.DefaultRequestHeaders.Authorization = new("Bearer", jwt.Token(expired: true));
             Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/ticket-reference-data/categories")).StatusCode);
-            using var wrongSigner = new TestJwtFactory(); client.DefaultRequestHeaders.Authorization = new("Bearer", wrongSigner.Token());
+            using var wrongSigner = new TestJwtFactory(); wrongSigner.Bind(sql.Connection); client.DefaultRequestHeaders.Authorization = new("Bearer", wrongSigner.Token());
             Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/ticket-reference-data/categories")).StatusCode);
             Assert.Equal(ExpectedMigrations, await sql.AppliedMigrationsAsync()); Assert.Equal(before, await DataSnapshotAsync(sql));
             AssertSourcesUnchanged(sources);
@@ -134,7 +134,7 @@ public sealed class DevelopmentMigrationStartupTests
         { ticket.Reference, ticket.Subject, ticket.Description, ticket.CategoryId, ticket.Priority, ticket.Status, ticket.AssignedAgentId, ticket.CreatedAtUtc, ticket.UpdatedAtUtc, ticket.Revision, Version = EF.Property<byte[]>(ticket, "RowVersion") }).ToListAsync();
         var histories = await context.History.AsNoTracking().OrderBy(entry => entry.Id).ToListAsync();
         var categories = await context.Categories.AsNoTracking().OrderBy(category => category.Id).ToListAsync();
-        var agents = await context.Agents.AsNoTracking().OrderBy(agent => agent.Id).ToListAsync();
+        var agents = await context.Agents.AsNoTracking().OrderBy(agent => agent.Id).Select(agent=>new{agent.Id,agent.Issuer,agent.Subject,agent.DisplayName,agent.IsEligible}).ToListAsync();
         return Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new { tickets, histories, categories, agents })));
     }
 }

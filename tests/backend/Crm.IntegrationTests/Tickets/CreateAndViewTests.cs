@@ -43,7 +43,7 @@ public sealed class CreateAndViewTests(SqlServerFixture sql)
         var history = JsonDocument.Parse(await client.GetStringAsync($"/api/tickets/{reference}/history")).RootElement;
         var entry = Assert.Single(history.GetProperty("items").EnumerateArray());
         Assert.Equal("Created", entry.GetProperty("kind").GetString()); Assert.Equal("1", entry.GetProperty("revision").GetString()); Assert.Equal(1, entry.GetProperty("sequence").GetInt32());
-        Assert.Equal("staff-a", entry.GetProperty("actor").GetProperty("subject").GetString());
+        Assert.Equal(jwt.UserId().ToString("D"), entry.GetProperty("actor").GetProperty("subject").GetString());
         Assert.Equal(JsonValueKind.Null, entry.GetProperty("previousValue").ValueKind);
         Assert.Equal("مشكلة <script>", entry.GetProperty("newValue").GetProperty("subject").GetString());
         Assert.Equal(reference, entry.GetProperty("newValue").GetProperty("reference").GetString());

@@ -4,10 +4,13 @@ using Crm.Application.Tickets.Ports;
 using Crm.Domain.Tickets;
 using Crm.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Crm.Domain.Accounts;
 namespace Crm.Infrastructure.Tickets;
 
 public sealed class TicketMutationStore(CrmDbContext database) : ITicketMutationStore
 {
+    private Task<bool> EligibleAsync(AgentReference agent,CancellationToken ct)=>agent.IsEligible&&agent.LocalUserId.HasValue
+        ?database.Users.AsNoTracking().AnyAsync(user=>user.Id==agent.LocalUserId&&user.IsActive&&user.AccountRole==AccountRole.Agent,ct):Task.FromResult(false);
     public Task<OperationResult<TicketDetailDto>> MutateAsync(string reference, byte[] expectedVersion, Func<TicketMutationContext, CancellationToken, Task<Failure?>> mutation, CancellationToken cancellationToken) => DatabaseOperation.RunAsync(() => MutateCoreAsync(reference, expectedVersion, mutation, cancellationToken));
     private async Task<OperationResult<TicketDetailDto>> MutateCoreAsync(string reference, byte[] expectedVersion, Func<TicketMutationContext, CancellationToken, Task<Failure?>> mutation, CancellationToken token)
     {
@@ -21,9 +24,11 @@ public sealed class TicketMutationStore(CrmDbContext database) : ITicketMutation
             var category = await database.Categories.SingleAsync(x => x.Id == ticket.CategoryId, token);
             var agent = ticket.AssignedAgentId is null ? null : await database.Agents.SingleAsync(x => x.Id == ticket.AssignedAgentId, token);
             var revision = ticket.Revision;
-            var scope = new TicketMutationContext(ticket, new(category.Id, category.DisplayName, category.IsAvailable), agent is null ? null : new(agent.Id, agent.DisplayName, agent.IsEligible),
+            var scope = new TicketMutationContext(ticket, new(category.Id, category.DisplayName, category.IsAvailable), agent is null ? null : new(agent.Id, agent.DisplayName, await EligibleAsync(agent,token)),
                 async (id, ct) => { var selected = await database.Categories.FromSqlInterpolated($"SELECT * FROM dbo.CategoryReferences WITH (HOLDLOCK) WHERE Id={id}").SingleOrDefaultAsync(ct); return selected is null ? null : new(selected.Id, selected.DisplayName, selected.IsAvailable); },
-                async (id, ct) => { var selected = await database.Agents.FromSqlInterpolated($"SELECT * FROM dbo.AgentReferences WITH (HOLDLOCK) WHERE Id={id}").SingleOrDefaultAsync(ct); return selected is null ? null : new(selected.Id, selected.DisplayName, selected.IsEligible); });
+                // An update lock excludes account writers at their reference-lock step,
+                // before their user UPDATE can block this transaction's eligibility read.
+                async (id, ct) => { var selected = await database.Agents.FromSqlInterpolated($"SELECT * FROM dbo.AgentReferences WITH (UPDLOCK,HOLDLOCK) WHERE Id={id}").SingleOrDefaultAsync(ct); return selected is null ? null : new(selected.Id, selected.DisplayName, await EligibleAsync(selected,ct)); });
             var failure = await mutation(scope, token);
             if (failure is not null) return new(null, failure);
             if (ticket.Revision != revision)
@@ -35,7 +40,7 @@ public sealed class TicketMutationStore(CrmDbContext database) : ITicketMutation
             category = database.Categories.Local.Single(x => x.Id == ticket.CategoryId);
             agent = ticket.AssignedAgentId is null ? null : database.Agents.Local.Single(x => x.Id == ticket.AssignedAgentId);
             var detail = new TicketDetailDto(ticket.Reference, ticket.Subject, ticket.Description, new(category.Id, category.DisplayName, category.IsAvailable), ticket.Priority.ToString(), ticket.Status.ToString(),
-                agent is null ? null : new(agent.Id, agent.DisplayName, agent.IsEligible), ticket.CreatedAtUtc, ticket.UpdatedAtUtc, Convert.ToBase64String(database.Entry(ticket).Property<byte[]>("RowVersion").CurrentValue!));
+                agent is null ? null : new(agent.Id, agent.DisplayName, await EligibleAsync(agent,token)), ticket.CreatedAtUtc, ticket.UpdatedAtUtc, Convert.ToBase64String(database.Entry(ticket).Property<byte[]>("RowVersion").CurrentValue!));
             await transaction.CommitAsync(token); ticket.AcknowledgePersistedHistory(); return OperationResult<TicketDetailDto>.Success(detail);
         }
         catch

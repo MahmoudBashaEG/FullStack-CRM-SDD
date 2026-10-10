@@ -13,10 +13,12 @@ namespace Crm.IntegrationTests.Tickets;
 [Collection("SQL")]
 public sealed class EditAssignmentConcurrencyTests(SqlServerFixture sql)
 {
-    private async Task Provision(Guid category, Guid agent, bool active, string label = "Snapshot")
+    private async Task<Guid> Provision(Guid category, Guid agent, bool active, string label = "Snapshot")
     {
-        var input = JsonSerializer.Serialize(new { schemaVersion = 1, categories = new[] { new { id = category, displayName = label, isAvailable = active } }, agents = new[] { new { id = agent, issuer = "https://example.test", subject = agent.ToString(), displayName = label + " agent", isEligible = active } } });
+        var input = JsonSerializer.Serialize(new { schemaVersion = 1, categories = new[] { new { id = category, displayName = label, isAvailable = active } } });
         Assert.Equal(0, (await ReferenceProvisioningTests.RunCliAsync(sql.Connection, input)).Exit);
+        await using var db=sql.OpenContext();if(await db.Agents.AnyAsync(x=>x.Id==agent)){await LocalAgentFixture.UpdateAsync(sql.Connection,agent,label+" agent",active);return agent;}
+        return await LocalAgentFixture.CreateAsync(sql.Connection,label+" agent",active);
     }
     private static async Task<JsonElement> Body(HttpResponseMessage response) => JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement.Clone();
     private static async Task<JsonElement> Create(HttpClient client) => await Body(await client.PostAsJsonAsync("/api/tickets", new { subject = "Edit test", description = "Original description" }));
@@ -40,7 +42,7 @@ public sealed class EditAssignmentConcurrencyTests(SqlServerFixture sql)
         var reference = original.GetProperty("reference").GetString();
         var history = await Body(await client.GetAsync($"/api/tickets/{reference}/history")); var entries = history.GetProperty("items").EnumerateArray().ToArray(); Assert.Equal(4, entries.Length);
         Assert.Equal(new[] { "subject", "description", "priority" }, entries.Skip(1).Select(x => x.GetProperty("field").GetString()));
-        Assert.All(entries.Skip(1), x => { Assert.Equal("2", x.GetProperty("revision").GetString()); Assert.Equal("DetailsChanged", x.GetProperty("kind").GetString()); Assert.Equal("staff-a", x.GetProperty("actor").GetProperty("subject").GetString()); Assert.Equal(JsonValueKind.String, x.GetProperty("newValue").ValueKind); });
+        Assert.All(entries.Skip(1), x => { Assert.Equal("2", x.GetProperty("revision").GetString()); Assert.Equal("DetailsChanged", x.GetProperty("kind").GetString()); Assert.Equal(jwt.UserId().ToString("D"), x.GetProperty("actor").GetProperty("subject").GetString()); Assert.Equal(JsonValueKind.String, x.GetProperty("newValue").ValueKind); });
         var noop = await Patch(client, changed, new { expectedVersion = changed.GetProperty("editVersion").GetString(), subject = " Changed " }); Assert.Equal(HttpStatusCode.OK, noop.StatusCode);
         var same = await Body(noop); Assert.Equal(changed.GetProperty("editVersion").GetString(), same.GetProperty("editVersion").GetString()); Assert.Equal(changed.GetProperty("updatedAtUtc").GetString(), same.GetProperty("updatedAtUtc").GetString());
         var stale = await Patch(client, original, new { expectedVersion = version, subject = "Changed" }); Assert.Equal(HttpStatusCode.Conflict, stale.StatusCode); Assert.Equal("ticket_changed", (await Body(stale)).GetProperty("code").GetString());
@@ -85,7 +87,7 @@ public sealed class EditAssignmentConcurrencyTests(SqlServerFixture sql)
     [Fact]
     public async Task Inactivation_keeps_versions_history_and_retained_references_but_rejects_new_selections()
     {
-        var category = Guid.NewGuid(); var agent = Guid.NewGuid(); await Provision(category, agent, true);
+        var category = Guid.NewGuid(); var agent = Guid.NewGuid(); agent=await Provision(category, agent, true);
         using var jwt = new TestJwtFactory(); await using var api = new CrmApiFactory(sql, jwt); using var client = api.CreateClient(); client.DefaultRequestHeaders.Authorization = new("Bearer", jwt.Token());
         var ticket = await Body(await client.PostAsJsonAsync("/api/tickets", new { subject = "S", description = "D", categoryId = category })); var reference = ticket.GetProperty("reference").GetString();
         async Task<HttpResponseMessage> Assign(JsonElement current, Guid? id) => await client.PutAsJsonAsync($"/api/tickets/{reference}/assignment", new { expectedVersion = current.GetProperty("editVersion").GetString(), agentId = id });
@@ -140,7 +142,7 @@ public sealed class EditAssignmentConcurrencyTests(SqlServerFixture sql)
     [InlineData(false)] [InlineData(true)]
     public async Task New_selection_lock_serializes_provisioning_and_keeps_event_label_snapshot(bool assignment)
     {
-        var category = Guid.NewGuid(); var agent = Guid.NewGuid(); await Provision(category, agent, true);
+        var category = Guid.NewGuid(); var agent = Guid.NewGuid(); agent=await Provision(category, agent, true);
         using var jwt = new TestJwtFactory(); await using var api = new CrmApiFactory(sql, jwt); using var client = api.CreateClient(); client.DefaultRequestHeaders.Authorization = new("Bearer", jwt.Token()); var ticket = await Create(client);
         await using var database = sql.OpenContext(); await using var provisioning = sql.OpenContext(); var selected = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously); var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
@@ -154,7 +156,7 @@ public sealed class EditAssignmentConcurrencyTests(SqlServerFixture sql)
             return null;
         }, deadline.Token);
         await selected.Task.WaitAsync(deadline.Token);
-        var provision = new ReferenceProvisioner(provisioning).ApplyAsync(assignment ? new() { SchemaVersion = 1, Agents = [new(agent, "https://example.test", agent.ToString(), "Later agent", false)] } : new() { SchemaVersion = 1, Categories = [new(category, "Later label", false)] }, deadline.Token);
+        Task provision=assignment?LocalAgentFixture.UpdateAsync(sql.Connection,agent,"Later agent",false,deadline.Token):new ReferenceProvisioner(provisioning).ApplyAsync(new(){SchemaVersion=1,Categories=[new(category,"Later label",false)]},deadline.Token);
         try { await Task.Delay(100, deadline.Token); Assert.False(provision.IsCompleted); } finally { release.TrySetResult(); }
         var committed = await mutation; Assert.True(committed.Succeeded); await provision;
         var current = await Body(await client.GetAsync("/api/tickets/" + ticket.GetProperty("reference").GetString())); Assert.Equal(committed.Value!.EditVersion, current.GetProperty("editVersion").GetString()); Assert.False(assignment ? current.GetProperty("assignedAgent").GetProperty("isEligible").GetBoolean() : current.GetProperty("category").GetProperty("isAvailable").GetBoolean());

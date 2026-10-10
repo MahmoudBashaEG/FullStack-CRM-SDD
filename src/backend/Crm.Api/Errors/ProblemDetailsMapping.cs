@@ -10,6 +10,7 @@ public static class ProblemDetailsMapping
         var problem = new ProblemDetails { Type = "about:blank", Title = failure.Code.Replace('_', ' '), Status = failure.Status };
         if(failure.Code=="invalid_credentials")problem.Title="Email or password is incorrect.";
         if(failure.Code=="registration_failed")problem.Title="Registration could not be completed.";
+        if(failure.Code=="agent_conflict")problem.Title="Agent could not be created.";
         problem.Extensions["code"] = failure.Code;
         problem.Extensions["traceId"] = context.TraceIdentifier;
         if (failure.Errors is not null) problem.Extensions["errors"] = failure.Errors;

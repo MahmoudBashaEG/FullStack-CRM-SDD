@@ -58,8 +58,8 @@ try {
                         $devReady = [int]$devApi.StatusCode -eq 401 -and [int]$devUi.StatusCode -eq 200 -and $devUi.Content.ReadAsStringAsync().GetAwaiter().GetResult() -match '<html'
                     } finally { $devApi.Dispose(); $devUi.Dispose() }
                 } catch { $devReady = $false }
-                if ($devReady) { Write-Host 'Both servers are available. Open https://localhost:4200. Sign-in and authorized SQL checks still require normal OIDC configuration.' }
-                elseif ($devClock.Elapsed.TotalSeconds -ge 120) { throw 'Startup availability timed out (120 seconds). Check build, SQL, OIDC and certificate trust setup in the visible logs.' }
+                if ($devReady) { Write-Host 'Both servers are available. Open https://localhost:4200. Sign in with a local CRM account; bootstrap the initial Admin separately.' }
+                elseif ($devClock.Elapsed.TotalSeconds -ge 120) { throw 'Startup availability timed out (120 seconds). Check build, SQL, local authentication and certificate trust setup in the visible logs.' }
             }
             Start-Sleep -Milliseconds 200
         }

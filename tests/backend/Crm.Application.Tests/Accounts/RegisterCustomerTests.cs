@@ -7,6 +7,12 @@ namespace Crm.Application.Tests.Accounts;
 
 public sealed class RegisterCustomerTests
 {
+    [Theory] [InlineData(" user@example.test ","user@example.test")] [InlineData("\u0085user@example.test\u0085","user@example.test")] [InlineData("\ufeffuser@example.test\ufeff","\ufeffuser@example.test\ufeff")] [InlineData(" \"multi part\"@example.test ","\"multi part\"@example.test")]
+    public async Task Creation_and_signin_share_canonical_identity(string input,string expected)
+    {
+        var store=new Store();const string password="  exact عربي password  ";var result=await new RegisterCustomerHandler(store).Handle(new("\u0085"+new string('a',200)+"\u0085",input,password),default);
+        Assert.True(result.Succeeded);Assert.Equal(expected,store.Account!.Email);Assert.Equal(new string('a',200),store.Account.DisplayName);Assert.Equal(password,store.Account.Password);Assert.Equal(AccountRole.Customer,store.Account.Role);
+    }
     private sealed class Store : IAccountRegistrationStore
     {
         public NewAccount? Account;

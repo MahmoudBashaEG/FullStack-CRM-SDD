@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using Crm.Api.Authorization;
 using Crm.Application.Common;
 using Crm.IntegrationTests.Fixtures;
+using Crm.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
@@ -36,17 +37,17 @@ public sealed class AuthorizationBoundaryTests(SqlServerFixture sql)
     {
         using var jwt = new TestJwtFactory(); await using var api = new CrmApiFactory(sql, jwt);
         using var client = api.CreateClient();
-        var actions = api.Services.GetRequiredService<IActionDescriptorCollectionProvider>().ActionDescriptors.Items.OfType<ControllerActionDescriptor>().ToArray();
+        var actions = api.Services.GetRequiredService<IActionDescriptorCollectionProvider>().ActionDescriptors.Items.OfType<ControllerActionDescriptor>().Where(action=>action.AttributeRouteInfo!.Template!.StartsWith("api/ticket",StringComparison.Ordinal)).ToArray();
         var actual = actions.SelectMany(action => action.ActionConstraints!.OfType<HttpMethodActionConstraint>().SelectMany(constraint => constraint.HttpMethods.Select(method => (method, action.AttributeRouteInfo!.Template!))));
         Assert.Equal(Routes.Order(), actual.Order());
-        var endpoints = api.Services.GetRequiredService<EndpointDataSource>().Endpoints.OfType<RouteEndpoint>();
+        var endpoints = api.Services.GetRequiredService<EndpointDataSource>().Endpoints.OfType<RouteEndpoint>().Where(endpoint=>endpoint.RoutePattern.RawText!.StartsWith("api/ticket",StringComparison.Ordinal));
         Assert.Equal(Routes.Order(), endpoints.SelectMany(endpoint => endpoint.Metadata.GetMetadata<HttpMethodMetadata>()!.HttpMethods.Select(method => (method, endpoint.RoutePattern.RawText!))).Order());
         foreach (var action in actions)
         {
             Assert.Contains(action.EndpointMetadata.OfType<IAuthorizeData>(), data => data.Policy == SupportQueuePolicy.Name);
             Assert.Empty(action.EndpointMetadata.OfType<IAllowAnonymous>());
         }
-        foreach (var (token, expected) in new (string? Token, HttpStatusCode Status)[] { (null, HttpStatusCode.Unauthorized), (jwt.Token(allowed: false), HttpStatusCode.Forbidden), (jwt.Token(issuer: "https://wrong.test"), HttpStatusCode.Unauthorized), (jwt.Token(audience: "wrong"), HttpStatusCode.Unauthorized), (jwt.Token(expired: true), HttpStatusCode.Unauthorized), (jwt.Token(subject: " "), HttpStatusCode.Forbidden) })
+        foreach (var (token, expected) in new (string? Token, HttpStatusCode Status)[] { (null, HttpStatusCode.Unauthorized), (jwt.Token(allowed: false), HttpStatusCode.Forbidden), (jwt.Token(issuer: "https://wrong.test"), HttpStatusCode.Unauthorized), (jwt.Token(audience: "wrong"), HttpStatusCode.Unauthorized), (jwt.Token(expired: true), HttpStatusCode.Unauthorized), (jwt.AlterSignedToken(jwt.Token(),"sub"," "), HttpStatusCode.Unauthorized) })
         {
             foreach (var (method, route) in Routes)
             {
@@ -57,7 +58,7 @@ public sealed class AuthorizationBoundaryTests(SqlServerFixture sql)
                 Assert.Equal(expected, response.StatusCode);
             }
         }
-        using var otherSigner = new TestJwtFactory();
+        using var otherSigner = new TestJwtFactory(); otherSigner.Bind(sql.Connection);
         client.DefaultRequestHeaders.Authorization = new("Bearer", otherSigner.Token());
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/ticket-reference-data/categories")).StatusCode);
     }
@@ -97,7 +98,7 @@ public sealed class AuthorizationBoundaryTests(SqlServerFixture sql)
 
     [Theory]
     [InlineData(null, "crm")]
-    [InlineData("http://issuer.example.test", "crm")]
+    [InlineData("", "crm")]
     [InlineData("https://issuer.example.test", null)]
     public void Production_auth_fails_closed_without_a_secure_issuer_and_audience(string? authority, string? audience)
     {
@@ -108,7 +109,7 @@ public sealed class AuthorizationBoundaryTests(SqlServerFixture sql)
     [Fact]
     public void Production_requires_normal_TLS_and_JWT_validation_without_diagnostic_details()
     {
-        using var provider = ProductionServices("https://issuer.example.test", "crm");
+        using var signing=new LocalAccountFixture();using var provider = ProductionServices("urn:crm:local", "crm-api",signing);
         var options = provider.GetRequiredService<IOptionsMonitor<JwtBearerOptions>>().Get(JwtBearerDefaults.AuthenticationScheme);
         Assert.True(options.RequireHttpsMetadata); Assert.False(options.IncludeErrorDetails); Assert.Null(options.BackchannelHttpHandler);
         Assert.True(options.TokenValidationParameters.ValidateIssuer); Assert.True(options.TokenValidationParameters.ValidateAudience);
@@ -132,11 +133,14 @@ public sealed class AuthorizationBoundaryTests(SqlServerFixture sql)
     }
 
     private static IConfiguration Configuration(Dictionary<string, string?> values) => new ConfigurationBuilder().AddInMemoryCollection(values).Build();
-    private static ServiceProvider ProductionServices(string? authority, string? audience)
+    private static ServiceProvider ProductionServices(string? authority, string? audience,LocalAccountFixture? signing=null)
     {
         var services = new ServiceCollection(); services.AddLogging();
-        services.AddQueueAuthentication(Configuration(new() { ["Authentication:Authority"] = authority, ["Authentication:Audience"] = audience }), new EnvironmentStub());
+        var values=signing?.Configuration(sqlConnection()).AsEnumerable().ToDictionary(x=>x.Key,x=>x.Value)??new Dictionary<string,string?>();values["Jwt:Issuer"]=authority;values["Jwt:Audience"]=audience;
+        var configuration=Configuration(values);if(signing is not null)services.AddInfrastructure(configuration);else{services.AddSingleton(_=>Crm.Infrastructure.Authentication.JwtOptions.Load(configuration));services.AddSingleton<Crm.Infrastructure.Authentication.SigningCertificateProvider>();}
+        services.AddQueueAuthentication(configuration, new EnvironmentStub());
         return services.BuildServiceProvider();
+        static string sqlConnection()=>"Server=localhost;Database=CrmTicketsIntegration_"+Guid.NewGuid().ToString("N")+";Integrated Security=True;Encrypt=True;TrustServerCertificate=True";
     }
     private sealed class FailingActor : ICurrentActor { public Actor Get() => throw new InvalidOperationException("private-diagnostic-marker"); }
     private sealed class EnvironmentStub : IHostEnvironment

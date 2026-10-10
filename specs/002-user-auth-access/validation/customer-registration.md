@@ -79,3 +79,11 @@ No migration was generated: this uses the already-versioned LocalCrmAuthenticati
 T067 depends on uncompleted T094, and T068 depends on T067. Both remain unchecked: a scoped signup browser pass is not the final integrated acceptance gate. Agent-management endpoints are not implemented in this run; an unmatched route's 404 is not reported as proof of Admin authorization. The existing AdminAgents policy tests remain part of the backend regression selection. Complete real direct Admin-operation denial after US4/US5, without claiming it now.
 
 Known legacy OIDC/Ticket migration/provisioning regressions remain assigned to US5. Their assertions were not changed or suppressed; the full obsolete harness was not run as a substitute for current local-auth acceptance. Feature 001 historical evidence, pending T079/SC-005 and provisional T081 are retained. No participants or usability evidence were created. This US3 integration gate does not block the explicitly independent T069–T085 Agent-management branch.
+
+## Integrated completion — 2026-10-10
+
+This later result completes the previously pending T067–T068 gate without rewriting the earlier checkpoint observations. T094's real SQL/API and Development proxy/launcher verification established the actual Ticket and Agent-management endpoints first.
+
+The complete33-case Playwright suite passed (6.2m, one worker, zero retries), including public Customer signup with no automatic login, explicit signin with Customer identity, reload restoration and signout revocation. The actual implemented Ticket/reference and Agent-management GET/POST endpoints return403 for the registered Customer; Ticket/Agents routes redirect to access and privileged navigation is absent. This is a role-boundary result, not an unmatched-route404. No Customer Portal behavior was introduced.
+
+The full SQL/API suite passed328/328, zero skips. Domain43/Application130/Architecture7, Angular120/22 files, backend/frontend builds and EF model consistency also passed. See [Ticket integration](ticket-integration.md) for commands, corrected legacy assumptions and preservation evidence. FR-001–006/009/016 and SC-001–003 now have their intended integrated signup/signin/no-escalation/role-boundary evidence. Unrelated final-verification work remains separate; Feature001 human evaluation is still pending.

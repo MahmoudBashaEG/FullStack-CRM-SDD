@@ -11,6 +11,11 @@ describe('local bearer and bounded retry', () => {
   const renew = vi.fn(async () => { token = 'new'; return token; }); const lose = vi.fn();
   beforeEach(() => { token = 'old'; renew.mockClear(); lose.mockClear(); TestBed.configureTestingModule({providers:[provideHttpClient(withInterceptors([authInterceptor])),provideHttpClientTesting(),{provide:AuthService,useValue:{accessToken:()=>token,generation:()=>1,renewAfterExpiry:renew,loseAuthentication:lose}}]}); client=TestBed.inject(HttpClient);http=TestBed.inject(HttpTestingController); });
   afterEach(() => http.verify());
+  it.each([503,0])('keeps a valid JWT for explicit Ticket recovery after %i, without replaying the uncertain operation',async status=>{
+    const result=firstValueFrom(client.patch('/api/tickets/TKT/details',{expectedVersion:'version',subject:'Draft'}));const rejected=expect(result).rejects.toBeDefined();const request=http.expectOne('/api/tickets/TKT/details');if(status===0)request.error(new ProgressEvent('error'));else request.flush({code:'service_unavailable'},{status,statusText:'Unavailable'});await rejected;
+    expect(lose).not.toHaveBeenCalled();expect(renew).not.toHaveBeenCalled();http.expectNone('/api/tickets/TKT/details');
+    const reload=firstValueFrom(client.get('/api/tickets/TKT'));const read=http.expectOne('/api/tickets/TKT');expect(read.request.headers.get('Authorization')).toBe('Bearer old');read.flush({subject:'Actually committed'});await reload;
+  });
   it('replays an expired request once using the published JWT', async () => {
     const result=firstValueFrom(client.get('/api/tickets'));const old=http.expectOne('/api/tickets');expect(old.request.headers.get('Authorization')).toBe('Bearer old');old.flush({code:'token_expired'},{status:401,statusText:'Unauthorized'});
     await Promise.resolve();await Promise.resolve();const replay=http.expectOne('/api/tickets');expect(replay.request.headers.get('Authorization')).toBe('Bearer new');replay.flush({ok:true});await result;expect(renew).toHaveBeenCalledTimes(1);

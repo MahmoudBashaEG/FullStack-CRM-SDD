@@ -10,7 +10,10 @@ export const authInterceptor: HttpInterceptorFn = (request,next) => {
   if(!isApi || publicAuth) return next(request);
   const auth=inject(AuthService);const token=auth.accessToken();const generation=auth.generation();
   const authenticated=token?request.clone({setHeaders:{Authorization:`Bearer ${token}`}}):request;
-  const clear=(failure:HttpErrorResponse) => {if(generation===auth.generation() && [0,401,503].includes(failure.status))auth.loseAuthentication(failure);};
+  // Ordinary feature/network failures do not invalidate a still-live session.
+  // AuthService itself clears every failed refresh/restoration; a protected401
+  // remains authoritative. Never replay an uncertain feature mutation.
+  const clear=(failure:HttpErrorResponse) => {if(generation===auth.generation() && failure.status===401)auth.loseAuthentication(failure);};
   return next(authenticated).pipe(catchError((failure:HttpErrorResponse) => {
     if(failure.status===401 && failure.error?.code==='token_expired' && token && url.pathname!=='/api/auth/signout') {
       return from(auth.renewAfterExpiry(token,generation)).pipe(switchMap(fresh => {

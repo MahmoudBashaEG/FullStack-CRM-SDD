@@ -44,10 +44,11 @@ public sealed class ReferenceProvisioningTests(SqlServerFixture sql)
     [Fact]
     public async Task Upsert_noop_omission_inactivation_and_snapshot_retention_follow_contract()
     {
-        var categoryId = Guid.NewGuid(); var agentId = Guid.NewGuid();
-        var input = JsonSerializer.Serialize(new { schemaVersion = 1, categories = new[] { new { id = categoryId, displayName = "Original Category", isAvailable = true } }, agents = new[] { new { id = agentId, issuer = "https://example.test", subject = Guid.NewGuid().ToString(), displayName = "Agent", isEligible = true } } });
+        var categoryId = Guid.NewGuid(); var agentId = await LocalAgentFixture.CreateAsync(sql.Connection,"Agent");
+        var input = JsonSerializer.Serialize(new { schemaVersion = 1, categories = new[] { new { id = categoryId, displayName = "Original Category", isAvailable = true } } });
         var first = await RunCliAsync(sql.Connection, input); Assert.Equal(0, first.Exit);
-        var second = await RunCliAsync(sql.Connection, input); Assert.Equal(0, second.Exit); Assert.Contains("\"unchanged\":2", second.Output);
+        var second = await RunCliAsync(sql.Connection, input); Assert.Equal(0, second.Exit); Assert.Contains("\"unchanged\":1", second.Output);
+        await LocalAgentFixture.UpdateAsync(sql.Connection,agentId,"Agent",true); // unchanged supported Agent operation
         using var jwt = new TestJwtFactory(); await using var api = new CrmApiFactory(sql, jwt); using var client = api.CreateClient(); client.DefaultRequestHeaders.Authorization = new("Bearer", jwt.Token());
         var create = await client.PostAsJsonAsync("/api/tickets", new { subject = "Subject", description = "Description", categoryId });
         var saved = JsonDocument.Parse(await create.Content.ReadAsStringAsync()).RootElement;
@@ -66,9 +67,7 @@ public sealed class ReferenceProvisioningTests(SqlServerFixture sql)
     [Fact]
     public async Task Identity_rebind_rolls_back_earlier_staged_category_changes()
     {
-        var agentId = Guid.NewGuid(); var categoryId = Guid.NewGuid(); var subject = Guid.NewGuid().ToString();
-        var initial = JsonSerializer.Serialize(new { schemaVersion = 1, agents = new[] { new { id = agentId, issuer = "https://example.test", subject, displayName = "Agent", isEligible = true } } });
-        Assert.Equal(0, (await RunCliAsync(sql.Connection, initial)).Exit);
+        var agentId = await LocalAgentFixture.CreateAsync(sql.Connection,"Agent"); var categoryId = Guid.NewGuid();
         var invalid = JsonSerializer.Serialize(new { schemaVersion = 1, categories = new[] { new { id = categoryId, displayName = "Must Roll Back", isAvailable = true } }, agents = new[] { new { id = agentId, issuer = "https://example.test", subject = "changed", displayName = "Agent", isEligible = true } } });
         Assert.Equal(2, (await RunCliAsync(sql.Connection, invalid)).Exit);
         await using var database = sql.OpenContext(); Assert.False(await database.Categories.AnyAsync(x => x.Id == categoryId));

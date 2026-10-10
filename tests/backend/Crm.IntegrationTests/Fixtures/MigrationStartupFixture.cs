@@ -29,6 +29,7 @@ public sealed class MigrationStartupFixture : IAsyncDisposable
 {
     public const string InitialMigration = "20261008164804_InitialTicketStorage";
     public const string SearchMigration = "20261008224935_LongTicketSubjectSearch";
+    public static readonly string[] CurrentMigrations=[InitialMigration,SearchMigration,"20261009124742_LocalCrmAuthentication","20261009131155_RefreshSessionLookupIndex"];
     private readonly SqlServerFixture owned;
     private MigrationStartupFixture(SqlServerFixture owned) => this.owned = owned;
     public string Connection => owned.Connection;
@@ -91,20 +92,10 @@ public sealed class MigrationStartupApiFactory(MigrationStartupFixture sql, Test
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment(environment);
+        jwt.Bind(sql.Connection);
         builder.ConfigureAppConfiguration((_, configuration) =>
         {
-            var values = new Dictionary<string, string?>
-            {
-                ["ConnectionStrings:Crm"] = sql.Connection,
-                ["Authentication:Authority"] = "https://example.test", ["Authentication:Audience"] = "crm-tickets-tests"
-            };
-            if (environment == "Testing")
-            {
-                values["Authentication:TestPublicKeyPath"] = jwt.PublicKeyPath;
-                values["Authentication:TestIssuer"] = "https://example.test";
-                values["Authentication:TestAudience"] = "crm-tickets-tests";
-            }
-            configuration.AddInMemoryCollection(values);
+            configuration.AddInMemoryCollection(jwt.Configuration(sql.Connection).AsEnumerable());
         });
         builder.ConfigureTestServices(services =>
         {
@@ -117,20 +108,6 @@ public sealed class MigrationStartupApiFactory(MigrationStartupFixture sql, Test
                 }).AddInterceptors(Probe);
                 if (fault == StartupFault.ModelDrift) options.ReplaceService<IModelCustomizer, StartupDriftModelCustomizer>();
                 Probe.StopApplication = () => provider.GetRequiredService<IHostApplicationLifetime>().StopApplication();
-            });
-            // Test-only static metadata: genuine signatures/issuer/audience/expiry, no external login
-            // and no Test-prefixed configuration accepted by a Development/Production host.
-            services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
-            {
-                using var rsa = RSA.Create(); rsa.ImportFromPem(File.ReadAllText(jwt.PublicKeyPath));
-                var key = new RsaSecurityKey(rsa.ExportParameters(false));
-                var metadata = new OpenIdConnectConfiguration { Issuer = "https://example.test" }; metadata.SigningKeys.Add(key);
-                options.ConfigurationManager = new StaticConfigurationManager<OpenIdConnectConfiguration>(metadata);
-                options.TokenValidationParameters.ValidIssuer = "https://example.test";
-                options.TokenValidationParameters.ValidAudience = "crm-tickets-tests";
-                options.TokenValidationParameters.IssuerSigningKey = key;
-                options.TokenValidationParameters.ValidAlgorithms = [SecurityAlgorithms.RsaSha256];
-                options.TokenValidationParameters.ClockSkew = TimeSpan.Zero;
             });
         });
     }

@@ -47,7 +47,7 @@ public sealed class TicketStatusTests(SqlServerFixture sql)
             var entries = history.GetProperty("items"); Assert.Equal(2, entries.GetArrayLength()); Assert.Equal(beforeHistory.GetProperty("items")[0].GetRawText(), entries[0].GetRawText());
             var entry = entries[1]; Assert.Equal("StatusChanged", entry.GetProperty("kind").GetString()); Assert.Equal("status", entry.GetProperty("field").GetString()); Assert.Equal("2", entry.GetProperty("revision").GetString()); Assert.Equal(1, entry.GetProperty("sequence").GetInt32());
             Assert.Equal(from, entry.GetProperty("previousValue").GetString()); Assert.Equal(to, entry.GetProperty("newValue").GetString());
-            Assert.Equal("https://example.test", entry.GetProperty("actor").GetProperty("issuer").GetString()); Assert.Equal("staff-a", entry.GetProperty("actor").GetProperty("subject").GetString()); Assert.Equal("Test Staff", entry.GetProperty("actor").GetProperty("displayName").GetString());
+            Assert.Equal("urn:crm:local:user", entry.GetProperty("actor").GetProperty("issuer").GetString()); Assert.Equal(jwt.UserId().ToString("D"), entry.GetProperty("actor").GetProperty("subject").GetString()); Assert.Equal("Test Staff", entry.GetProperty("actor").GetProperty("displayName").GetString());
             Assert.Equal(saved.GetProperty("updatedAtUtc").GetString(), entry.GetProperty("occurredAtUtc").GetString()); Assert.True(Guid.TryParse(entry.GetProperty("id").GetString(), out _));
         }
         else { Assert.Equal(original.GetRawText(), saved.GetRawText()); Assert.Equal(beforeHistory.GetRawText(), history.GetRawText()); if (from != to) Assert.Equal("invalid_transition", result.GetProperty("code").GetString()); }
@@ -70,10 +70,10 @@ public sealed class TicketStatusTests(SqlServerFixture sql)
         Assert.Equal(original.GetRawText(), (await Body(await client.GetAsync("/api/tickets/" + Reference(original)))).GetRawText()); Assert.Equal(1, (await Body(await History(client, original))).GetProperty("items").GetArrayLength());
     }
     [Theory]
-    [InlineData("staff-a", false, false, "https://example.test", "crm-tickets-tests", 403)]
-    [InlineData("staff-a", true, true, "https://example.test", "crm-tickets-tests", 401)]
-    [InlineData("staff-a", true, false, "https://untrusted.test", "crm-tickets-tests", 401)]
-    [InlineData("staff-a", true, false, "https://example.test", "wrong-audience", 401)]
+    [InlineData("staff-a", false, false, "urn:crm:local", "crm-api", 403)]
+    [InlineData("staff-a", true, true, "urn:crm:local", "crm-api", 401)]
+    [InlineData("staff-a", true, false, "https://untrusted.test", "crm-api", 401)]
+    [InlineData("staff-a", true, false, "urn:crm:local", "wrong-audience", 401)]
     public async Task Real_JWT_authorization_precedes_mutation_validation(string subject, bool allowed, bool expired, string issuer, string audience, int expected)
     {
         using var jwt = new TestJwtFactory(); await using var api = new CrmApiFactory(sql, jwt); using var client = api.CreateClient(); client.DefaultRequestHeaders.Authorization = new("Bearer", jwt.Token(subject, allowed, issuer: issuer, audience: audience, expired: expired));
@@ -90,13 +90,13 @@ public sealed class TicketStatusTests(SqlServerFixture sql)
     [Fact]
     public async Task Close_reopen_keeps_inactive_references_and_blocks_even_noop_details_and_assignment()
     {
-        var category = Guid.NewGuid(); var agent = Guid.NewGuid();
-        string Provision(bool active) => JsonSerializer.Serialize(new { schemaVersion = 1, categories = new[] { new { id = category, displayName = "Lifecycle category", isAvailable = active } }, agents = new[] { new { id = agent, issuer = "https://example.test", subject = agent.ToString(), displayName = "Lifecycle agent", isEligible = active } } });
+        var category = Guid.NewGuid(); var agent = await LocalAgentFixture.CreateAsync(sql.Connection,"Lifecycle agent");
+        string Provision(bool active) => JsonSerializer.Serialize(new { schemaVersion = 1, categories = new[] { new { id = category, displayName = "Lifecycle category", isAvailable = active } } });
         Assert.Equal(0, (await ReferenceProvisioningTests.RunCliAsync(sql.Connection, Provision(true))).Exit);
         using var jwt = new TestJwtFactory(); await using var api = new CrmApiFactory(sql, jwt); using var client = api.CreateClient(); client.DefaultRequestHeaders.Authorization = new("Bearer", jwt.Token());
         var detail = await Body(await client.PostAsJsonAsync("/api/tickets", new { subject = "Preserved issue", description = "Description", categoryId = category, priority = "Urgent" }));
         detail = await Body(await client.PutAsJsonAsync($"/api/tickets/{Reference(detail)}/assignment", new { expectedVersion = Version(detail), agentId = agent })); var before = detail; var initialHistory = (await Body(await History(client, detail))).GetProperty("items").EnumerateArray().Select(x => x.GetRawText()).ToArray();
-        Assert.Equal(0, (await ReferenceProvisioningTests.RunCliAsync(sql.Connection, Provision(false))).Exit);
+        Assert.Equal(0, (await ReferenceProvisioningTests.RunCliAsync(sql.Connection, Provision(false))).Exit); await LocalAgentFixture.UpdateAsync(sql.Connection,agent,"Lifecycle agent",false);
         detail = await Body(await client.GetAsync("/api/tickets/" + Reference(detail))); Assert.Equal(Version(before), Version(detail)); Assert.False(detail.GetProperty("category").GetProperty("isAvailable").GetBoolean()); Assert.False(detail.GetProperty("assignedAgent").GetProperty("isEligible").GetBoolean());
         client.DefaultRequestHeaders.Authorization = new("Bearer", jwt.Token("staff-b", name: null));
         foreach (var status in new[] { "Resolved", "Closed", "Open" })
