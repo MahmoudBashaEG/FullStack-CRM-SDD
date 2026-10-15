@@ -1,0 +1,38 @@
+# Managed by squad-kit — do not edit this block
+.squad/secrets.yaml
+.squad/stories/**/attachments/
+.squad/.trash/
+.squad/.last-run.json
+.squad/.last-copy-prompt.md
+.squad/runs/
+# End squad-kit block
+
+# --- .NET ---
+bin/
+obj/
+*.user
+*.suo
+*.rsuser
+.vs/
+TestResults/
+*.trx
+*.coverage
+appsettings.*.local.json
+
+# --- Angular / Node ---
+node_modules/
+frontend/dist/
+frontend/.angular/
+coverage/
+npm-debug.log*
+
+# --- Local secrets and machine files ---
+.env
+.env.*
+!.env.example
+*.pfx
+*.mdf
+*.ldf
+.idea/
+.DS_Store
+Thumbs.db

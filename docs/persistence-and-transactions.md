@@ -1,0 +1,10 @@
+# Persistence and transactions
+
+- One request = one scoped `CrmDbContext`, shared by handlers, repositories and `EfUnitOfWork`.
+- **Default (single save):** the handler stages Add/Update/Remove and calls `IUnitOfWork.SaveChangesAsync` exactly once. EF Core's implicit transaction makes it atomic. No explicit transaction, no marker.
+- **Multi-step writes:** the command implements `ITransactionalCommand`. `TransactionBehavior` (innermost pipeline behavior) calls `IUnitOfWork.ExecuteInTransactionAsync`, which runs the handler inside the SQL Server execution strategy -> `BeginTransactionAsync` -> handler -> final `SaveChangesAsync` -> `CommitAsync`. Any exception or cancellation -> `RollbackAsync` and rethrow; nothing commits early. Nested transactional commands join the outer transaction.
+- **Retries:** `EnableRetryOnFailure` is on, so explicit transactions **must** go through `ExecuteInTransactionAsync` (the execution strategy retries the whole unit, clearing the change tracker first). Handlers of transactional commands must not call external services, because a retry replays the handler. If a commit succeeds but the connection drops before acknowledgement, a retry could re-apply the work; commands needing exactly-once semantics must be idempotent or check state first.
+- **Queries** never open write transactions (`TransactionBehavior` passes them through; prefer `AsNoTracking` in future query repositories).
+- **Ownership:** contract in `Crm.Application/Abstractions/Persistence/IUnitOfWork.cs`; EF implementation in `Crm.Infrastructure/Persistence/EfUnitOfWork.cs`. Controllers and Domain never begin, commit or roll back.
+- **Boundary:** atomicity covers one local SQL Server database only. Email/WhatsApp/SMS/payment calls are outside it; a future story needing DB + message reliability must specify an outbox.
+- Do not add generic repositories that wrap `DbSet` 1:1; add narrow per-aggregate interfaces only when a feature needs them.

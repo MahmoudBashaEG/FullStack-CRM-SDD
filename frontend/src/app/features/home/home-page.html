@@ -1,0 +1,30 @@
+<crm-page-header
+  title="Welcome to Support CRM"
+  subtitle="Your workspace for customers, tickets and conversations. Modules appear here as they are delivered." />
+
+<mat-card appearance="outlined" class="status-card">
+  <mat-card-header>
+    <mat-card-title>System status</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    @let state = connection();
+    @switch (state.kind) {
+      @case ('checking') {
+        <crm-status-badge label="Checking..." tone="pending" />
+      }
+      @case ('online') {
+        <crm-status-badge label="API connected" tone="success" />
+        <p>{{ state.health.service }} reported {{ state.health.status }} at {{ state.health.checkedAtUtc | date: 'medium' }}.</p>
+      }
+      @case ('offline') {
+        <crm-status-badge label="API unavailable" tone="error" />
+        <p>{{ state.message }}</p>
+      }
+    }
+  </mat-card-content>
+  <mat-card-actions align="end">
+    <button mat-stroked-button type="button" (click)="checkConnection()" [disabled]="connection().kind === 'checking'">
+      <mat-icon>refresh</mat-icon> Check again
+    </button>
+  </mat-card-actions>
+</mat-card>

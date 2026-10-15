@@ -1,0 +1,9 @@
+.status-card {
+  max-inline-size: 560px;
+  border-radius: var(--crm-radius-md);
+}
+
+mat-card-content p {
+  margin-block: var(--crm-space-3) 0;
+  color: var(--mat-sys-on-surface-variant);
+}
