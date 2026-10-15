@@ -1,0 +1,20 @@
+.form-card {
+  max-inline-size: 640px;
+}
+
+.form-grid {
+  display: grid;
+  gap: var(--crm-space-2);
+  padding-block-start: var(--crm-space-4);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--crm-space-2);
+}
+
+.form-error {
+  margin: 0;
+  color: var(--mat-sys-error);
+}

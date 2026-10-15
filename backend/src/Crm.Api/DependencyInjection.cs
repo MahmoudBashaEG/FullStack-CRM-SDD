@@ -1,7 +1,9 @@
+using Crm.Api.Authentication;
 using Crm.Api.Errors;
 using Crm.Application.Common.Behaviors;
 using Crm.Application.Diagnostics.GetSystemStatus;
 using Mediator;
+using Microsoft.OpenApi;
 
 namespace Crm.Api;
 
@@ -23,7 +25,17 @@ public static class DependencyInjection
             document.Info.Description =
                 "Business routes: /api/v1/{plural-resource}. Infrastructure: /api/health (unversioned). " +
                 "DTOs: *Request / *Response, camelCase JSON. Success: direct DTO with 200/201(+Location)/204. " +
-                "Errors: application/problem+json (ProblemDetails / ValidationProblemDetails).";
+                "Errors: application/problem+json (ProblemDetails / ValidationProblemDetails). " +
+                "Auth: Bearer JWT from POST /api/v1/auth/login; anonymous only where stated.";
+            document.Components ??= new OpenApiComponents();
+            document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
+            document.Components.SecuritySchemes["Bearer"] = new OpenApiSecurityScheme
+            {
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT",
+                Description = "Access token from /api/v1/auth/login or /api/v1/auth/refresh.",
+            };
             return Task.CompletedTask;
         }));
 
@@ -38,6 +50,8 @@ public static class DependencyInjection
                 typeof(TransactionBehavior<,>), // innermost, wraps the handler only
             ];
         });
+
+        services.AddSecurity();
 
         return services;
     }

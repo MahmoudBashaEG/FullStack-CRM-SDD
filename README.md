@@ -1,6 +1,6 @@
 # Customer Support CRM
 
-A full-stack Customer Support CRM built spec-first with squad-kit: an ASP.NET Core (.NET 10) REST API in Clean Architecture with CQRS, EF Core and SQL Server, plus an Angular 22 + Angular Material frontend. This repository currently contains the architectural foundation only (story `ARCH-001`); CRM business features arrive as separate stories. See [docs/](docs/) for the conventions.
+A full-stack Customer Support CRM built spec-first with squad-kit: an ASP.NET Core (.NET 10) REST API in Clean Architecture with CQRS, EF Core and SQL Server, plus an Angular 22 + Angular Material frontend. This repository contains the architectural foundation (`ARCH-001`) and identity & access (`AUTH-001`); CRM business features arrive as separate stories. See [docs/](docs/) for the conventions.
 
 ## Repository layout
 
@@ -43,6 +43,16 @@ dotnet user-secrets set "ConnectionStrings:CrmDatabase" "Server=(localdb)\MSSQLL
 ```
 
 For a full SQL Server use `Server=localhost;Database=CrmDev;Trusted_Connection=True;TrustServerCertificate=True`. If SQL authentication is needed, supply it only through user secrets or the `ConnectionStrings__CrmDatabase` environment variable. Never commit credentials.
+
+### Authentication secrets
+
+```powershell
+cd backend
+dotnet user-secrets set "Jwt:SigningKey" ([Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(64))) --project src/Crm.Api
+dotnet user-secrets set "Bootstrap:SuperAdmin:Password" "<initial-superadmin-password>" --project src/Crm.Api
+```
+
+On first start with an empty database the API creates the three roles and `admin@admin.com`. Sign in with the configured password; no password change is forced.
 
 ## Database migrations
 
@@ -95,6 +105,7 @@ Policy: happy-path unit tests only.
 - [API conventions](docs/api-conventions.md)
 - [Persistence and transactions](docs/persistence-and-transactions.md)
 - [Frontend UI foundation](docs/frontend-ui-foundation.md)
+- [Identity and access](docs/identity-and-access.md)
 
 ## Spec-driven workflow (squad-kit)
 

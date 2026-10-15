@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { HealthApi, HealthResponse } from '../../core/api/health-api';
+import { AuthService } from '../../core/auth/auth-service';
 import { ProblemDetails } from '../../core/api/problem-details';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
@@ -33,6 +34,7 @@ function describeError(error: HttpErrorResponse): string {
 export class HomePage {
   private readonly healthApi = inject(HealthApi);
   private readonly destroyRef = inject(DestroyRef);
+  protected readonly user = inject(AuthService).currentUser;
   protected readonly connection = signal<ConnectionState>({ kind: 'checking' });
 
   constructor() {

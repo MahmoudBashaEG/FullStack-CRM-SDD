@@ -1,11 +1,13 @@
 using Crm.Api.Contracts.Health;
 using Crm.Application.Diagnostics.GetSystemStatus;
 using Mediator;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Crm.Api.Controllers;
 
 [ApiController]
+[AllowAnonymous]
 [Route(ApiRoutes.Health)]
 public sealed class HealthController(ISender sender) : ControllerBase
 {

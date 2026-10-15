@@ -39,6 +39,18 @@ internal sealed class GlobalExceptionHandler(
                 Title = "Business rule violation.",
                 Detail = domain.Message,
             },
+            UnauthorizedException unauthorized => new ProblemDetails
+            {
+                Status = StatusCodes.Status401Unauthorized,
+                Title = "Authentication failed.",
+                Detail = unauthorized.Message,
+            },
+            ConflictException conflict => new ProblemDetails
+            {
+                Status = StatusCodes.Status409Conflict,
+                Title = "Conflict.",
+                Detail = conflict.Message,
+            },
             _ => new ProblemDetails
             {
                 Status = StatusCodes.Status500InternalServerError,

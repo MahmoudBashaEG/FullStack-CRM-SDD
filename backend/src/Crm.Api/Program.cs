@@ -1,6 +1,7 @@
 using Crm.Api;
 using Crm.Application;
 using Crm.Infrastructure;
+using Crm.Infrastructure.Identity;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,18 +13,25 @@ builder.Services
 
 var app = builder.Build();
 
+// Roles + initial SuperAdmin (idempotent). Skipped with a warning while migrations are pending.
+await app.Services.BootstrapIdentityAsync();
+
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();               // /openapi/v1.json
-    app.MapScalarApiReference();    // /scalar
+    app.MapOpenApi().AllowAnonymous();              // /openapi/v1.json
+    app.MapScalarApiReference().AllowAnonymous();   // /scalar
 }
 else
 {
     app.UseHttpsRedirection();
 }
+
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapControllers();
 

@@ -9,7 +9,7 @@
       <span>Support CRM</span>
     </div>
     <mat-nav-list aria-label="Main navigation">
-      @for (item of navItems; track item.path) {
+      @for (item of navItems(); track item.path) {
         <a
           mat-list-item
           [routerLink]="item.path"
@@ -33,6 +33,13 @@
         </button>
       }
       <span class="shell__title">Customer Support CRM</span>
+      <span class="shell__spacer"></span>
+      @if (user(); as user) {
+        <span class="shell__user">{{ user.firstName }} {{ user.lastName }}</span>
+      }
+      <button mat-icon-button type="button" aria-label="Sign out" (click)="signOut()">
+        <mat-icon>logout</mat-icon>
+      </button>
     </mat-toolbar>
     <main class="shell__content">
       <router-outlet />

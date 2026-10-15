@@ -1,0 +1,74 @@
+# Identity and access (AUTH-001)
+
+## 1. Role matrix
+
+Roles are assigned by the server only. Angular guards and navigation filtering are usability aids; the API enforces every rule.
+
+| Capability | SuperAdmin | Agent | Customer |
+|---|:-:|:-:|:-:|
+| Sign in | ✔ | ✔ | ✔ |
+| View / update own profile | ✔ | ✔ | ✔ |
+| Change own password | ✔ | ✔ | ✔ |
+| Public signup | — | — | ✔ (creates a Customer) |
+| List / create / edit / enable-disable / set password of Agents | ✔ | — | — |
+| Create a SuperAdmin | nobody via the API (bootstrap only) | | |
+
+## 2. API routes
+
+| Method | Route | Auth | Success |
+|---|---|---|---|
+| POST | `/api/v1/auth/register` | anonymous (rate limited) | 201 |
+| POST | `/api/v1/auth/login` | anonymous (rate limited) | 200 |
+| POST | `/api/v1/auth/refresh` | anonymous + refresh cookie + CSRF header | 200 |
+| POST | `/api/v1/auth/logout` | anonymous + refresh cookie + CSRF header | 204 |
+| GET / PUT | `/api/v1/me` | authenticated | 200 |
+| POST | `/api/v1/me/password` | authenticated | 204 |
+| GET / POST | `/api/v1/agents` | SuperAdmin | 200 / 201 |
+| GET / PUT | `/api/v1/agents/{id}` | SuperAdmin | 200 |
+| PUT | `/api/v1/agents/{id}/status` | SuperAdmin | 204 |
+| PUT | `/api/v1/agents/{id}/password` | SuperAdmin | 204 |
+| GET | `/api/health` | anonymous | 200 |
+
+`/api/v1/agents/{id}` only reaches Agent accounts; SuperAdmin and Customer ids return 404.
+
+## 3. Sessions
+
+- **Access token:** HS256 JWT, 10 minutes, claims `sub`, `role`, `sstamp`, `jti` and time claims only. Held in Angular memory, never in web storage.
+- **Refresh token:** 256 random bits, stored only as a SHA-256 hash in `RefreshSessions`; 7 days sliding; single use. Reusing a rotated token outside the grace window revokes the whole family.
+- **Multi-tab grace window** (`Jwt:RefreshTokenReuseGracePeriod`, default 30 s): a token rotated moments ago by another tab, re-presented while the login is still alive, yields a sibling session in the same family instead of a revocation.
+- **Logout** revokes the whole family of the presented token, so siblings never outlive it.
+- **Cookies:** `crm_refresh` (HttpOnly, Secure, SameSite=Strict, Path `/api/v1/auth`) and `XSRF-TOKEN` (readable, Secure, SameSite=Strict, Path `/`). Refresh and logout validate the double-submit `X-XSRF-TOKEN` header (403 on mismatch).
+- **Reload:** `provideAppInitializer` calls `POST auth/refresh` when an `XSRF-TOKEN` cookie exists, so the session is restored before the first navigation.
+
+## 4. Revocation and JWT trade-offs
+
+- Every authenticated request re-reads `IsActive` and the security stamp, so disable / password change / password reset take effect immediately (one extra indexed read per request).
+- **Logout does not rotate the stamp**: an access token copied before logout stays valid until it expires (at most 10 minutes).
+- Inside the grace window, a thief replaying a just-rotated token while the victim's login is still active gets a sibling session instead of triggering revocation. Accepted: the window is shorter than an access-token lifetime, siblings die with logout / password change / disable, and any replay after the window revokes the family. Set the grace period to `00:00:00` for strict rotation.
+
+## 5. Brute force
+
+Identity lockout after 5 failures for 15 minutes; 10 credential requests per minute per IP on `auth/login` and `auth/register`; one uniform login error ("Invalid email or password.").
+
+## 6. Bootstrap
+
+- The migration creates schema only. On startup the API creates the three roles and `admin@admin.com` if absent, using the password from `Bootstrap:SuperAdmin:Password` (user secret; placeholder `<initial-superadmin-password>` in documentation).
+- An existing admin is never reset. An existing account with that email but without the SuperAdmin role is logged and not promoted.
+- With pending migrations the bootstrap is skipped with a warning; run `dotnet ef database update` and restart.
+- No password change is forced on first login; change it (Profile → Change password) before any non-local deployment.
+
+## 7. Local development
+
+```powershell
+cd backend
+dotnet user-secrets set "Jwt:SigningKey" ([Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(64))) --project src/Crm.Api
+dotnet user-secrets set "Bootstrap:SuperAdmin:Password" "<initial-superadmin-password>" --project src/Crm.Api
+```
+
+- The API now touches the database at startup (bootstrap), so it fails to start when `ConnectionStrings:CrmDatabase` is missing. This replaces ARCH-001's "starts without a DB" behaviour.
+- `Jwt:SigningKey` must be Base64 of at least 32 random bytes; startup validation stops the API otherwise.
+- Cookies are `Secure` and work on `http://localhost:4200` in Chromium-based browsers and Firefox (localhost is a secure context). For Safari or other hosts use HTTPS (`dotnet dev-certs https --trust`, the API `https` profile, `ng serve --ssl`, proxy target `https://localhost:7080`). Never relax `Secure` / `SameSite` in code.
+
+## 8. Deferred
+
+Email verification (public signup does **not** verify email ownership), forgot-password, MFA / SSO, email change, session / device management, absolute refresh-family lifetime, customer CRM records and company field, custom roles / permissions, agent ticket / customer permissions.

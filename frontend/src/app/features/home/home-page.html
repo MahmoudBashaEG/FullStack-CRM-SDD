@@ -1,6 +1,6 @@
 <crm-page-header
-  title="Welcome to Support CRM"
-  subtitle="Your workspace for customers, tickets and conversations. Modules appear here as they are delivered." />
+  [title]="'Welcome, ' + (user()?.firstName ?? '')"
+  subtitle="You are signed in to Support CRM. Modules appear here as they are delivered." />
 
 <mat-card appearance="outlined" class="status-card">
   <mat-card-header>

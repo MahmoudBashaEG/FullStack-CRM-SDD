@@ -1,5 +1,5 @@
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -8,6 +8,7 @@ import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { map } from 'rxjs';
+import { AuthService } from '../../auth/auth-service';
 import { NAV_ITEMS } from '../navigation';
 
 @Component({
@@ -27,7 +28,17 @@ import { NAV_ITEMS } from '../navigation';
   styleUrl: './shell.scss',
 })
 export class Shell {
-  protected readonly navItems = NAV_ITEMS;
+  private readonly auth = inject(AuthService);
+  protected readonly user = this.auth.currentUser;
+  protected readonly navItems = computed(() => {
+    const role = this.auth.role();
+    return NAV_ITEMS.filter(item => !item.roles || (role !== null && item.roles.includes(role)));
+  });
+
+  protected signOut(): void {
+    this.auth.logout();
+  }
+
   protected readonly isHandset = toSignal(
     inject(BreakpointObserver).observe(Breakpoints.Handset).pipe(map(result => result.matches)),
     { initialValue: false },
