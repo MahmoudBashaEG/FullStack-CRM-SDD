@@ -64,8 +64,8 @@ internal sealed class TicketRepository(CrmDbContext dbContext) : ITicketReposito
         return new PagedResult<TicketDetails>(items, page, pageSize, totalCount);
     }
 
-    // Applied first, in SQL: an Agent can never see or edit a ticket assigned to someone else or unassigned.
-    private static IQueryable<Ticket> Scope(IQueryable<Ticket> tickets, Guid? agentScope) =>
+    // Applied first, in SQL: an Agent can never see or edit a ticket assigned to someone else or unassigned. Also used by AgentDashboardRepository.
+    internal static IQueryable<Ticket> Scope(IQueryable<Ticket> tickets, Guid? agentScope) =>
         agentScope is { } agentId ? tickets.Where(t => t.AssignedAgentUserId == agentId) : tickets;
 
     // Display names are joined, not stored. Ordered here (newest first, Id tie-breaker) because EF cannot order

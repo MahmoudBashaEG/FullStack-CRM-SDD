@@ -1,6 +1,6 @@
 # API conventions
 
-- **Routes:** business resources use `/api/v1/{resource}` — plural, lowercase (`ApiRoutes.V1`, `LowercaseUrls = true`). `GET /api/health` is the only unversioned route. No `v2`. Singleton resources `/api/v1/auth/*` and `/api/v1/me` are the documented exceptions to plural naming.
+- **Routes:** business resources use `/api/v1/{resource}` — plural, lowercase (`ApiRoutes.V1`, `LowercaseUrls = true`). `GET /api/health` is the only unversioned route. No `v2`. Singleton resources `/api/v1/auth/*`, `/api/v1/me` and `/api/v1/agent-dashboard` (per-caller) are the documented exceptions to plural naming.
 - **DTOs:** PascalCase C# records ending in `Request` / `Response`, in `Crm.Api/Contracts/<Feature>/`. JSON is camelCase (ASP.NET Core web defaults). Never expose Domain entities or EF models.
 - **Success:** return the DTO directly, no envelope. `200 OK` for reads/updates, `201 Created` + `Location` (`CreatedAtAction`) on create, `204 No Content` when there is no body.
 - **Errors:** `application/problem+json` only, produced centrally by `GlobalExceptionHandler` and `[ApiController]` model validation.

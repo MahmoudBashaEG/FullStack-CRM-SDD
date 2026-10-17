@@ -20,6 +20,7 @@ Roles are assigned by the server only. Angular guards and navigation filtering a
 | Escalate ticket | ✔ | ✔ assigned to them | — |
 | Clear escalation | ✔ | — | — |
 | View ticket activity | ✔ all | ✔ assigned to them | — |
+| View own Agent Dashboard (assigned-ticket workload) | — | ✔ | — |
 | Create a SuperAdmin | nobody via the API (bootstrap only) | | |
 
 ## 2. API routes
@@ -45,6 +46,7 @@ Roles are assigned by the server only. Angular guards and navigation filtering a
 | POST | `/api/v1/tickets/{id}/escalation` | SuperAdmin, Agent (only own assigned) | 200 |
 | DELETE | `/api/v1/tickets/{id}/escalation` | SuperAdmin | 200 |
 | GET | `/api/v1/tickets/{id}/activity` | SuperAdmin, Agent (only own assigned) | 200 |
+| GET | `/api/v1/agent-dashboard` | Agent | 200 |
 | GET / PUT | `/api/v1/me/customer-profile` | Customer | 200 |
 | GET | `/api/health` | anonymous | 200 |
 

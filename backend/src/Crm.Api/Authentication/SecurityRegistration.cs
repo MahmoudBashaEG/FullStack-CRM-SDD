@@ -62,6 +62,7 @@ internal static class SecurityRegistration
             .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build()) // auth by default
             .AddPolicy(AuthorizationPolicies.SuperAdmin, policy => policy.RequireRole(UserRoles.SuperAdmin))
             .AddPolicy(AuthorizationPolicies.Staff, policy => policy.RequireRole(UserRoles.SuperAdmin, UserRoles.Agent))
+            .AddPolicy(AuthorizationPolicies.Agent, policy => policy.RequireRole(UserRoles.Agent))
             .AddPolicy(AuthorizationPolicies.Customer, policy => policy.RequireRole(UserRoles.Customer));
 
         services.AddRateLimiter(options =>

@@ -147,3 +147,4 @@ After a 409 the Angular detail page shows the server message, refreshes the tick
 - **SLA & Automation:** SLA targets, rule/workload-based assignment, notifications.
 - **Deferred:** comments/internal notes, attachments, escalation levels and notifications, auto-close, configurable workflows/custom statuses, ticket deletion/merge/bulk actions.
 - **Never:** Agent self-claim or Agent-to-Agent transfer.
+- **Agent Dashboard (DASH-001):** read-only consumer of this module — see [agent-dashboard.md](agent-dashboard.md). It adds no ticket operations.

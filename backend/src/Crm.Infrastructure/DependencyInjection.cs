@@ -38,6 +38,7 @@ public static class DependencyInjection
         services.AddScoped<IRefreshSessionRepository, RefreshSessionRepository>();
         services.AddScoped<ICustomerRepository, CustomerRepository>();
         services.AddScoped<ITicketRepository, TicketRepository>();
+        services.AddScoped<IAgentDashboardRepository, AgentDashboardRepository>();
 
         services.AddIdentityCore<ApplicationUser>(options =>
             {

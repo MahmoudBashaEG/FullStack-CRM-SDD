@@ -1,0 +1,94 @@
+<crm-page-header title="My Dashboard" subtitle="Live overview of the tickets currently assigned to you." />
+
+<div class="toolbar">
+  @if (dashboard(); as d) {
+    <span class="hint">Updated {{ d.generatedAtUtc | date: 'medium' }}</span>
+  }
+  <button mat-stroked-button type="button" (click)="refresh()" [disabled]="loading()">
+    <mat-icon>refresh</mat-icon> Refresh
+  </button>
+  <a mat-stroked-button routerLink="/tickets">View all my tickets</a>
+  <a mat-flat-button routerLink="/tickets/new"><mat-icon>add</mat-icon> Create ticket</a>
+</div>
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+@if (error(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+  <button mat-stroked-button type="button" (click)="refresh()">Retry</button>
+}
+
+@if (dashboard(); as d) {
+  <section aria-labelledby="workload-heading">
+    <h2 id="workload-heading">Workload</h2>
+    <p class="hint">
+      {{ d.summary.active }} active tickets (Open + In Progress). Counts overlap — one ticket can appear in several
+      cards.
+    </p>
+    <div class="summary-grid">
+      <mat-card appearance="outlined" class="summary-card">
+        <mat-card-content>
+          <span>Open</span>
+          <span class="count">{{ d.summary.open }}</span>
+        </mat-card-content>
+      </mat-card>
+      <mat-card appearance="outlined" class="summary-card">
+        <mat-card-content>
+          <span>In Progress</span>
+          <span class="count">{{ d.summary.inProgress }}</span>
+        </mat-card-content>
+      </mat-card>
+      <mat-card appearance="outlined" class="summary-card">
+        <mat-card-content>
+          <span>Escalated</span>
+          <span class="count">{{ d.summary.escalated }}</span>
+        </mat-card-content>
+      </mat-card>
+      <mat-card appearance="outlined" class="summary-card">
+        <mat-card-content>
+          <span>High / Urgent</span>
+          <span class="count">{{ d.summary.highOrUrgent }}</span>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </section>
+
+  <section aria-labelledby="queue-heading">
+    <h2 id="queue-heading">Needs attention</h2>
+    <p class="hint">
+      Top {{ d.attentionQueueLimit }} of your Open and In Progress tickets: escalated first, then Urgent, High, Medium,
+      Low, then longest without an update. This is a display order, not an SLA.
+    </p>
+
+    @if (d.attentionQueue.length === 0) {
+      <p>No Open or In Progress tickets are assigned to you right now.</p>
+    } @else {
+      <ol class="queue">
+        @for (t of d.attentionQueue; track t.id) {
+          <li class="queue-item">
+            <a class="subject" [routerLink]="['/tickets', t.id]">{{ t.subject }}</a>
+            @if (t.isEscalated) {
+              <crm-status-badge label="Escalated" tone="error" />
+            }
+            <crm-status-badge [label]="t.priority" [tone]="priorityTone(t.priority)" />
+            <crm-status-badge [label]="statusLabel(t.status)" [tone]="statusTone(t.status)" />
+            <div class="meta">
+              {{ t.category }} ·
+              <a [routerLink]="['/customers', t.customerId]">{{ t.customerName }}</a> ·
+              <span class="email">{{ t.customerEmail }}</span> · Updated {{ t.updatedAtUtc | date: 'medium' }}
+            </div>
+          </li>
+        }
+      </ol>
+    }
+
+    @if (d.summary.active > d.attentionQueue.length) {
+      <p class="hint">
+        Showing {{ d.attentionQueue.length }} of {{ d.summary.active }} active tickets.
+        <a routerLink="/tickets">View all my tickets</a>
+      </p>
+    }
+  </section>
+}
