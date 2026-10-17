@@ -1,5 +1,6 @@
 using Crm.Domain.Customers;
 using Crm.Domain.Identity;
+using Crm.Domain.Tickets;
 using Crm.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -14,6 +15,7 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options)
 
     public DbSet<RefreshSession> RefreshSessions => Set<RefreshSession>();
     public DbSet<Customer> Customers => Set<Customer>();
+    public DbSet<Ticket> Tickets => Set<Ticket>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

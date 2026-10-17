@@ -13,6 +13,8 @@ Roles are assigned by the server only. Angular guards and navigation filtering a
 | List / create / edit / enable-disable / set password of Agents | ✔ | — | — |
 | Manage CRM customers (list / view / create contact-only / edit) | ✔ | ✔ | — |
 | View / edit own CRM customer profile | — | — | ✔ |
+| Create tickets (Agent: assigned to self; SuperAdmin: active Agent or unassigned) | ✔ | ✔ | — |
+| List / view / edit tickets | ✔ all | ✔ assigned to them | — |
 | Create a SuperAdmin | nobody via the API (bootstrap only) | | |
 
 ## 2. API routes
@@ -31,6 +33,8 @@ Roles are assigned by the server only. Angular guards and navigation filtering a
 | PUT | `/api/v1/agents/{id}/password` | SuperAdmin | 204 |
 | GET / POST | `/api/v1/customers` | SuperAdmin, Agent | 200 / 201 |
 | GET / PUT | `/api/v1/customers/{id}` | SuperAdmin, Agent | 200 |
+| GET / POST | `/api/v1/tickets` | SuperAdmin, Agent | 200 / 201 |
+| GET / PUT | `/api/v1/tickets/{id}` | SuperAdmin, Agent (Agent only own assigned) | 200 |
 | GET / PUT | `/api/v1/me/customer-profile` | Customer | 200 |
 | GET | `/api/health` | anonymous | 200 |
 
@@ -78,4 +82,4 @@ dotnet user-secrets set "Bootstrap:SuperAdmin:Password" "<initial-superadmin-pas
 
 ## 8. Deferred
 
-Email verification (public signup does **not** verify email ownership), forgot-password, MFA / SSO, email change, session / device management, absolute refresh-family lifetime, custom roles / permissions, agent ticket permissions.
+Email verification (public signup does **not** verify email ownership), forgot-password, MFA / SSO, email change, session / device management, absolute refresh-family lifetime, custom roles / permissions. (Agent ticket permissions are implemented; see [ticket-management.md](ticket-management.md).)

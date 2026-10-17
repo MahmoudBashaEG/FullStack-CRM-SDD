@@ -8,6 +8,7 @@
   - `shared/ui/` — presentational building blocks (`PageHeader`, `StatusBadge`).
   - `features/<name>/` — routes, pages, API service and models for that feature, lazy-loaded via `<name>.routes.ts`.
 - **Lists:** server-side paging with `MatPaginator` (`pageIndex = page - 1`), debounced (300 ms) search field, `StatusBadge` for record type/status.
+- **Pickers:** select existing records through server-side search (`CustomerPicker` in `features/tickets/` wraps `MatAutocomplete` over `GET /api/v1/customers`); fixed sets use `MatSelect`.
 - **CSS:** use logical properties only (`padding-inline`, `margin-block`, `inline-size`, `text-align: start`); never `left`/`right`. No RTL or localization logic yet.
 - **Auth:** access token in memory only (`AuthService`); guards are UX only; `NavItem.roles` filters navigation; public pages (`/sign-in`, `/sign-up`) render outside the shell.
 - **Navigation:** entries are added to `NAV_ITEMS` only when a screen ships.

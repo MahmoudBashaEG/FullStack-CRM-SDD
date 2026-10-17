@@ -59,4 +59,4 @@ There is no automatic link or merge between a contact-only record and an account
 
 ## 7. Future stories
 
-CUST-002 notes, CUST-003 attachments, CUST-004 interaction history and Ticket Management reference `Customers.Id`. Deferred: verified linking/merge, deletion/archiving, invitations, per-agent assignment, departments/branches, optimistic concurrency, full-text search.
+CUST-002 notes, CUST-003 attachments, CUST-004 interaction history reference `Customers.Id`; tickets already do (`Tickets.CustomerId`, see [ticket-management.md](ticket-management.md)). Deferred: verified linking/merge, deletion/archiving, invitations, per-agent assignment, departments/branches, optimistic concurrency, full-text search.

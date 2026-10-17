@@ -1,0 +1,93 @@
+<crm-page-header title="Ticket" subtitle="Ticket details." />
+
+<p><a mat-button routerLink="/tickets">Back to tickets</a></p>
+
+@if (loadError(); as message) {
+  <p class="form-error" role="alert">{{ message }}</p>
+}
+
+@if (ticket(); as current) {
+  <div class="detail-stack">
+    <mat-card appearance="outlined">
+      <mat-card-header>
+        <mat-card-title>Summary</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <dl class="readonly-list">
+          <dt>Ticket ID</dt>
+          <dd>{{ current.id }}</dd>
+          <dt>Status</dt>
+          <dd><crm-status-badge [label]="current.status" tone="pending" /></dd>
+          <dt>Priority</dt>
+          <dd><crm-status-badge [label]="current.priority" [tone]="priorityTone(current.priority)" /></dd>
+          <dt>Category</dt>
+          <dd>{{ current.category }}</dd>
+          <dt>Customer</dt>
+          <dd>
+            <a [routerLink]="['/customers', current.customerId]">{{ current.customerName }}</a> · {{ current.customerEmail }}
+          </dd>
+          <dt>Created by</dt>
+          <dd>{{ current.createdByName }}</dd>
+          <dt>Assigned agent</dt>
+          <dd>{{ current.assignedAgentName ?? 'Unassigned' }}</dd>
+          <dt>Created</dt>
+          <dd>{{ current.createdAtUtc | date: 'medium' }}</dd>
+          <dt>Last updated</dt>
+          <dd>{{ current.updatedAtUtc | date: 'medium' }}</dd>
+        </dl>
+        <p class="hint">Assignment and status are read-only here.</p>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card appearance="outlined">
+      <mat-card-header>
+        <mat-card-title>Edit details</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <form [formGroup]="form" (ngSubmit)="save()" class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Subject</mat-label>
+            <input matInput formControlName="subject" />
+            @if (form.controls.subject.invalid) {
+              <mat-error>Subject is required (max 200 characters)</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Description</mat-label>
+            <textarea matInput formControlName="description" rows="6"></textarea>
+            @if (form.controls.description.invalid) {
+              <mat-error>Description is required (max 4000 characters)</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Category</mat-label>
+            <mat-select formControlName="category">
+              @for (c of categories; track c) {
+                <mat-option [value]="c">{{ c }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Priority</mat-label>
+            <mat-select formControlName="priority">
+              @for (p of priorities; track p) {
+                <mat-option [value]="p">{{ p }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          @if (saveError(); as message) {
+            <p class="form-error" role="alert">{{ message }}</p>
+          }
+
+          <div>
+            <button mat-flat-button type="submit" [disabled]="saving()">Save</button>
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  </div>
+}

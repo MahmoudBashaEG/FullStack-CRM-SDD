@@ -1,0 +1,33 @@
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--crm-space-4);
+}
+
+.search {
+  flex: 1 1 220px;
+  max-inline-size: 320px;
+}
+
+.customer-filter {
+  flex: 1 1 260px;
+  max-inline-size: 360px;
+}
+
+.filter {
+  flex: 0 1 160px;
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+table {
+  inline-size: 100%;
+}
+
+.error {
+  color: var(--mat-sys-error);
+}

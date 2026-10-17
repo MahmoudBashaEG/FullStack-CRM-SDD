@@ -1,0 +1,124 @@
+<crm-page-header title="Tickets" [subtitle]="isSuperAdmin() ? 'All support tickets.' : 'Tickets assigned to you.'" />
+
+<div class="toolbar" [formGroup]="filters">
+  <mat-form-field appearance="outline" class="search">
+    <mat-label>Search</mat-label>
+    <input matInput type="search" formControlName="search" placeholder="Subject or ticket ID" />
+    <mat-icon matSuffix>search</mat-icon>
+  </mat-form-field>
+
+  <crm-customer-picker class="customer-filter" label="Customer" (selected)="onCustomer($event)" />
+
+  <mat-form-field appearance="outline" class="filter">
+    <mat-label>Status</mat-label>
+    <mat-select formControlName="status">
+      <mat-option [value]="null">Any</mat-option>
+      @for (v of statuses; track v) {
+        <mat-option [value]="v">{{ v }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="filter">
+    <mat-label>Category</mat-label>
+    <mat-select formControlName="category">
+      <mat-option [value]="null">Any</mat-option>
+      @for (v of categories; track v) {
+        <mat-option [value]="v">{{ v }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="filter">
+    <mat-label>Priority</mat-label>
+    <mat-select formControlName="priority">
+      <mat-option [value]="null">Any</mat-option>
+      @for (v of priorities; track v) {
+        <mat-option [value]="v">{{ v }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <a mat-flat-button routerLink="new">
+    <mat-icon>add</mat-icon> New ticket
+  </a>
+</div>
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+@if (error(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+}
+
+@if (!loading() && !error()) {
+  @if (tickets().length === 0) {
+    <p>
+      {{
+        hasFilters()
+          ? 'No tickets match your filters.'
+          : isSuperAdmin()
+            ? 'No tickets yet. Create the first ticket.'
+            : 'No tickets are assigned to you yet.'
+      }}
+    </p>
+  } @else {
+    <div class="table-container">
+      <table mat-table [dataSource]="tickets()">
+        <ng-container matColumnDef="subject">
+          <th mat-header-cell *matHeaderCellDef>Subject</th>
+          <td mat-cell *matCellDef="let t"><a [routerLink]="t.id">{{ t.subject }}</a></td>
+        </ng-container>
+
+        <ng-container matColumnDef="customer">
+          <th mat-header-cell *matHeaderCellDef>Customer</th>
+          <td mat-cell *matCellDef="let t">{{ t.customerName }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="category">
+          <th mat-header-cell *matHeaderCellDef>Category</th>
+          <td mat-cell *matCellDef="let t">{{ t.category }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="priority">
+          <th mat-header-cell *matHeaderCellDef>Priority</th>
+          <td mat-cell *matCellDef="let t"><crm-status-badge [label]="t.priority" [tone]="priorityTone(t.priority)" /></td>
+        </ng-container>
+
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let t"><crm-status-badge [label]="t.status" tone="pending" /></td>
+        </ng-container>
+
+        <ng-container matColumnDef="assignee">
+          <th mat-header-cell *matHeaderCellDef>Assigned agent</th>
+          <td mat-cell *matCellDef="let t">{{ t.assignedAgentName ?? 'Unassigned' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="created">
+          <th mat-header-cell *matHeaderCellDef>Created</th>
+          <td mat-cell *matCellDef="let t">{{ t.createdAtUtc | date: 'medium' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let t">
+            <a mat-button [routerLink]="t.id">View</a>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+      </table>
+    </div>
+
+    <mat-paginator
+      [length]="totalCount()"
+      [pageIndex]="page() - 1"
+      [pageSize]="pageSize()"
+      [pageSizeOptions]="pageSizeOptions"
+      (page)="onPage($event)"
+      aria-label="Ticket pages" />
+  }
+}

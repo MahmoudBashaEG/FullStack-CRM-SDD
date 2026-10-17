@@ -12,6 +12,7 @@ export interface NavItem {
 /** Feature stories append their entry here when their first screen ships. */
 export const NAV_ITEMS: readonly NavItem[] = [
   { label: 'Home', icon: 'home', path: '/', exact: true },
+  { label: 'Tickets', icon: 'confirmation_number', path: '/tickets', exact: false, roles: ['SuperAdmin', 'Agent'] },
   { label: 'Customers', icon: 'groups', path: '/customers', exact: false, roles: ['SuperAdmin', 'Agent'] },
   { label: 'Agents', icon: 'badge', path: '/agents', exact: false, roles: ['SuperAdmin'] },
   { label: 'Profile', icon: 'account_circle', path: '/profile', exact: false },

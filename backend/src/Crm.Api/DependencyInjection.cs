@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Crm.Api.Authentication;
 using Crm.Api.Errors;
 using Crm.Application.Common.Behaviors;
@@ -11,7 +12,10 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddPresentation(this IServiceCollection services)
     {
-        services.AddControllers(); // System.Text.Json web defaults: camelCase properties
+        // System.Text.Json web defaults (camelCase properties); enums travel as their names ("Billing"), never as integers.
+        services.AddControllers()
+            .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false)));
+        services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false))); // OpenAPI schema generation
         services.AddRouting(options => options.LowercaseUrls = true);
 
         services.AddProblemDetails(options =>
@@ -26,6 +30,7 @@ public static class DependencyInjection
                 "Business routes: /api/v1/{plural-resource}. Infrastructure: /api/health (unversioned). " +
                 "DTOs: *Request / *Response, camelCase JSON. Success: direct DTO with 200/201(+Location)/204. " +
                 "Lists: ?page (one-based, default 1)&pageSize (default 20, max 100) -> { items, page, pageSize, totalCount }. " +
+                "Enums: string names, e.g. \"Billing\". " +
                 "Errors: application/problem+json (ProblemDetails / ValidationProblemDetails). " +
                 "Auth: Bearer JWT from POST /api/v1/auth/login; anonymous only where stated.";
             document.Components ??= new OpenApiComponents();
