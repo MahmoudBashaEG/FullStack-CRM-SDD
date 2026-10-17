@@ -1,3 +1,4 @@
+using Crm.Domain.Customers;
 using Crm.Domain.Identity;
 using Crm.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
@@ -12,6 +13,7 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options)
     public const string ConnectionStringName = "CrmDatabase";
 
     public DbSet<RefreshSession> RefreshSessions => Set<RefreshSession>();
+    public DbSet<Customer> Customers => Set<Customer>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

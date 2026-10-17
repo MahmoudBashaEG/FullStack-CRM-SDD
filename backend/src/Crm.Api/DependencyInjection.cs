@@ -25,6 +25,7 @@ public static class DependencyInjection
             document.Info.Description =
                 "Business routes: /api/v1/{plural-resource}. Infrastructure: /api/health (unversioned). " +
                 "DTOs: *Request / *Response, camelCase JSON. Success: direct DTO with 200/201(+Location)/204. " +
+                "Lists: ?page (one-based, default 1)&pageSize (default 20, max 100) -> { items, page, pageSize, totalCount }. " +
                 "Errors: application/problem+json (ProblemDetails / ValidationProblemDetails). " +
                 "Auth: Bearer JWT from POST /api/v1/auth/login; anonymous only where stated.";
             document.Components ??= new OpenApiComponents();

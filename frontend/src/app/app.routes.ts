@@ -23,6 +23,11 @@ export const routes: Routes = [
       { path: '', loadChildren: () => import('./features/home/home.routes').then(m => m.HOME_ROUTES) },
       { path: 'profile', loadChildren: () => import('./features/profile/profile.routes').then(m => m.PROFILE_ROUTES) },
       {
+        path: 'customers',
+        canActivate: [roleGuard('SuperAdmin', 'Agent')],
+        loadChildren: () => import('./features/customers/customers.routes').then(m => m.CUSTOMERS_ROUTES),
+      },
+      {
         path: 'agents',
         canActivate: [roleGuard('SuperAdmin')],
         loadChildren: () => import('./features/agents/agents.routes').then(m => m.AGENTS_ROUTES),

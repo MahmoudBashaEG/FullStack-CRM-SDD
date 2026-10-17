@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
@@ -19,7 +19,7 @@ import { CurrentUser } from '../../core/auth/auth-models';
 import { AuthService } from '../../core/auth/auth-service';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
-import { ProfileApi } from './profile-api';
+import { MyCustomerProfile, ProfileApi } from './profile-api';
 
 function passwordsMatch(group: AbstractControl): ValidationErrors | null {
   return group.get('newPassword')?.value === group.get('confirmPassword')?.value ? null : { mismatch: true };
@@ -49,11 +49,16 @@ export class ProfilePage {
 
   protected readonly user = signal<CurrentUser | null>(null);
   protected readonly loadError = signal<string | null>(null);
+  protected readonly isCustomer = computed(() => this.auth.role() === 'Customer');
+  protected readonly customerProfile = signal<MyCustomerProfile | null>(null);
+  protected readonly customerProfileLoading = signal(false);
+  protected readonly customerProfileError = signal<string | null>(null);
 
   protected readonly profileForm = this.fb.group({
     firstName: ['', [Validators.required, Validators.maxLength(100)]],
     lastName: ['', [Validators.required, Validators.maxLength(100)]],
     phoneNumber: ['', [Validators.maxLength(32)]],
+    company: ['', [Validators.maxLength(200)]],
   });
   protected readonly profileSaving = signal(false);
   protected readonly profileError = signal<string | null>(null);
@@ -85,6 +90,31 @@ export class ProfilePage {
         error: (error: HttpErrorResponse) =>
           this.loadError.set(describeHttpError(error, 'Could not load your profile.')),
       });
+
+    if (this.isCustomer()) {
+      this.loadCustomerProfile();
+    }
+  }
+
+  /** Used by the constructor and the Retry button. */
+  protected loadCustomerProfile(): void {
+    this.customerProfileLoading.set(true);
+    this.customerProfileError.set(null);
+    this.api
+      .getMyCustomerProfile()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: profile => {
+          this.customerProfile.set(profile);
+          this.profileForm.controls.company.setValue(profile.company ?? '');
+          this.customerProfileLoading.set(false);
+        },
+        error: (error: HttpErrorResponse) => {
+          this.customerProfile.set(null);
+          this.customerProfileError.set(describeHttpError(error, 'Could not load your customer details.'));
+          this.customerProfileLoading.set(false);
+        },
+      });
   }
 
   protected saveProfile(): void {
@@ -94,14 +124,41 @@ export class ProfilePage {
     }
 
     const value = this.profileForm.getRawValue();
+    const firstName = value.firstName.trim();
+    const lastName = value.lastName.trim();
+    const phoneNumber = value.phoneNumber.trim() || null;
     this.profileSaving.set(true);
     this.profileError.set(null);
+
+    const onError = (error: HttpErrorResponse) => {
+      this.profileError.set(describeHttpError(error, 'Could not save your profile.'));
+      this.profileSaving.set(false);
+    };
+
+    if (this.customerProfile() !== null) {
+      // Customer with a loaded CRM profile: one call updates the account and the CRM row (plus Company).
+      this.api
+        .updateMyCustomerProfile({ firstName, lastName, phoneNumber, company: value.company.trim() || null })
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: p => {
+            this.customerProfile.set(p);
+            const current = this.user();
+            if (current) {
+              const updated = { ...current, firstName: p.firstName, lastName: p.lastName, phoneNumber: p.phoneNumber };
+              this.user.set(updated);
+              this.auth.updateCurrentUser(updated);
+            }
+            this.profileSaving.set(false);
+            this.snackBar.open('Profile saved.', undefined, { duration: 3000 });
+          },
+          error: onError,
+        });
+      return;
+    }
+
     this.api
-      .updateMe({
-        firstName: value.firstName.trim(),
-        lastName: value.lastName.trim(),
-        phoneNumber: value.phoneNumber.trim() || null,
-      })
+      .updateMe({ firstName, lastName, phoneNumber })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: user => {
@@ -110,10 +167,7 @@ export class ProfilePage {
           this.profileSaving.set(false);
           this.snackBar.open('Profile saved.', undefined, { duration: 3000 });
         },
-        error: (error: HttpErrorResponse) => {
-          this.profileError.set(describeHttpError(error, 'Could not save your profile.'));
-          this.profileSaving.set(false);
-        },
+        error: onError,
       });
   }
 

@@ -1,6 +1,7 @@
 using Crm.Application.Abstractions.Identity;
 using Crm.Application.Abstractions.Persistence;
 using Crm.Application.Common.Validation;
+using Crm.Infrastructure.Customers;
 using Crm.Infrastructure.Identity;
 using Crm.Infrastructure.Persistence;
 using Crm.Infrastructure.Persistence.Repositories;
@@ -35,6 +36,7 @@ public static class DependencyInjection
 
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
         services.AddScoped<IRefreshSessionRepository, RefreshSessionRepository>();
+        services.AddScoped<ICustomerRepository, CustomerRepository>();
 
         services.AddIdentityCore<ApplicationUser>(options =>
             {
@@ -55,6 +57,7 @@ public static class DependencyInjection
 
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IdentityBootstrapper>();
+        services.AddScoped<CustomerProfileInitializer>();
         services.AddSingleton<ITokenService, JwtTokenService>();
 
         services.AddOptions<JwtOptions>()

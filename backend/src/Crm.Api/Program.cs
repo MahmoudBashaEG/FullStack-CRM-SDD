@@ -1,6 +1,7 @@
 using Crm.Api;
 using Crm.Application;
 using Crm.Infrastructure;
+using Crm.Infrastructure.Customers;
 using Crm.Infrastructure.Identity;
 using Scalar.AspNetCore;
 
@@ -15,6 +16,9 @@ var app = builder.Build();
 
 // Roles + initial SuperAdmin (idempotent). Skipped with a warning while migrations are pending.
 await app.Services.BootstrapIdentityAsync();
+
+// One CRM profile per pre-existing Customer account (idempotent). Skipped with a warning while migrations are pending.
+await app.Services.InitializeCustomerProfilesAsync();
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();

@@ -16,7 +16,18 @@
           <dd>{{ account.email }}</dd>
           <dt>Role</dt>
           <dd><crm-status-badge [label]="account.role" tone="neutral" /></dd>
+          @if (customerProfile(); as p) {
+            <dt>Customer ID</dt>
+            <dd>{{ p.id }}</dd>
+          }
         </dl>
+      }
+
+      @if (customerProfileError(); as message) {
+        <div class="form-error customer-profile-error" role="alert">
+          <span>{{ message }} Company and Customer ID are unavailable until your customer details load.</span>
+          <button mat-button type="button" (click)="loadCustomerProfile()" [disabled]="customerProfileLoading()">Retry</button>
+        </div>
       }
 
       <form [formGroup]="profileForm" (ngSubmit)="saveProfile()" class="form-grid">
@@ -43,6 +54,16 @@
             <mat-error>Phone number is too long</mat-error>
           }
         </mat-form-field>
+
+        @if (customerProfile()) {
+          <mat-form-field appearance="outline">
+            <mat-label>Company (optional)</mat-label>
+            <input matInput formControlName="company" autocomplete="organization" />
+            @if (profileForm.controls.company.invalid) {
+              <mat-error>Company is too long (max 200 characters)</mat-error>
+            }
+          </mat-form-field>
+        }
 
         @if (profileError(); as message) {
           <p class="form-error" role="alert">{{ message }}</p>

@@ -11,6 +11,8 @@ Roles are assigned by the server only. Angular guards and navigation filtering a
 | Change own password | ✔ | ✔ | ✔ |
 | Public signup | — | — | ✔ (creates a Customer) |
 | List / create / edit / enable-disable / set password of Agents | ✔ | — | — |
+| Manage CRM customers (list / view / create contact-only / edit) | ✔ | ✔ | — |
+| View / edit own CRM customer profile | — | — | ✔ |
 | Create a SuperAdmin | nobody via the API (bootstrap only) | | |
 
 ## 2. API routes
@@ -27,9 +29,14 @@ Roles are assigned by the server only. Angular guards and navigation filtering a
 | GET / PUT | `/api/v1/agents/{id}` | SuperAdmin | 200 |
 | PUT | `/api/v1/agents/{id}/status` | SuperAdmin | 204 |
 | PUT | `/api/v1/agents/{id}/password` | SuperAdmin | 204 |
+| GET / POST | `/api/v1/customers` | SuperAdmin, Agent | 200 / 201 |
+| GET / PUT | `/api/v1/customers/{id}` | SuperAdmin, Agent | 200 |
+| GET / PUT | `/api/v1/me/customer-profile` | Customer | 200 |
 | GET | `/api/health` | anonymous | 200 |
 
 `/api/v1/agents/{id}` only reaches Agent accounts; SuperAdmin and Customer ids return 404.
+
+Signup also creates the linked CRM customer profile (see [customer-management.md](customer-management.md)).
 
 ## 3. Sessions
 
@@ -71,4 +78,4 @@ dotnet user-secrets set "Bootstrap:SuperAdmin:Password" "<initial-superadmin-pas
 
 ## 8. Deferred
 
-Email verification (public signup does **not** verify email ownership), forgot-password, MFA / SSO, email change, session / device management, absolute refresh-family lifetime, customer CRM records and company field, custom roles / permissions, agent ticket / customer permissions.
+Email verification (public signup does **not** verify email ownership), forgot-password, MFA / SSO, email change, session / device management, absolute refresh-family lifetime, custom roles / permissions, agent ticket permissions.

@@ -6,3 +6,4 @@ One row per feature folder under `.squad/plans/`. `NN` continues as a global exe
 |---------|----------|----------|
 | project-architecture | [00-overview.md](project-architecture/00-overview.md) | 01 |
 | identity-access-management | [00-overview.md](identity-access-management/00-overview.md) | 02 |
+| customer-management | [00-overview.md](customer-management/00-overview.md) | 03 |

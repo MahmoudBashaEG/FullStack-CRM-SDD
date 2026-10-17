@@ -1,7 +1,10 @@
 using Crm.Api.Authentication;
+using Crm.Api.Contracts.Customers;
 using Crm.Api.Contracts.Profile;
 using Crm.Application.Profile.ChangeMyPassword;
+using Crm.Application.Profile.GetMyCustomerProfile;
 using Crm.Application.Profile.GetMyProfile;
+using Crm.Application.Profile.UpdateMyCustomerProfile;
 using Crm.Application.Profile.UpdateMyProfile;
 using Mediator;
 using Microsoft.AspNetCore.Authorization;
@@ -38,5 +41,23 @@ public sealed class MeController(ISender sender) : ControllerBase
             new ChangeMyPasswordCommand(User.GetUserId(), request.CurrentPassword, request.NewPassword), cancellationToken);
         AuthCookies.Clear(Response); // every session of this user was revoked; the client signs in again
         return NoContent();
+    }
+
+    [EndpointDescription("Requires role: Customer (own linked CRM profile only).")]
+    [Authorize(Policy = AuthorizationPolicies.Customer)]
+    [HttpGet("customer-profile")]
+    public async Task<ActionResult<CustomerResponse>> GetCustomerProfile(CancellationToken cancellationToken) =>
+        Ok(CustomerResponse.From(await sender.Send(new GetMyCustomerProfileQuery(User.GetUserId()), cancellationToken)));
+
+    [EndpointDescription("Requires role: Customer (own linked CRM profile only). Email is not editable; name/phone also update the account.")]
+    [Authorize(Policy = AuthorizationPolicies.Customer)]
+    [HttpPut("customer-profile")]
+    public async Task<ActionResult<CustomerResponse>> UpdateCustomerProfile(
+        UpdateMyCustomerProfileRequest request, CancellationToken cancellationToken)
+    {
+        var customer = await sender.Send(
+            new UpdateMyCustomerProfileCommand(User.GetUserId(), request.FirstName, request.LastName, request.PhoneNumber, request.Company),
+            cancellationToken);
+        return Ok(CustomerResponse.From(customer));
     }
 }

@@ -30,3 +30,11 @@
   margin: 0;
   color: var(--mat-sys-error);
 }
+
+.customer-profile-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--crm-space-2);
+  margin-block-end: var(--crm-space-4);
+}

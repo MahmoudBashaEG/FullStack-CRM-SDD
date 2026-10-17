@@ -1,6 +1,6 @@
 # Customer Support CRM
 
-A full-stack Customer Support CRM built spec-first with squad-kit: an ASP.NET Core (.NET 10) REST API in Clean Architecture with CQRS, EF Core and SQL Server, plus an Angular 22 + Angular Material frontend. This repository contains the architectural foundation (`ARCH-001`) and identity & access (`AUTH-001`); CRM business features arrive as separate stories. See [docs/](docs/) for the conventions.
+A full-stack Customer Support CRM built spec-first with squad-kit: an ASP.NET Core (.NET 10) REST API in Clean Architecture with CQRS, EF Core and SQL Server, plus an Angular 22 + Angular Material frontend. This repository contains the architectural foundation (`ARCH-001`), identity & access (`AUTH-001`) and customer profiles & contacts (`CUST-001`); CRM business features arrive as separate stories. See [docs/](docs/) for the conventions.
 
 ## Repository layout
 
@@ -106,6 +106,7 @@ Policy: happy-path unit tests only.
 - [Persistence and transactions](docs/persistence-and-transactions.md)
 - [Frontend UI foundation](docs/frontend-ui-foundation.md)
 - [Identity and access](docs/identity-and-access.md)
+- [Customer management](docs/customer-management.md)
 
 ## Spec-driven workflow (squad-kit)
 
