@@ -29,6 +29,8 @@ import {
   TicketPriority,
   TicketStatus,
   priorityTone,
+  statusLabel,
+  statusTone,
 } from './ticket-models';
 import { TicketsApi } from './tickets-api';
 
@@ -67,11 +69,14 @@ export class TicketListPage {
   protected readonly priorities = TICKET_PRIORITIES;
   protected readonly statuses = TICKET_STATUSES;
   protected readonly priorityTone = priorityTone;
+  protected readonly statusLabel = statusLabel;
+  protected readonly statusTone = statusTone;
   protected readonly filters = inject(NonNullableFormBuilder).group({
     search: [''],
     status: [null as TicketStatus | null],
     category: [null as TicketCategory | null],
     priority: [null as TicketPriority | null],
+    escalated: [null as boolean | null],
   });
   protected readonly customerId = signal<string | null>(null);
   protected readonly tickets = signal<Ticket[]>([]);
@@ -122,7 +127,7 @@ export class TicketListPage {
 
   protected hasFilters(): boolean {
     const f = this.filters.getRawValue();
-    return !!(f.search.trim() || f.status || f.category || f.priority || this.customerId());
+    return !!(f.search.trim() || f.status || f.category || f.priority || f.escalated !== null || this.customerId());
   }
 
   protected onPage(event: PageEvent): void {
@@ -142,6 +147,7 @@ export class TicketListPage {
       status: f.status,
       category: f.category,
       priority: f.priority,
+      escalated: f.escalated,
     });
   }
 }

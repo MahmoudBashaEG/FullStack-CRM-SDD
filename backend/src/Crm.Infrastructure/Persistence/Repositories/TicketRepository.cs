@@ -41,6 +41,11 @@ internal sealed class TicketRepository(CrmDbContext dbContext) : ITicketReposito
             query = query.Where(t => t.Priority == priority);
         }
 
+        if (filter.Escalated is { } escalated)
+        {
+            query = query.Where(t => t.IsEscalated == escalated);
+        }
+
         if (!string.IsNullOrEmpty(filter.Search))
         {
             // Parameterized; EF Core escapes LIKE wildcards for string.Contains. A full GUID also matches the ticket id.
@@ -71,6 +76,7 @@ internal sealed class TicketRepository(CrmDbContext dbContext) : ITicketReposito
         join c in dbContext.Customers on t.CustomerId equals c.Id
         join creator in dbContext.Users on t.CreatedByUserId equals creator.Id
         from agent in dbContext.Users.Where(u => u.Id == t.AssignedAgentUserId).DefaultIfEmpty()
+        from escalatedBy in dbContext.Users.Where(u => u.Id == t.EscalatedByUserId).DefaultIfEmpty()
         orderby t.CreatedAtUtc descending, t.Id descending
         select new TicketDetails(
             t.Id,
@@ -87,5 +93,50 @@ internal sealed class TicketRepository(CrmDbContext dbContext) : ITicketReposito
             t.AssignedAgentUserId,
             agent == null ? null : agent.FirstName + " " + agent.LastName,
             t.CreatedAtUtc,
-            t.UpdatedAtUtc);
+            t.UpdatedAtUtc,
+            t.IsEscalated,
+            t.EscalationReason,
+            t.EscalatedAtUtc,
+            t.EscalatedByUserId,
+            escalatedBy == null ? null : escalatedBy.FirstName + " " + escalatedBy.LastName);
+
+    public async Task<PagedResult<TicketActivityDetails>?> ListActivityAsync(
+        Guid ticketId, Guid? agentScope, int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        var visibleTicket = Scope(dbContext.Tickets.AsNoTracking(), agentScope).Where(t => t.Id == ticketId);
+        if (!await visibleTicket.AnyAsync(cancellationToken))
+        {
+            return null;
+        }
+
+        // The scope is part of every statement, so a reassignment between the two queries cannot leak events.
+        var activities =
+            from a in dbContext.TicketActivities.AsNoTracking()
+            join t in visibleTicket on a.TicketId equals t.Id
+            select a;
+
+        var totalCount = await activities.CountAsync(cancellationToken);
+        var items = await (
+                from a in activities
+                join actor in dbContext.Users on a.ActorUserId equals actor.Id
+                from fromAgent in dbContext.Users.Where(u => u.Id == a.FromAgentUserId).DefaultIfEmpty()
+                from toAgent in dbContext.Users.Where(u => u.Id == a.ToAgentUserId).DefaultIfEmpty()
+                orderby a.OccurredAtUtc descending, a.Id descending
+                select new TicketActivityDetails(
+                    a.Id,
+                    a.Type,
+                    a.OccurredAtUtc,
+                    actor.FirstName + " " + actor.LastName,
+                    a.Field,
+                    a.OldValue,
+                    a.NewValue,
+                    fromAgent == null ? null : fromAgent.FirstName + " " + fromAgent.LastName,
+                    toAgent == null ? null : toAgent.FirstName + " " + toAgent.LastName,
+                    a.Reason))
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PagedResult<TicketActivityDetails>(items, page, pageSize, totalCount);
+    }
 }

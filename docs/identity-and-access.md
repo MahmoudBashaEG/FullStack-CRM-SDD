@@ -15,6 +15,11 @@ Roles are assigned by the server only. Angular guards and navigation filtering a
 | View / edit own CRM customer profile | — | — | ✔ |
 | Create tickets (Agent: assigned to self; SuperAdmin: active Agent or unassigned) | ✔ | ✔ | — |
 | List / view / edit tickets | ✔ all | ✔ assigned to them | — |
+| Assign / reassign / unassign existing tickets | ✔ | — | — |
+| Change ticket status (workflow) | ✔ all | ✔ assigned to them | — |
+| Escalate ticket | ✔ | ✔ assigned to them | — |
+| Clear escalation | ✔ | — | — |
+| View ticket activity | ✔ all | ✔ assigned to them | — |
 | Create a SuperAdmin | nobody via the API (bootstrap only) | | |
 
 ## 2. API routes
@@ -35,6 +40,11 @@ Roles are assigned by the server only. Angular guards and navigation filtering a
 | GET / PUT | `/api/v1/customers/{id}` | SuperAdmin, Agent | 200 |
 | GET / POST | `/api/v1/tickets` | SuperAdmin, Agent | 200 / 201 |
 | GET / PUT | `/api/v1/tickets/{id}` | SuperAdmin, Agent (Agent only own assigned) | 200 |
+| PUT | `/api/v1/tickets/{id}/assignee` | SuperAdmin | 200 |
+| POST | `/api/v1/tickets/{id}/transitions` | SuperAdmin, Agent (only own assigned) | 200 |
+| POST | `/api/v1/tickets/{id}/escalation` | SuperAdmin, Agent (only own assigned) | 200 |
+| DELETE | `/api/v1/tickets/{id}/escalation` | SuperAdmin | 200 |
+| GET | `/api/v1/tickets/{id}/activity` | SuperAdmin, Agent (only own assigned) | 200 |
 | GET / PUT | `/api/v1/me/customer-profile` | Customer | 200 |
 | GET | `/api/health` | anonymous | 200 |
 

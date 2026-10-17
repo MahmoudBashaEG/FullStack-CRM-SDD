@@ -5,7 +5,7 @@ using Mediator;
 
 namespace Crm.Application.Tickets.UpdateTicket;
 
-/// <summary>Only Subject/Description/Category/Priority. Single save — not transactional.</summary>
+/// <summary>Only Subject/Description/Category/Priority, each actual change recorded as a FieldChanged event. Single save — not transactional; no-op = no save.</summary>
 public sealed record UpdateTicketCommand(
     TicketActor Actor,
     Guid Id,
@@ -25,14 +25,18 @@ public sealed class UpdateTicketCommandHandler(
         var ticket = await tickets.GetByIdAsync(command.Id, command.Actor.AgentScope, cancellationToken)
             ?? throw new NotFoundException($"Ticket '{command.Id}' was not found.");
 
-        ticket.UpdateDetails(
+        var changed = ticket.UpdateDetails(
             command.Subject.Trim(),
             command.Description.Trim(),
             command.Category!.Value, // validator: NotNull
             command.Priority!.Value, // validator: NotNull
+            command.Actor.UserId,
             timeProvider.GetUtcNow());
 
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        if (changed)
+        {
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
 
         // Same scope as the load above (the assignment cannot change here), so the ticket is still visible.
         return (await tickets.FindDetailsByIdAsync(ticket.Id, command.Actor.AgentScope, cancellationToken))!;

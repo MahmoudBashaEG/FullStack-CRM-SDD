@@ -57,11 +57,13 @@ public sealed class CreateTicketCommandHandlerTests
             var t = Added.Single(x => x.Id == id);
             return Task.FromResult<TicketDetails?>(new TicketDetails(
                 t.Id, t.Subject, t.Description, t.Category, t.Priority, t.Status, t.CustomerId, "Ada Lovelace", "ada@example.com",
-                t.CreatedByUserId, "Agent One", t.AssignedAgentUserId, "Agent One", t.CreatedAtUtc, t.UpdatedAtUtc));
+                t.CreatedByUserId, "Agent One", t.AssignedAgentUserId, "Agent One", t.CreatedAtUtc, t.UpdatedAtUtc,
+                false, null, null, null, null));
         }
 
         public Task<Ticket?> GetByIdAsync(Guid id, Guid? agentScope, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<PagedResult<TicketDetails>> ListAsync(TicketListFilter filter, Guid? agentScope, int page, int pageSize, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<PagedResult<TicketActivityDetails>?> ListActivityAsync(Guid ticketId, Guid? agentScope, int page, int pageSize, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 
     private sealed class FakeCustomerRepository(Guid existingId) : ICustomerRepository

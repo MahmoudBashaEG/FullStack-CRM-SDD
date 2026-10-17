@@ -1,10 +1,13 @@
 namespace Crm.Domain.Tickets;
 
 /// <summary>
-/// System-managed. TICK-001 only creates Open tickets and has no transitions;
-/// TICK-002 appends the other lifecycle states (stored as names, so appending is additive).
+/// System-managed lifecycle, changed only through Ticket.TransitionTo (rules in TicketWorkflow).
+/// Stored as names, so the TICK-002 members were appended without remapping existing rows.
 /// </summary>
 public enum TicketStatus
 {
     Open = 0,
+    InProgress = 1,
+    Resolved = 2,
+    Closed = 3,
 }

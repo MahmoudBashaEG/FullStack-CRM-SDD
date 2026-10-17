@@ -16,6 +16,7 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options)
     public DbSet<RefreshSession> RefreshSessions => Set<RefreshSession>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Ticket> Tickets => Set<Ticket>();
+    public DbSet<TicketActivity> TicketActivities => Set<TicketActivity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

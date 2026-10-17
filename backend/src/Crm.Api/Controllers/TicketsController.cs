@@ -3,9 +3,14 @@ using Crm.Api.Contracts.Common;
 using Crm.Api.Contracts.Tickets;
 using Crm.Application.Common.Paging;
 using Crm.Application.Tickets;
+using Crm.Application.Tickets.ChangeAssignee;
+using Crm.Application.Tickets.ClearTicketEscalation;
 using Crm.Application.Tickets.CreateTicket;
+using Crm.Application.Tickets.EscalateTicket;
 using Crm.Application.Tickets.GetTicket;
+using Crm.Application.Tickets.ListTicketActivity;
 using Crm.Application.Tickets.ListTickets;
+using Crm.Application.Tickets.TransitionTicket;
 using Crm.Application.Tickets.UpdateTicket;
 using Crm.Domain.Identity;
 using Crm.Domain.Tickets;
@@ -20,7 +25,7 @@ namespace Crm.Api.Controllers;
 [Authorize(Policy = AuthorizationPolicies.Staff)]
 public sealed class TicketsController(ISender sender) : ControllerBase
 {
-    [EndpointDescription("Requires role: SuperAdmin (all tickets) or Agent (only tickets assigned to them). One-based page (default 1), pageSize (default 20, values above 100 are clamped to 100), optional search on subject or exact ticket id, filters customerId/status/category/priority. Newest first.")]
+    [EndpointDescription("Requires role: SuperAdmin (all tickets) or Agent (only tickets assigned to them). One-based page (default 1), pageSize (default 20, values above 100 are clamped to 100), optional search on subject or exact ticket id, filters customerId/status/category/priority/escalated (true/false). Newest first.")]
     [HttpGet]
     public async Task<ActionResult<PagedResponse<TicketResponse>>> List(
         [FromQuery] string? search,
@@ -28,12 +33,13 @@ public sealed class TicketsController(ISender sender) : ControllerBase
         [FromQuery] TicketStatus? status,
         [FromQuery] TicketCategory? category,
         [FromQuery] TicketPriority? priority,
+        [FromQuery] bool? escalated,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = Paging.DefaultPageSize,
         CancellationToken cancellationToken = default)
     {
         var result = await sender.Send(
-            new ListTicketsQuery(Actor, search, customerId, status, category, priority, page, pageSize), cancellationToken);
+            new ListTicketsQuery(Actor, search, customerId, status, category, priority, escalated, page, pageSize), cancellationToken);
         return Ok(new PagedResponse<TicketResponse>(
             result.Items.Select(TicketResponse.From).ToList(), result.Page, result.PageSize, result.TotalCount));
     }
@@ -55,7 +61,7 @@ public sealed class TicketsController(ISender sender) : ControllerBase
         return CreatedAtAction(nameof(Get), new { id = ticket.Id }, TicketResponse.From(ticket));
     }
 
-    [EndpointDescription("Requires role: SuperAdmin (any ticket) or Agent (only tickets assigned to them). Updates subject, description, category and priority only; customer, creator, assignment and status never change here.")]
+    [EndpointDescription("Requires role: SuperAdmin (any ticket) or Agent (only tickets assigned to them). Updates subject, description, category and priority only; each changed field is recorded in the ticket activity. Customer, creator, assignment, status and escalation never change here.")]
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<TicketResponse>> Update(Guid id, UpdateTicketRequest request, CancellationToken cancellationToken)
     {
@@ -63,6 +69,38 @@ public sealed class TicketsController(ISender sender) : ControllerBase
             new UpdateTicketCommand(Actor, id, request.Subject, request.Description, request.Category, request.Priority),
             cancellationToken);
         return Ok(TicketResponse.From(ticket));
+    }
+
+    [EndpointDescription("Requires role: SuperAdmin. Assigns, reassigns or unassigns (assignedAgentUserId = null) an existing ticket. The assignee must be an active Agent (400 otherwise). Same assignee = no change. Recorded in the ticket activity.")]
+    [HttpPut("{id:guid}/assignee")]
+    [Authorize(Policy = AuthorizationPolicies.SuperAdmin)]
+    public async Task<ActionResult<TicketResponse>> ChangeAssignee(Guid id, ChangeTicketAssigneeRequest request, CancellationToken cancellationToken) =>
+        Ok(TicketResponse.From(await sender.Send(new ChangeTicketAssigneeCommand(Actor, id, request.AssignedAgentUserId), cancellationToken)));
+
+    [EndpointDescription("Requires role: SuperAdmin (any ticket) or Agent (only tickets assigned to them; others 404). Allowed: Open→InProgress, InProgress→Resolved, Resolved→Closed, Resolved→InProgress, Closed→Open. fromStatus must equal the current status (409 otherwise); other transitions 409. Resolving clears an active escalation.")]
+    [HttpPost("{id:guid}/transitions")]
+    public async Task<ActionResult<TicketResponse>> Transition(Guid id, TransitionTicketRequest request, CancellationToken cancellationToken) =>
+        Ok(TicketResponse.From(await sender.Send(new TransitionTicketStatusCommand(Actor, id, request.FromStatus, request.ToStatus), cancellationToken)));
+
+    [EndpointDescription("Requires role: SuperAdmin (any ticket) or Agent (only tickets assigned to them; others 404). Marks an Open or InProgress ticket as escalated with a required reason (max 500). Already escalated or Resolved/Closed: 409.")]
+    [HttpPost("{id:guid}/escalation")]
+    public async Task<ActionResult<TicketResponse>> Escalate(Guid id, EscalateTicketRequest request, CancellationToken cancellationToken) =>
+        Ok(TicketResponse.From(await sender.Send(new EscalateTicketCommand(Actor, id, request.Reason), cancellationToken)));
+
+    [EndpointDescription("Requires role: SuperAdmin. Clears an active escalation (409 if not escalated). Recorded in the ticket activity.")]
+    [HttpDelete("{id:guid}/escalation")]
+    [Authorize(Policy = AuthorizationPolicies.SuperAdmin)]
+    public async Task<ActionResult<TicketResponse>> ClearEscalation(Guid id, CancellationToken cancellationToken) =>
+        Ok(TicketResponse.From(await sender.Send(new ClearTicketEscalationCommand(Actor, id), cancellationToken)));
+
+    [EndpointDescription("Requires role: SuperAdmin (any ticket) or Agent (only tickets currently assigned to them; others 404). Read-only, append-only history, newest first. One-based page (default 1), pageSize (default 20, clamped to 100).")]
+    [HttpGet("{id:guid}/activity")]
+    public async Task<ActionResult<PagedResponse<TicketActivityResponse>>> Activity(
+        Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = Paging.DefaultPageSize, CancellationToken cancellationToken = default)
+    {
+        var result = await sender.Send(new ListTicketActivityQuery(Actor, id, page, pageSize), cancellationToken);
+        return Ok(new PagedResponse<TicketActivityResponse>(
+            result.Items.Select(TicketActivityResponse.From).ToList(), result.Page, result.PageSize, result.TotalCount));
     }
 
     // From the validated JWT only (sub + role claims; RoleClaimType = "role"). Never from the request.

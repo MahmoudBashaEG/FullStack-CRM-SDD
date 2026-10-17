@@ -21,4 +21,11 @@ public interface ITicketRepository
     /// <summary>Ordered CreatedAtUtc DESC, Id DESC.</summary>
     Task<PagedResult<TicketDetails>> ListAsync(
         TicketListFilter filter, Guid? agentScope, int page, int pageSize, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Newest first (OccurredAtUtc DESC, Id DESC). Null when the ticket is missing or outside agentScope —
+    /// the same visibility rule as the ticket itself, applied in SQL.
+    /// </summary>
+    Task<PagedResult<TicketActivityDetails>?> ListActivityAsync(
+        Guid ticketId, Guid? agentScope, int page, int pageSize, CancellationToken cancellationToken = default);
 }

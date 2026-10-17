@@ -14,7 +14,7 @@
     <mat-select formControlName="status">
       <mat-option [value]="null">Any</mat-option>
       @for (v of statuses; track v) {
-        <mat-option [value]="v">{{ v }}</mat-option>
+        <mat-option [value]="v">{{ statusLabel(v) }}</mat-option>
       }
     </mat-select>
   </mat-form-field>
@@ -36,6 +36,15 @@
       @for (v of priorities; track v) {
         <mat-option [value]="v">{{ v }}</mat-option>
       }
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="filter">
+    <mat-label>Escalation</mat-label>
+    <mat-select formControlName="escalated">
+      <mat-option [value]="null">Any</mat-option>
+      <mat-option [value]="true">Escalated</mat-option>
+      <mat-option [value]="false">Not escalated</mat-option>
     </mat-select>
   </mat-form-field>
 
@@ -88,7 +97,12 @@
 
         <ng-container matColumnDef="status">
           <th mat-header-cell *matHeaderCellDef>Status</th>
-          <td mat-cell *matCellDef="let t"><crm-status-badge [label]="t.status" tone="pending" /></td>
+          <td mat-cell *matCellDef="let t">
+            <crm-status-badge [label]="statusLabel(t.status)" [tone]="statusTone(t.status)" />
+            @if (t.isEscalated) {
+              <crm-status-badge label="Escalated" tone="error" />
+            }
+          </td>
         </ng-container>
 
         <ng-container matColumnDef="assignee">

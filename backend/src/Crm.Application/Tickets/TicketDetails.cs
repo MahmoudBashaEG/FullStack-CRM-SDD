@@ -21,12 +21,18 @@ public sealed record TicketDetails(
     Guid? AssignedAgentUserId,
     string? AssignedAgentName,
     DateTimeOffset CreatedAtUtc,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc,
+    bool IsEscalated,
+    string? EscalationReason,
+    DateTimeOffset? EscalatedAtUtc,
+    Guid? EscalatedByUserId,
+    string? EscalatedByName);
 
-/// <summary>Optional list filters; Search is already trimmed (null/empty = no filter).</summary>
+/// <summary>Optional list filters; Search is already trimmed (null/empty = no filter). Escalated: null = any; true = escalated only; false = not escalated.</summary>
 public sealed record TicketListFilter(
     string? Search,
     Guid? CustomerId,
     TicketStatus? Status,
     TicketCategory? Category,
-    TicketPriority? Priority);
+    TicketPriority? Priority,
+    bool? Escalated);

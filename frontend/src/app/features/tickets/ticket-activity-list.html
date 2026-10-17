@@ -1,0 +1,28 @@
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+@if (error(); as message) {
+  <p class="form-error" role="alert">{{ message }}</p>
+  <button mat-button type="button" (click)="retry()">Retry</button>
+}
+
+<ol class="activity">
+  @for (a of items(); track a.id) {
+    <li>
+      <strong>{{ describe(a).title }}</strong>
+      <span class="hint">{{ a.actorName }} · {{ a.occurredAtUtc | date: 'medium' }}</span>
+      @if (describe(a).detail; as detail) {
+        <span>{{ detail }}</span>
+      }
+    </li>
+  }
+</ol>
+
+@if (hasMore() && !loading()) {
+  <button mat-button type="button" (click)="loadMore()">Load more</button>
+}
+
+@if (showTrackingNote()) {
+  <p class="hint">History tracking started with TICK-002; earlier activity was not recorded.</p>
+}

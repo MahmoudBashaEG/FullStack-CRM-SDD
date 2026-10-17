@@ -1,0 +1,23 @@
+.activity {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--crm-space-3);
+
+  li {
+    display: grid;
+    gap: var(--crm-space-1);
+  }
+}
+
+.hint {
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-medium);
+}
+
+.form-error {
+  margin: 0;
+  color: var(--mat-sys-error);
+}

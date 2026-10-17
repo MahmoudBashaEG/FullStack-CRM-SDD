@@ -3,7 +3,16 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiUrl } from '../../core/api/api-url';
 import { PagedResponse } from '../customers/customer-models';
-import { CreateTicketRequest, Ticket, TicketListParams, UpdateTicketRequest } from './ticket-models';
+import {
+  ChangeTicketAssigneeRequest,
+  CreateTicketRequest,
+  EscalateTicketRequest,
+  Ticket,
+  TicketActivity,
+  TicketListParams,
+  TransitionTicketRequest,
+  UpdateTicketRequest,
+} from './ticket-models';
 
 @Injectable({ providedIn: 'root' })
 export class TicketsApi {
@@ -11,7 +20,7 @@ export class TicketsApi {
   private readonly apiUrl = inject(ApiUrl);
 
   /** Empty filters are omitted. The server additionally restricts Agents to their own tickets. */
-  list({ page, pageSize, search, customerId, status, category, priority }: TicketListParams): Observable<PagedResponse<Ticket>> {
+  list({ page, pageSize, search, customerId, status, category, priority, escalated }: TicketListParams): Observable<PagedResponse<Ticket>> {
     let params = new HttpParams().set('page', page).set('pageSize', pageSize);
     const term = search?.trim();
     if (term) {
@@ -29,6 +38,9 @@ export class TicketsApi {
     if (priority) {
       params = params.set('priority', priority);
     }
+    if (escalated != null) {
+      params = params.set('escalated', escalated);
+    }
     return this.http.get<PagedResponse<Ticket>>(this.apiUrl.versioned('tickets'), { params });
   }
 
@@ -42,5 +54,27 @@ export class TicketsApi {
 
   update(id: string, body: UpdateTicketRequest): Observable<Ticket> {
     return this.http.put<Ticket>(this.apiUrl.versioned(`tickets/${id}`), body);
+  }
+
+  changeAssignee(id: string, body: ChangeTicketAssigneeRequest): Observable<Ticket> {
+    return this.http.put<Ticket>(this.apiUrl.versioned(`tickets/${id}/assignee`), body);
+  }
+
+  transition(id: string, body: TransitionTicketRequest): Observable<Ticket> {
+    return this.http.post<Ticket>(this.apiUrl.versioned(`tickets/${id}/transitions`), body);
+  }
+
+  escalate(id: string, body: EscalateTicketRequest): Observable<Ticket> {
+    return this.http.post<Ticket>(this.apiUrl.versioned(`tickets/${id}/escalation`), body);
+  }
+
+  clearEscalation(id: string): Observable<Ticket> {
+    return this.http.delete<Ticket>(this.apiUrl.versioned(`tickets/${id}/escalation`));
+  }
+
+  /** Newest first; the server returns 404 when the ticket is not (or no longer) visible to the caller. */
+  activity(id: string, page: number, pageSize: number): Observable<PagedResponse<TicketActivity>> {
+    const params = new HttpParams().set('page', page).set('pageSize', pageSize);
+    return this.http.get<PagedResponse<TicketActivity>>(this.apiUrl.versioned(`tickets/${id}/activity`), { params });
   }
 }

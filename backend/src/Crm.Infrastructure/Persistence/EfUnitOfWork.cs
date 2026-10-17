@@ -1,12 +1,23 @@
 using Crm.Application.Abstractions.Persistence;
+using Crm.Application.Common.Exceptions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Crm.Infrastructure.Persistence;
 
 internal sealed class EfUnitOfWork(CrmDbContext dbContext) : IUnitOfWork
 {
-    public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
-        dbContext.SaveChangesAsync(cancellationToken);
+    public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // A row version (Tickets.Version) changed since this request loaded the row; nothing was saved.
+            throw new ConflictException("The record was changed by another request. Reload it and try again.");
+        }
+    }
 
     public async Task<TResult> ExecuteInTransactionAsync<TResult>(
         Func<CancellationToken, Task<TResult>> operation,

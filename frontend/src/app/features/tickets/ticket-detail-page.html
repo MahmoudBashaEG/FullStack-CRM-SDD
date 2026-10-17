@@ -17,7 +17,14 @@
           <dt>Ticket ID</dt>
           <dd>{{ current.id }}</dd>
           <dt>Status</dt>
-          <dd><crm-status-badge [label]="current.status" tone="pending" /></dd>
+          <dd><crm-status-badge [label]="statusLabel(current.status)" [tone]="statusTone(current.status)" /></dd>
+          @if (current.isEscalated) {
+            <dt>Escalation</dt>
+            <dd>
+              <crm-status-badge label="Escalated" tone="error" /> {{ current.escalationReason }}
+              <span class="hint">— {{ current.escalatedByName }}, {{ current.escalatedAtUtc | date: 'medium' }}</span>
+            </dd>
+          }
           <dt>Priority</dt>
           <dd><crm-status-badge [label]="current.priority" [tone]="priorityTone(current.priority)" /></dd>
           <dt>Category</dt>
@@ -35,9 +42,93 @@
           <dt>Last updated</dt>
           <dd>{{ current.updatedAtUtc | date: 'medium' }}</dd>
         </dl>
-        <p class="hint">Assignment and status are read-only here.</p>
+        <p class="hint">Status, assignment and escalation change only through the actions below.</p>
       </mat-card-content>
     </mat-card>
+
+    @if (actions(); as a) {
+      <mat-card appearance="outlined">
+        <mat-card-header>
+          <mat-card-title>Workflow</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="actions">
+            @for (t of a.transitions; track t.to) {
+              <button mat-stroked-button type="button" [disabled]="busy() || saving()" (click)="transition(current, t.to)">
+                {{ t.label }}
+              </button>
+            }
+            @if (a.canClearEscalation) {
+              <button mat-stroked-button type="button" [disabled]="busy() || saving()" (click)="clearEscalation()">
+                Clear escalation
+              </button>
+            }
+          </div>
+          @if (a.transitions.length === 0) {
+            <p class="hint">No workflow actions are available to you for this ticket.</p>
+          }
+
+          @if (a.canEscalate) {
+            <div class="form-grid">
+              <mat-form-field appearance="outline">
+                <mat-label>Escalation reason</mat-label>
+                <textarea matInput [formControl]="escalationReason" rows="3"></textarea>
+                <mat-hint align="end">{{ escalationReason.value.length }}/500</mat-hint>
+                @if (escalationReason.invalid) {
+                  <mat-error>A reason is required (max 500 characters)</mat-error>
+                }
+              </mat-form-field>
+              <div>
+                <button mat-flat-button type="button" [disabled]="busy() || saving()" (click)="escalate()">Escalate</button>
+              </div>
+            </div>
+          }
+
+          @if (actionError(); as message) {
+            <p class="form-error" role="alert">{{ message }}</p>
+          }
+        </mat-card-content>
+      </mat-card>
+
+      @if (a.canAssign) {
+        <mat-card appearance="outlined">
+          <mat-card-header>
+            <mat-card-title>Assignment</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="form-grid">
+              <mat-form-field appearance="outline">
+                <mat-label>Assigned agent</mat-label>
+                <mat-select [value]="selectedAssignee()" (selectionChange)="selectedAssignee.set($event.value)">
+                  <mat-option [value]="null">Unassigned</mat-option>
+                  @for (agent of activeAgents(); track agent.id) {
+                    <mat-option [value]="agent.id">{{ agent.firstName }} {{ agent.lastName }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              @if (agentsError(); as message) {
+                <p class="form-error" role="alert">{{ message }}</p>
+              }
+              @if (current.assignedAgentUserId && !isAgentActive(current.assignedAgentUserId)) {
+                <p class="hint">
+                  Current agent {{ current.assignedAgentName }} is inactive; choose an active Agent or Unassigned.
+                </p>
+              }
+              <div>
+                <button
+                  mat-flat-button
+                  type="button"
+                  [disabled]="busy() || saving() || selectedAssignee() === current.assignedAgentUserId"
+                  (click)="saveAssignee()"
+                >
+                  Save assignment
+                </button>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      }
+    }
 
     <mat-card appearance="outlined">
       <mat-card-header>
@@ -84,9 +175,18 @@
           }
 
           <div>
-            <button mat-flat-button type="submit" [disabled]="saving()">Save</button>
+            <button mat-flat-button type="submit" [disabled]="saving() || busy()">Save</button>
           </div>
         </form>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card appearance="outlined">
+      <mat-card-header>
+        <mat-card-title>Activity</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <crm-ticket-activity-list [ticketId]="current.id" [refresh]="activityRefresh()" />
       </mat-card-content>
     </mat-card>
   </div>
