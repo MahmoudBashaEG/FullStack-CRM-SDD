@@ -1,5 +1,4 @@
 import { Clipboard } from '@angular/cdk/clipboard';
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -13,22 +12,22 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
 import { describeHttpError } from '../../core/api/describe-http-error';
 import { AuthService } from '../../core/auth/auth-service';
+import { I18n } from '../../core/i18n/i18n';
+import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
 import { copyQuickReply } from '../quick-replies/copy-quick-reply';
 import { KnowledgeBaseApi } from './knowledge-base-api';
 import {
-  KB_COPY_HINT,
   KB_LIMITS,
   KnowledgeArticle,
-  PUBLIC_VISIBILITY_HINT,
   articleStatusLabel,
   articleStatusTone,
   articleTypeLabel,
 } from './knowledge-base-models';
 import { MarkdownView } from './markdown-view';
-
-const NOT_AVAILABLE = 'This article is not available to you. It may be unpublished or archived.';
 
 @Component({
   selector: 'crm-knowledge-article-page',
@@ -36,7 +35,9 @@ const NOT_AVAILABLE = 'This article is not available to you. It may be unpublish
   imports: [
     ReactiveFormsModule,
     RouterLink,
-    DatePipe,
+    TranslatePipe,
+    LocalizedDatePipe,
+    ErrorState,
     PageHeader,
     StatusBadge,
     MarkdownView,
@@ -50,14 +51,13 @@ const NOT_AVAILABLE = 'This article is not available to you. It may be unpublish
   styleUrl: './knowledge-article-page.scss',
 })
 export class KnowledgeArticlePage {
+  protected readonly i18n = inject(I18n);
   private readonly api = inject(KnowledgeBaseApi);
   private readonly auth = inject(AuthService);
   private readonly clipboard = inject(Clipboard);
   private readonly snackBar = inject(MatSnackBar);
   private readonly id = inject(ActivatedRoute).snapshot.paramMap.get('id') ?? '';
 
-  protected readonly copyHint = KB_COPY_HINT;
-  protected readonly publicHint = PUBLIC_VISIBILITY_HINT;
   protected readonly typeLabel = articleTypeLabel;
   protected readonly statusLabel = articleStatusLabel;
   protected readonly statusTone = articleStatusTone;
@@ -78,35 +78,35 @@ export class KnowledgeArticlePage {
     this.api.getArticle(this.id).subscribe({
       next: a => this.article.set(a),
       error: (error: HttpErrorResponse) =>
-        this.loadError.set(error.status === 404 ? NOT_AVAILABLE : describeHttpError(error, 'Could not load the article.')),
+        this.loadError.set(error.status === 404 ? this.i18n.t('kb.article.notAvailable') : describeHttpError(error, this.i18n.t('kb.article.loadFailed'), this.i18n.t)),
     });
   }
 
   protected copy(a: KnowledgeArticle): void {
-    copyQuickReply(this.clipboard, this.snackBar, a.body);
+    copyQuickReply(this.clipboard, this.snackBar, a.body, this.i18n.t);
   }
 
   protected submit(): void {
-    this.run(this.api.submit(this.id), 'Submitted for publication.');
+    this.run(this.api.submit(this.id), this.i18n.t('kb.article.submittedToast'));
   }
 
   protected returnToDraft(): void {
     if (this.reason.invalid) {
       return;
     }
-    this.run(this.api.returnToDraft(this.id, this.reason.value.trim() || null), 'Returned to Draft.', () => this.reason.reset(''));
+    this.run(this.api.returnToDraft(this.id, this.reason.value.trim() || null), this.i18n.t('kb.article.returnedToast'), () => this.reason.reset(''));
   }
 
   protected publish(): void {
-    this.run(this.api.publish(this.id), 'Published.');
+    this.run(this.api.publish(this.id), this.i18n.t('kb.article.publishedToast'));
   }
 
   protected archive(): void {
-    this.run(this.api.archive(this.id), 'Archived.');
+    this.run(this.api.archive(this.id), this.i18n.t('kb.article.archivedToast'));
   }
 
   protected restore(): void {
-    this.run(this.api.restore(this.id), 'Restored to Draft.');
+    this.run(this.api.restore(this.id), this.i18n.t('kb.article.restoredToast'));
   }
 
   private run(request: Observable<KnowledgeArticle>, message: string, done?: () => void): void {
@@ -117,16 +117,16 @@ export class KnowledgeArticlePage {
         this.busy.set(false);
         this.article.set(a);
         done?.();
-        this.snackBar.open(message, 'OK', { duration: 4000 });
+        this.snackBar.open(message, this.i18n.t('quickReplies.ok'), { duration: 4000 });
       },
       error: (error: HttpErrorResponse) => {
         this.busy.set(false);
         if (error.status === 404) {
           this.article.set(null);
-          this.loadError.set(NOT_AVAILABLE);
+          this.loadError.set(this.i18n.t('kb.article.notAvailable'));
           return;
         }
-        this.error.set(describeHttpError(error, 'Could not change the article.'));
+        this.error.set(describeHttpError(error, this.i18n.t('kb.article.changeFailed'), this.i18n.t));
         if (error.status === 409) {
           this.load(); // show the current state
         }

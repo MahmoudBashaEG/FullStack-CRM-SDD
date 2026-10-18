@@ -1,9 +1,6 @@
-<crm-page-header
-  title="Ticket Reports"
-  subtitle="Tickets created in the selected period, with their current status, category and priority."
-/>
+<crm-page-header icon="confirmation_number" [title]="'reports.ticket.title' | t" [subtitle]="'reports.ticket.subtitle' | t" />
 
-<p><a mat-button routerLink="/reports" queryParamsHandling="preserve">← Management Dashboard</a></p>
+<crm-reports-nav />
 
 <crm-report-period-filter
   [value]="period()"
@@ -13,9 +10,9 @@
 />
 
 @if (report(); as r) {
-  <p class="hint">
-    Period: {{ formatUtcDay(r.period.from) }} – {{ formatUtcDay(r.period.to) }} (UTC calendar days) · Updated
-    {{ r.generatedAtUtc | date: 'medium' : 'UTC' }} UTC
+  <p class="hint note">
+    {{ 'reports.periodNote' | t: { from: formatDay(r.period.from), to: formatDay(r.period.to) } }} ·
+    {{ 'reports.updated' | t: { time: (r.generatedAtUtc | crmDate: 'medium' : 'UTC') } }}
   </p>
 }
 
@@ -24,68 +21,59 @@
 }
 
 @if (error(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
-  <button mat-stroked-button type="button" (click)="refresh()">Retry</button>
+  <crm-error-state [message]="message" (retry)="refresh()" />
 }
 
 @if (report(); as r) {
   <section aria-labelledby="volume-heading">
-    <h2 id="volume-heading">Volume</h2>
+    <h2 id="volume-heading">{{ 'reports.ticket.volume' | t }}</h2>
     <div class="summary-grid">
-      <mat-card appearance="outlined" class="summary-card">
-        <mat-card-content>
-          <span class="scope">Period · by creation date</span>
-          <span>Tickets created</span>
-          <span class="count">{{ r.createdTickets }}</span>
-        </mat-card-content>
-      </mat-card>
+      <crm-kpi-card [label]="'reports.ticket.created' | t" [value]="'' + r.createdTickets" [scope]="'common.period' | t" icon="confirmation_number">
+        <span class="hint">{{ 'reports.basis.created' | t }}</span>
+      </crm-kpi-card>
     </div>
-    @if (r.createdTickets === 0) {
-      <p class="hint">No tickets were created in this period.</p>
-    }
-    <p class="hint">
-      Status, category and priority are the <strong>current</strong> values of the tickets created in this period, not
-      their values at creation.
-    </p>
+    <p class="hint">{{ 'reports.ticket.currentNote' | t }}</p>
   </section>
 
-  <section aria-labelledby="distribution-heading">
-    <h2 id="distribution-heading">Distribution</h2>
-    <div class="charts">
-      <mat-card appearance="outlined" class="chart-card">
-        <mat-card-content>
-          <h3>Current status</h3>
-          <crm-report-bars label="Tickets by current status" [items]="statusBars()" />
-          <span class="hint">Total: {{ r.createdTickets }}</span>
-        </mat-card-content>
-      </mat-card>
-      <mat-card appearance="outlined" class="chart-card">
-        <mat-card-content>
-          <h3>Category</h3>
-          <crm-report-bars label="Tickets by category" [items]="categoryBars()" />
-          <span class="hint">Total: {{ r.createdTickets }}</span>
-        </mat-card-content>
-      </mat-card>
-      <mat-card appearance="outlined" class="chart-card">
-        <mat-card-content>
-          <h3>Priority</h3>
-          <crm-report-bars label="Tickets by priority" [items]="priorityBars()" />
-          <span class="hint">Total: {{ r.createdTickets }}</span>
-        </mat-card-content>
-      </mat-card>
-    </div>
+  <section class="charts">
+    <crm-chart-card
+      [title]="'reports.ticket.status' | t"
+      [summary]="'charts.total' | t: { count: r.createdTickets }"
+      [empty]="r.createdTickets === 0"
+      [emptyText]="'reports.ticket.none' | t"
+      [rows]="statusRows()"
+    >
+      <crm-chart type="doughnut" [labels]="status().labels" [series]="[{ label: ('reports.ticket.created' | t), data: status().data }]" [ariaLabel]="'reports.ticket.statusAria' | t" />
+    </crm-chart-card>
+    <crm-chart-card
+      [title]="'reports.ticket.category' | t"
+      [summary]="'charts.total' | t: { count: r.createdTickets }"
+      [empty]="r.createdTickets === 0"
+      [emptyText]="'reports.ticket.none' | t"
+      [rows]="categoryRows()"
+    >
+      <crm-chart type="horizontalBar" [labels]="category().labels" [series]="[{ label: ('reports.ticket.created' | t), data: category().data }]" [ariaLabel]="'reports.ticket.categoryAria' | t" />
+    </crm-chart-card>
+    <crm-chart-card
+      [title]="'reports.ticket.priority' | t"
+      [summary]="'charts.total' | t: { count: r.createdTickets }"
+      [empty]="r.createdTickets === 0"
+      [emptyText]="'reports.ticket.none' | t"
+      [rows]="priorityRows()"
+    >
+      <crm-chart type="horizontalBar" [labels]="priority().labels" [series]="[{ label: ('reports.ticket.created' | t), data: priority().data }]" [ariaLabel]="'reports.ticket.priorityAria' | t" />
+    </crm-chart-card>
   </section>
 
-  <section aria-labelledby="trend-heading">
-    <h2 id="trend-heading">Ticket creation trend</h2>
-    <mat-card appearance="outlined" class="chart-card">
-      <mat-card-content>
-        <crm-report-bars label="Tickets created per day or week" [items]="trendBars()" />
-        <span class="hint">
-          {{ r.period.bucketDays === 1 ? 'Daily' : '7-day' }} buckets by creation date (UTC). This is a creation trend,
-          not a status-change trend.
-        </span>
-      </mat-card-content>
-    </mat-card>
+  <section>
+    <crm-chart-card
+      [title]="'reports.ticket.trend' | t"
+      [empty]="r.trend.length === 0"
+      [emptyText]="'reports.ticket.trendEmpty' | t"
+      [rows]="trendRows()"
+    >
+      <crm-chart type="bar" [labels]="trend().labels" [series]="[{ label: ('reports.ticket.trendSeries' | t), data: trend().data }]" [ariaLabel]="'reports.ticket.trendAria' | t" />
+    </crm-chart-card>
+    <p class="hint">{{ (r.period.bucketDays === 1 ? 'reports.ticket.daily' : 'reports.ticket.weekly') | t }}</p>
   </section>
 }

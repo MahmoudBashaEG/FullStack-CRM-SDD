@@ -1,0 +1,45 @@
+import type { Translations } from '../translations';
+
+/** PLAT-001: Arabic strings for the 'notifications' namespace. Must mirror en/notifications.ts exactly (compile-time check). */
+export const notifications: Translations['notifications'] = {
+  title: 'الإشعارات',
+  subtitle: 'تظهر هنا تنبيهات اتفاقية مستوى الخدمة (SLA) وتذكيرات المهام أثناء استخدامك للنظام. قراءة أي منها لا تغيّر شيئًا في التذكرة أو المهمة.',
+  slaAlerts: 'تنبيهات SLA',
+  reminders: 'تذكيرات المهام',
+  unreadOnly: 'غير المقروءة فقط',
+  noReminders: 'لا توجد تذكيرات بعد.',
+  missedReminder: 'تذكير فائت',
+  reminder: 'تذكير',
+  completed: 'مكتملة',
+  archived: 'مؤرشفة',
+  scheduledDelivered: 'مجدول {scheduled} · تم التسليم {delivered}',
+  missedNote: 'تم التسليم بعد أكثر من 5 دقائق من الموعد المجدول.',
+  transferredNote: 'نُقل إليك مع المهمة في {date}.',
+  markRead: 'تحديد كمقروء',
+  loadMore: 'تحميل المزيد',
+  ok: 'حسنًا',
+  loadError: 'تعذر تحميل التذكيرات.',
+  markError: 'تعذر تحديد التذكير كمقروء.',
+  reminderMoved: 'انتقل هذا التذكير مع مهمته إلى وكيل آخر.',
+  sla: {
+    hint: 'ينشئ النظام تنبيهات SLA أثناء تشغيله؛ ولا يُرسل أي شيء خارج النظام.',
+    none: 'لا توجد تنبيهات SLA.',
+    breach: 'تجاوز',
+    warning: 'تحذير',
+    kind: {
+      FirstResponse: 'الاستجابة الأولى',
+      Resolution: 'الحل',
+    },
+    dueRaised: 'الاستحقاق {due} · تم الإنشاء {raised}',
+    loadError: 'تعذر تحميل تنبيهات SLA.',
+    markError: 'تعذر تحديد التنبيه كمقروء.',
+    moved: 'لم تعد تذكرة هذا التنبيه مسندة إليك.',
+  },
+  bell: {
+    unreadLabel: 'الإشعارات، {count} غير مقروء',
+    oneReminder: 'لديك تذكير مهمة جديد واحد.',
+    manyReminders: 'لديك {count} تذكيرات مهام جديدة.',
+    newSla: 'لديك تنبيهات SLA جديدة.',
+    view: 'عرض',
+  },
+};

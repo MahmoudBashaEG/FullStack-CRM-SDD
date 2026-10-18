@@ -10,6 +10,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
 import { describeHttpError } from '../../core/api/describe-http-error';
+import { I18n } from '../../core/i18n/i18n';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { CustomersApi } from './customers-api';
 
@@ -20,6 +22,7 @@ import { CustomersApi } from './customers-api';
     ReactiveFormsModule,
     RouterLink,
     PageHeader,
+    TranslatePipe,
     MatCardModule,
     MatFormFieldModule,
     MatInputModule,
@@ -30,6 +33,7 @@ import { CustomersApi } from './customers-api';
   styleUrl: './customer-create-page.scss',
 })
 export class CustomerCreatePage {
+  private readonly i18n = inject(I18n);
   private readonly api = inject(CustomersApi);
   private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);
@@ -65,11 +69,11 @@ export class CustomerCreatePage {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: customer => {
-          this.snackBar.open('Customer created.', undefined, { duration: 3000 });
+          this.snackBar.open(this.i18n.t('customers.create.created'), undefined, { duration: 3000 });
           void this.router.navigate(['/customers', customer.id]);
         },
         error: (error: HttpErrorResponse) => {
-          this.error.set(describeHttpError(error, 'Could not create the customer.'));
+          this.error.set(describeHttpError(error, this.i18n.t('customers.create.failed'), this.i18n.t));
           this.submitting.set(false);
         },
       });

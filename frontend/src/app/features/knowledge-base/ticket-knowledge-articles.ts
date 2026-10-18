@@ -1,5 +1,4 @@
 import { Clipboard } from '@angular/cdk/clipboard';
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, input, output, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -12,11 +11,14 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { RouterLink } from '@angular/router';
 import { EMPTY, Subject, catchError, debounceTime, startWith, switchMap, tap } from 'rxjs';
 import { describeHttpError } from '../../core/api/describe-http-error';
+import { I18n } from '../../core/i18n/i18n';
+import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
 import { copyQuickReply } from '../quick-replies/copy-quick-reply';
 import { KnowledgeBaseApi } from './knowledge-base-api';
 import {
-  KB_COPY_HINT,
   KnowledgeArticle,
   KnowledgeArticleSummary,
   TicketKnowledgeLink,
@@ -30,11 +32,12 @@ import { MarkdownView } from './markdown-view';
 @Component({
   selector: 'crm-ticket-knowledge-articles',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink, DatePipe, StatusBadge, MarkdownView, MatButtonModule, MatFormFieldModule, MatInputModule, MatIconModule],
+  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, LocalizedDatePipe, ErrorState, StatusBadge, MarkdownView, MatButtonModule, MatFormFieldModule, MatInputModule, MatIconModule],
   templateUrl: './ticket-knowledge-articles.html',
   styleUrl: '../../shared/ui/productivity-page.scss',
 })
 export class TicketKnowledgeArticles implements OnInit {
+  protected readonly i18n = inject(I18n);
   private readonly api = inject(KnowledgeBaseApi);
   private readonly clipboard = inject(Clipboard);
   private readonly snackBar = inject(MatSnackBar);
@@ -45,7 +48,6 @@ export class TicketKnowledgeArticles implements OnInit {
   /** The caller lost ticket access (the link list returned 404): the parent shows its "no longer available" state (as TicketDiscussion). */
   readonly accessLost = output<void>();
 
-  protected readonly copyHint = KB_COPY_HINT;
   protected readonly typeLabel = articleTypeLabel;
   protected readonly statusLabel = articleStatusLabel;
   protected readonly statusTone = articleStatusTone;
@@ -71,7 +73,7 @@ export class TicketKnowledgeArticles implements OnInit {
             .listArticles({ page: 1, pageSize: 5, search: this.search.value, type: null, categoryId: null, status: 'Published', mine: false })
             .pipe(
               catchError((error: HttpErrorResponse) => {
-                this.error.set(describeHttpError(error, 'Could not search articles.'));
+                this.error.set(describeHttpError(error, this.i18n.t('kb.ticket.searchFailed'), this.i18n.t));
                 return EMPTY;
               }),
             ),
@@ -100,7 +102,7 @@ export class TicketKnowledgeArticles implements OnInit {
           this.accessLost.emit();
           return;
         }
-        this.loadError.set(describeHttpError(error, 'Could not load linked articles.'));
+        this.loadError.set(describeHttpError(error, this.i18n.t('kb.ticket.linksFailed'), this.i18n.t));
       },
     });
   }
@@ -117,7 +119,7 @@ export class TicketKnowledgeArticles implements OnInit {
         this.selected.set(null);
         this.rowError.set({
           id: article.id,
-          message: error.status === 404 ? 'This article is no longer available.' : describeHttpError(error, 'Could not load the article.'),
+          message: error.status === 404 ? this.i18n.t('kb.ticket.unavailable') : describeHttpError(error, this.i18n.t('kb.ticket.loadFailed'), this.i18n.t),
         });
         if (error.status === 404) {
           this.refreshSearch.next();
@@ -127,7 +129,7 @@ export class TicketKnowledgeArticles implements OnInit {
   }
 
   protected copy(article: KnowledgeArticle): void {
-    copyQuickReply(this.clipboard, this.snackBar, article.body);
+    copyQuickReply(this.clipboard, this.snackBar, article.body, this.i18n.t);
   }
 
   protected link(article: KnowledgeArticleSummary): void {
@@ -136,10 +138,10 @@ export class TicketKnowledgeArticles implements OnInit {
     this.api.linkArticle(this.ticketId(), article.id).subscribe({
       next: () => {
         this.busy.set(false);
-        this.snackBar.open('Article linked to the ticket.', 'OK', { duration: 4000 });
+        this.snackBar.open(this.i18n.t('kb.ticket.linkedToast'), this.i18n.t('quickReplies.ok'), { duration: 4000 });
         this.reloadLinks();
       },
-      error: (error: HttpErrorResponse) => this.onChangeFailed(error, 'The article could not be linked.', true),
+      error: (error: HttpErrorResponse) => this.onChangeFailed(error, this.i18n.t('kb.ticket.linkFailed'), true),
     });
   }
 
@@ -149,10 +151,10 @@ export class TicketKnowledgeArticles implements OnInit {
     this.api.unlinkArticle(this.ticketId(), link.articleId).subscribe({
       next: () => {
         this.busy.set(false);
-        this.snackBar.open('Article unlinked.', 'OK', { duration: 4000 });
+        this.snackBar.open(this.i18n.t('kb.ticket.unlinkedToast'), this.i18n.t('quickReplies.ok'), { duration: 4000 });
         this.reloadLinks();
       },
-      error: (error: HttpErrorResponse) => this.onChangeFailed(error, 'The article could not be unlinked.', false),
+      error: (error: HttpErrorResponse) => this.onChangeFailed(error, this.i18n.t('kb.ticket.unlinkFailed'), false),
     });
   }
 
@@ -160,7 +162,7 @@ export class TicketKnowledgeArticles implements OnInit {
   // The link-list reload decides: it emits accessLost only when the ticket itself returns 404.
   private onChangeFailed(error: HttpErrorResponse, fallback: string, rerunSearch: boolean): void {
     this.busy.set(false);
-    this.error.set(describeHttpError(error, fallback));
+    this.error.set(describeHttpError(error, fallback, this.i18n.t));
     this.reloadLinks();
     if (rerunSearch) {
       this.refreshSearch.next();

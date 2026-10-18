@@ -1,103 +1,111 @@
-<p><a [routerLink]="id ? ['/knowledge-base', id] : ['/knowledge-base']">← Back</a></p>
-<crm-page-header [title]="isNew ? 'New article' : 'Edit article'" subtitle="Write in Markdown. Use Preview to check how it will look." />
+<p>
+  <a mat-button [routerLink]="id ? ['/knowledge-base', id] : ['/knowledge-base']"><mat-icon class="dir-icon">arrow_back</mat-icon> {{ 'common.back' | t }}</a>
+</p>
+<crm-page-header [title]="(isNew ? 'kb.edit.newTitle' : 'kb.edit.editTitle') | t" [subtitle]="'kb.edit.subtitle' | t" icon="edit_note" />
 
 @if (loadError(); as message) {
   <p class="error" role="alert">{{ message }}</p>
 } @else if (readOnly()) {
-  <p class="hint">You cannot edit this article. <a [routerLink]="['/knowledge-base', id]">Open the article</a></p>
+  <p class="hint">{{ 'kb.edit.readOnly' | t }} <a [routerLink]="['/knowledge-base', id]">{{ 'kb.edit.openArticle' | t }}</a></p>
 } @else {
-  <form class="stack" [formGroup]="form" (ngSubmit)="save()">
-    <p class="hint">{{ statusLine() }}</p>
+  <mat-card appearance="outlined">
+    <mat-card-content>
+      <form class="stack" [formGroup]="form" (ngSubmit)="save()">
+        <p class="hint">{{ statusLine() }}</p>
 
-    @if (noCategories()) {
-      <p class="form-error" role="alert">No active categories yet — ask a SuperAdmin to add one.</p>
-    }
-
-    <mat-form-field appearance="outline">
-      <mat-label>Title (for an FAQ: the question)</mat-label>
-      <input matInput formControlName="title" [attr.maxlength]="limits.title" />
-      <mat-hint align="end">{{ form.controls.title.value.length }} / {{ limits.title }}</mat-hint>
-      @if (form.controls.title.touched && form.controls.title.invalid) {
-        <mat-error>Enter a title.</mat-error>
-      }
-    </mat-form-field>
-
-    <mat-form-field appearance="outline">
-      <mat-label>Summary (optional)</mat-label>
-      <textarea matInput rows="2" formControlName="summary" [attr.maxlength]="limits.summary"></textarea>
-      <mat-hint align="end">{{ form.controls.summary.value.length }} / {{ limits.summary }}</mat-hint>
-    </mat-form-field>
-
-    <mat-form-field appearance="outline">
-      <mat-label>Type</mat-label>
-      <mat-select formControlName="type">
-        @for (t of types; track t) {
-          <mat-option [value]="t">{{ typeLabel(t) }}</mat-option>
+        @if (noCategories()) {
+          <p class="form-error" role="alert">{{ 'kb.edit.noCategories' | t }}</p>
         }
-      </mat-select>
-    </mat-form-field>
 
-    <mat-form-field appearance="outline">
-      <mat-label>Category</mat-label>
-      <mat-select formControlName="categoryId">
-        @for (c of categories(); track c.id) {
-          <mat-option [value]="c.id">{{ c.name }}</mat-option>
-        }
-      </mat-select>
-      @if (form.controls.categoryId.touched && form.controls.categoryId.invalid) {
-        <mat-error>Choose a category.</mat-error>
-      }
-    </mat-form-field>
-
-    <mat-form-field appearance="outline">
-      <mat-label>Visibility</mat-label>
-      <mat-select formControlName="visibility">
-        @for (v of visibilities; track v) {
-          <mat-option [value]="v">{{ v }}</mat-option>
-        }
-      </mat-select>
-      <mat-hint>{{ publicHint }}</mat-hint>
-    </mat-form-field>
-
-    <mat-tab-group animationDuration="0ms">
-      <mat-tab label="Write">
-        <mat-form-field appearance="outline" class="body-field">
-          <mat-label>Body (Markdown; for an FAQ: the answer)</mat-label>
-          <textarea matInput rows="16" formControlName="body" [attr.maxlength]="limits.body"></textarea>
-          <mat-hint align="end">{{ form.controls.body.value.length }} / {{ limits.body }}</mat-hint>
-          @if (form.controls.body.touched && form.controls.body.invalid) {
-            <mat-error>Enter the article text.</mat-error>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'kb.edit.title' | t }}</mat-label>
+          <input matInput formControlName="title" [attr.maxlength]="limits.title" />
+          <mat-hint align="end">{{ form.controls.title.value.length }} / {{ limits.title }}</mat-hint>
+          @if (form.controls.title.touched && form.controls.title.invalid) {
+            <mat-error>{{ 'kb.edit.enterTitle' | t }}</mat-error>
           }
         </mat-form-field>
-      </mat-tab>
-      <mat-tab label="Preview">
-        @if (form.controls.body.value.trim()) {
-          <crm-markdown-view [source]="form.controls.body.value" />
-        } @else {
-          <p class="hint">Nothing to preview yet.</p>
+
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'kb.edit.summary' | t }}</mat-label>
+          <textarea matInput rows="2" formControlName="summary" [attr.maxlength]="limits.summary"></textarea>
+          <mat-hint align="end">{{ form.controls.summary.value.length }} / {{ limits.summary }}</mat-hint>
+        </mat-form-field>
+
+        <div class="grid-two">
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'kb.edit.type' | t }}</mat-label>
+            <mat-select formControlName="type">
+              @for (ty of types; track ty) {
+                <mat-option [value]="ty">{{ typeLabel(ty, i18n.t) }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'kb.edit.category' | t }}</mat-label>
+            <mat-select formControlName="categoryId">
+              @for (c of categories(); track c.id) {
+                <mat-option [value]="c.id">{{ c.name }}</mat-option>
+              }
+            </mat-select>
+            @if (form.controls.categoryId.touched && form.controls.categoryId.invalid) {
+              <mat-error>{{ 'kb.edit.chooseCategory' | t }}</mat-error>
+            }
+          </mat-form-field>
+        </div>
+
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'kb.edit.visibility' | t }}</mat-label>
+          <mat-select formControlName="visibility">
+            @for (v of visibilities; track v) {
+              <mat-option [value]="v">{{ 'kb.visibility.' + v | t }}</mat-option>
+            }
+          </mat-select>
+          <mat-hint>{{ 'kb.publicHint' | t }}</mat-hint>
+        </mat-form-field>
+
+        <mat-tab-group animationDuration="0ms">
+          <mat-tab [label]="'kb.edit.write' | t">
+            <mat-form-field appearance="outline" class="body-field">
+              <mat-label>{{ 'kb.edit.body' | t }}</mat-label>
+              <textarea matInput rows="16" formControlName="body" [attr.maxlength]="limits.body"></textarea>
+              <mat-hint align="end">{{ form.controls.body.value.length }} / {{ limits.body }}</mat-hint>
+              @if (form.controls.body.touched && form.controls.body.invalid) {
+                <mat-error>{{ 'kb.edit.enterBody' | t }}</mat-error>
+              }
+            </mat-form-field>
+          </mat-tab>
+          <mat-tab [label]="'kb.edit.preview' | t">
+            @if (form.controls.body.value.trim()) {
+              <crm-markdown-view [source]="form.controls.body.value" />
+            } @else {
+              <p class="hint">{{ 'kb.edit.nothingToPreview' | t }}</p>
+            }
+          </mat-tab>
+        </mat-tab-group>
+
+        <details class="hint md-help">
+          <summary>{{ 'kb.edit.helpTitle' | t }}</summary>
+          <ul>
+            <li><code># Heading</code>, <code>## Subheading</code></li>
+            <li><code>**bold**</code>, <code>*italic*</code></li>
+            <li><code>1. step</code> {{ 'kb.edit.helpNumbered' | t }} <code>- item</code> {{ 'kb.edit.helpBullets' | t }}</li>
+            <li><code>`code`</code> {{ 'kb.edit.helpInline' | t }} <code>```</code></li>
+            <li><code>[text](https://example.com)</code> {{ 'kb.edit.helpLinks' | t }}</li>
+          </ul>
+          <p>{{ 'kb.edit.helpNoHtml' | t }}</p>
+        </details>
+
+        @if (error(); as message) {
+          <p class="form-error" role="alert">{{ message }}</p>
         }
-      </mat-tab>
-    </mat-tab-group>
 
-    <details class="hint">
-      <summary>Markdown help</summary>
-      <ul>
-        <li><code># Heading</code>, <code>## Subheading</code></li>
-        <li><code>**bold**</code>, <code>*italic*</code></li>
-        <li><code>1. step</code> for numbered lists, <code>- item</code> for bullets</li>
-        <li><code>`code`</code> inline, or a fenced block between lines of <code>```</code></li>
-        <li><code>[text](https://example.com)</code> for links (http, https and mailto only)</li>
-      </ul>
-      <p>HTML and images are not supported and are shown as plain text.</p>
-    </details>
-
-    @if (error(); as message) {
-      <p class="form-error" role="alert">{{ message }}</p>
-    }
-
-    <div class="actions">
-      <button mat-flat-button type="submit" [disabled]="busy() || noCategories()">Save</button>
-      <a mat-button [routerLink]="id ? ['/knowledge-base', id] : ['/knowledge-base']">Cancel</a>
-    </div>
-  </form>
+        <div class="actions">
+          <button mat-flat-button type="submit" [disabled]="busy() || noCategories()">{{ 'common.save' | t }}</button>
+          <a mat-button [routerLink]="id ? ['/knowledge-base', id] : ['/knowledge-base']">{{ 'common.cancel' | t }}</a>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
 }

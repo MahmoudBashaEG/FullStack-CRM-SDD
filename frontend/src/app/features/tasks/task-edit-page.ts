@@ -1,25 +1,32 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormControl, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormControl, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTimepickerModule } from '@angular/material/timepicker';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
 import { describeHttpError } from '../../core/api/describe-http-error';
 import { AuthService } from '../../core/auth/auth-service';
+import { I18n } from '../../core/i18n/i18n';
+import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { combineLocalDateTime, splitIsoToLocal } from '../../shared/date/date-only';
+import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
 import { Agent } from '../agents/agent-models';
 import { AgentsApi } from '../agents/agents-api';
-import { AgentTask, LinkableTicket, fromLocalInput, toLocalInput } from './task-models';
+import { AgentTask, LinkableTicket } from './task-models';
 import { TasksApi } from './tasks-api';
 import { TicketPicker } from './ticket-picker';
 
@@ -31,7 +38,9 @@ type Card = 'details' | 'reminder' | 'status' | 'owner' | 'link';
   imports: [
     ReactiveFormsModule,
     RouterLink,
-    DatePipe,
+    LocalizedDatePipe,
+    TranslatePipe,
+    ErrorState,
     PageHeader,
     StatusBadge,
     TicketPicker,
@@ -41,12 +50,28 @@ type Card = 'details' | 'reminder' | 'status' | 'owner' | 'link';
     MatSelectModule,
     MatSlideToggleModule,
     MatCheckboxModule,
+    MatDatepickerModule,
+    MatTimepickerModule,
     MatButtonModule,
+    MatIconModule,
   ],
   templateUrl: './task-edit-page.html',
   styleUrl: '../../shared/ui/productivity-page.scss',
+  styles: `
+    .pair {
+      display: grid;
+      gap: var(--crm-space-3);
+      grid-template-columns: minmax(0, 1fr);
+    }
+    @media (min-width: 600px) {
+      .pair {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+  `,
 })
 export class TaskEditPage {
+  private readonly i18n = inject(I18n);
   private readonly api = inject(TasksApi);
   private readonly auth = inject(AuthService);
   private readonly agentsApi = inject(AgentsApi);
@@ -72,12 +97,17 @@ export class TaskEditPage {
   protected readonly form = this.fb.group({
     title: ['', [Validators.required, Validators.maxLength(200)]],
     description: ['', Validators.maxLength(2000)],
-    due: [''],
+    dueDay: [null as Date | null],
+    dueTime: [null as Date | null],
     ownerId: [''],
     remind: [false],
-    remindAt: [''],
+    remindDay: [null as Date | null],
+    remindTime: [null as Date | null],
   });
-  protected readonly reminderForm = this.fb.group({ remindAt: ['', Validators.required] });
+  protected readonly reminderForm = this.fb.group({
+    remindDay: [null as Date | null, Validators.required],
+    remindTime: [null as Date | null, Validators.required],
+  });
   protected readonly ownerForm = this.fb.group({ ownerId: ['', Validators.required], removeTicketLink: [false] });
   protected readonly selectedTicket = signal<LinkableTicket | null>(null);
   protected readonly changeTicket = signal<LinkableTicket | null>(null);
@@ -105,7 +135,7 @@ export class TaskEditPage {
     if (t) return t.assignedAgentName;
     const id = this.form.controls.ownerId.value;
     const a = this.agents().find(x => x.id === id);
-    return a ? `${a.firstName} ${a.lastName}` : 'the task owner';
+    return a ? `${a.firstName} ${a.lastName}` : this.i18n.t('tasks.edit.theTaskOwner');
   }
 
   protected create(): void {
@@ -114,8 +144,13 @@ export class TaskEditPage {
       return;
     }
     const v = this.form.getRawValue();
-    if (v.remind && !v.remindAt) {
-      this.setError('create', 'Choose a reminder time or turn the reminder off.');
+    if (v.remind && !v.remindDay && !v.remindTime) {
+      this.setError('create', this.i18n.t('tasks.edit.reminderRequired'));
+      return;
+    }
+    const due = this.pair(this.form.controls.dueDay, this.form.controls.dueTime);
+    const remindAt = v.remind ? this.pair(this.form.controls.remindDay, this.form.controls.remindTime) : null;
+    if (due?.invalid || remindAt?.invalid) {
       return;
     }
     this.busy.set(true);
@@ -126,70 +161,81 @@ export class TaskEditPage {
         description: v.description.trim() || null,
         assignedAgentUserId: this.isSuperAdmin() ? v.ownerId : null,
         ticketId: this.selectedTicket()?.id ?? null,
-        dueAtUtc: fromLocalInput(v.due),
-        remindAtUtc: v.remind ? fromLocalInput(v.remindAt) : null,
+        dueAtUtc: due?.iso ?? null,
+        remindAtUtc: remindAt?.iso ?? null,
       })
       .subscribe({
         next: created => {
           this.busy.set(false);
-          this.snackBar.open('Task created.', 'OK', { duration: 4000 });
+          this.snackBar.open(this.i18n.t('tasks.edit.created'), 'OK', { duration: 4000 });
           void this.router.navigate(['/tasks', created.id]);
         },
         error: (error: HttpErrorResponse) => {
           this.busy.set(false);
-          this.setError('create', describeHttpError(error, 'Could not create the task.'));
+          this.setError('create', describeHttpError(error, this.i18n.t('tasks.edit.createFailed'), this.i18n.t));
         },
       });
   }
 
   protected saveDetails(): void {
     const t = this.task();
-    if (!t || this.form.controls.title.invalid || this.form.controls.description.invalid) {
+    if (
+      !t ||
+      this.form.controls.title.invalid ||
+      this.form.controls.description.invalid ||
+      this.form.controls.dueDay.invalid ||
+      this.form.controls.dueTime.invalid
+    ) {
       this.form.markAllAsTouched();
+      return;
+    }
+    const due = this.pair(this.form.controls.dueDay, this.form.controls.dueTime);
+    if (due?.invalid) {
       return;
     }
     const v = this.form.getRawValue();
     this.run('details', this.api.update(t.id, t.version, {
       title: v.title.trim(),
       description: v.description.trim() || null,
-      dueAtUtc: fromLocalInput(v.due),
-    }), 'Task saved.');
+      dueAtUtc: due?.iso ?? null,
+    }), this.i18n.t('tasks.edit.saved'));
   }
 
   protected saveReminder(): void {
     const t = this.task();
-    const value = fromLocalInput(this.reminderForm.controls.remindAt.value);
+    const { remindDay, remindTime } = this.reminderForm.controls;
+    const value = remindDay.invalid || remindTime.invalid ? null : combineLocalDateTime(remindDay.value, remindTime.value);
     if (!t || !value) {
       this.reminderForm.markAllAsTouched();
       return;
     }
-    this.run('reminder', this.api.scheduleReminder(t.id, t.version, value), 'Reminder scheduled.');
+    this.run('reminder', this.api.scheduleReminder(t.id, t.version, value), this.i18n.t('tasks.edit.reminderScheduled'));
   }
 
   protected cancelReminder(): void {
     const t = this.task();
-    if (t) this.run('reminder', this.api.cancelReminder(t.id, t.version), 'Reminder cancelled.');
+    if (t) this.run('reminder', this.api.cancelReminder(t.id, t.version), this.i18n.t('tasks.edit.reminderCancelled'));
   }
 
   protected setCompleted(completed: boolean): void {
     const t = this.task();
-    if (t) this.run('status', completed ? this.api.complete(t.id, t.version) : this.api.reopen(t.id, t.version), completed ? 'Task completed.' : 'Task reopened.');
+    if (t) this.run('status', completed ? this.api.complete(t.id, t.version) : this.api.reopen(t.id, t.version), this.i18n.t(completed ? 'tasks.edit.completed' : 'tasks.edit.reopened'));
   }
 
   protected setArchived(archived: boolean): void {
     const t = this.task();
-    if (t) this.run('status', archived ? this.api.archive(t.id, t.version) : this.api.restore(t.id, t.version), archived ? 'Task archived.' : 'Task restored.');
+    if (t) this.run('status', archived ? this.api.archive(t.id, t.version) : this.api.restore(t.id, t.version), this.i18n.t(archived ? 'tasks.edit.archived' : 'tasks.edit.restored'));
   }
 
   protected saveLink(): void {
     const t = this.task();
     const ticket = this.changeTicket();
-    if (t && ticket) this.run('link', this.api.setTicketLink(t.id, t.version, ticket.id), 'Ticket linked.');
+    if (t && ticket) this.run('link', this.api.setTicketLink(t.id, t.version, ticket.id), this.i18n.t('tasks.edit.linked'));
   }
 
   protected removeLink(): void {
     const t = this.task();
-    if (t) this.run('link', this.api.removeTicketLink(t.id, t.version), 'Ticket link removed.');
+    if (t) this.run('link', this.api.removeTicketLink(t.id, t.version), this.i18n.t('tasks.edit.linkRemoved'));
   }
 
   protected reassign(): void {
@@ -199,7 +245,7 @@ export class TaskEditPage {
       return;
     }
     const v = this.ownerForm.getRawValue();
-    this.run('owner', this.api.reassign(t.id, t.version, v.ownerId, v.removeTicketLink), 'Task reassigned.');
+    this.run('owner', this.api.reassign(t.id, t.version, v.ownerId, v.removeTicketLink), this.i18n.t('tasks.edit.reassigned'));
   }
 
   /** F1: one request at a time, always with the displayed version; the response replaces the task (new version). */
@@ -224,21 +270,21 @@ export class TaskEditPage {
   private onFailure(card: Card, error: HttpErrorResponse): void {
     if (error.status === 404) {
       this.task.set(null);
-      this.loadError.set('This task is no longer available to you.');
+      this.loadError.set(this.i18n.t('tasks.edit.unavailable'));
       return;
     }
     if (error.status === 409) {
       // Stale version or state conflict: show the message, reload the latest, keep dirty input; the user re-applies.
-      this.setError(card, describeHttpError(error, 'The task was changed by someone else. Reload it and try again.'));
+      this.setError(card, describeHttpError(error, this.i18n.t('tasks.edit.conflict'), this.i18n.t));
       this.reload(false);
       return;
     }
     if (error.status === 503) {
-      this.setError(card, 'Your change may have been saved. Check it before trying again.');
+      this.setError(card, this.i18n.t('tasks.edit.maybeSaved'));
       this.reload(false);
       return;
     }
-    this.setError(card, describeHttpError(error, 'Could not save the change.')); // 400 inline, 428 generic
+    this.setError(card, describeHttpError(error, this.i18n.t('tasks.edit.saveFailed'), this.i18n.t)); // 400 inline, 428 generic
   }
 
   private reload(resetForms: boolean): void {
@@ -252,9 +298,9 @@ export class TaskEditPage {
         this.loading.set(false);
         if (error.status === 404) {
           this.task.set(null);
-          this.loadError.set('This task is no longer available to you.');
+          this.loadError.set(this.i18n.t('tasks.edit.unavailable'));
         } else if (!this.task()) {
-          this.loadError.set(describeHttpError(error, 'Could not load the task.'));
+          this.loadError.set(describeHttpError(error, this.i18n.t('tasks.edit.loadFailed'), this.i18n.t));
         }
       },
     });
@@ -265,17 +311,37 @@ export class TaskEditPage {
     this.task.set(task);
     this.pickerOwner.set(task.assignedAgentUserId);
     if (resetForms || !this.form.dirty) {
+      const due = splitIsoToLocal(task.dueAtUtc);
       this.form.reset({
-        title: task.title, description: task.description ?? '', due: toLocalInput(task.dueAtUtc),
-        ownerId: task.assignedAgentUserId, remind: false, remindAt: '',
+        title: task.title, description: task.description ?? '', dueDay: due.day, dueTime: due.time,
+        ownerId: task.assignedAgentUserId, remind: false, remindDay: null, remindTime: null,
       });
     }
     if (resetForms || !this.reminderForm.dirty) {
-      this.reminderForm.reset({ remindAt: toLocalInput(task.remindAtUtc) });
+      const remind = splitIsoToLocal(task.remindAtUtc);
+      this.reminderForm.reset({ remindDay: remind.day, remindTime: remind.time });
     }
     if (resetForms || !this.ownerForm.dirty) {
       this.ownerForm.reset({ ownerId: task.assignedAgentUserId, removeTicketLink: false });
     }
+  }
+
+  /** Day + time pair => ISO UTC. Both empty => null; only one filled => marks the missing control (timeRequired / dateRequired) and flags invalid. */
+  private pair(day: AbstractControl<Date | null>, time: AbstractControl<Date | null>): { iso: string | null; invalid: boolean } | null {
+    if (!day.value && !time.value) {
+      return null;
+    }
+    if (day.value && !time.value) {
+      time.setErrors({ timeRequired: true });
+      time.markAsTouched();
+      return { iso: null, invalid: true };
+    }
+    if (!day.value && time.value) {
+      day.setErrors({ dateRequired: true });
+      day.markAsTouched();
+      return { iso: null, invalid: true };
+    }
+    return { iso: combineLocalDateTime(day.value, time.value), invalid: false };
   }
 
   private setError(card: Card | 'create', message: string | null): void {

@@ -11,11 +11,15 @@ import {
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { describeHttpError } from '../../core/api/describe-http-error';
+import { I18n } from '../../core/i18n/i18n';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
 import { Agent } from './agent-models';
@@ -32,17 +36,21 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
     ReactiveFormsModule,
     RouterLink,
     PageHeader,
+    ErrorState,
+    TranslatePipe,
     StatusBadge,
     MatCardModule,
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
+    MatIconModule,
     MatSlideToggleModule,
   ],
   templateUrl: './agent-detail-page.html',
   styleUrl: './agent-detail-page.scss',
 })
 export class AgentDetailPage {
+  private readonly i18n = inject(I18n);
   private readonly api = inject(AgentsApi);
   private readonly snackBar = inject(MatSnackBar);
   private readonly destroyRef = inject(DestroyRef);
@@ -74,13 +82,22 @@ export class AgentDetailPage {
   protected readonly passwordError = signal<string | null>(null);
 
   constructor() {
+    this.load();
+  }
+
+  protected reload(): void {
+    this.loadError.set(null);
+    this.load();
+  }
+
+  private load(): void {
     this.api
       .get(this.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: agent => this.show(agent),
         error: (error: HttpErrorResponse) =>
-          this.loadError.set(describeHttpError(error, 'Could not load the agent.')),
+          this.loadError.set(describeHttpError(error, this.i18n.t('agents.detail.loadFailed'), this.i18n.t)),
       });
   }
 
@@ -113,10 +130,10 @@ export class AgentDetailPage {
         next: agent => {
           this.show(agent);
           this.detailsSaving.set(false);
-          this.snackBar.open('Agent updated.', undefined, { duration: 3000 });
+          this.snackBar.open(this.i18n.t('agents.detail.updated'), undefined, { duration: 3000 });
         },
         error: (error: HttpErrorResponse) => {
-          this.detailsError.set(describeHttpError(error, 'Could not update the agent.'));
+          this.detailsError.set(describeHttpError(error, this.i18n.t('agents.detail.updateFailed'), this.i18n.t));
           this.detailsSaving.set(false);
         },
       });
@@ -138,7 +155,7 @@ export class AgentDetailPage {
           this.agent.set({ ...current, isActive });
           this.statusSaving.set(false);
           this.snackBar.open(
-            isActive ? 'Agent enabled.' : 'Agent disabled. Active sessions were signed out.',
+            isActive ? this.i18n.t('agents.detail.enabled') : this.i18n.t('agents.detail.disabled'),
             undefined,
             { duration: 4000 },
           );
@@ -146,7 +163,7 @@ export class AgentDetailPage {
         error: (error: HttpErrorResponse) => {
           // Re-assign so the toggle is bound back to the server's value.
           this.agent.set({ ...current });
-          this.statusError.set(describeHttpError(error, 'Could not change the account status.'));
+          this.statusError.set(describeHttpError(error, this.i18n.t('agents.detail.statusFailed'), this.i18n.t));
           this.statusSaving.set(false);
         },
       });
@@ -167,12 +184,12 @@ export class AgentDetailPage {
         next: () => {
           this.passwordForm.reset();
           this.passwordSaving.set(false);
-          this.snackBar.open("Password updated. The agent's existing sessions were signed out.", undefined, {
+          this.snackBar.open(this.i18n.t('agents.detail.passwordUpdated'), undefined, {
             duration: 4000,
           });
         },
         error: (error: HttpErrorResponse) => {
-          this.passwordError.set(describeHttpError(error, 'Could not update the password.'));
+          this.passwordError.set(describeHttpError(error, this.i18n.t('agents.detail.passwordFailed'), this.i18n.t));
           this.passwordSaving.set(false);
         },
       });

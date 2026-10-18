@@ -10,10 +10,12 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
 import { describeHttpError } from '../../core/api/describe-http-error';
+import { I18n } from '../../core/i18n/i18n';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { TICKET_CATEGORIES, TicketCategory } from '../tickets/ticket-models';
 import { PortalApi } from './portal-api';
-import { NOT_LINKED, PORTAL_LIMITS } from './portal-models';
+import { PORTAL_LIMITS } from './portal-models';
 
 @Component({
   selector: 'crm-portal-ticket-create-page',
@@ -22,6 +24,7 @@ import { NOT_LINKED, PORTAL_LIMITS } from './portal-models';
     ReactiveFormsModule,
     RouterLink,
     PageHeader,
+    TranslatePipe,
     MatCardModule,
     MatFormFieldModule,
     MatInputModule,
@@ -35,6 +38,7 @@ export class PortalTicketCreatePage {
   private readonly api = inject(PortalApi);
   private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly i18n = inject(I18n);
   private readonly destroyRef = inject(DestroyRef);
   private readonly fb = inject(NonNullableFormBuilder);
 
@@ -62,11 +66,11 @@ export class PortalTicketCreatePage {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: ticket => {
-          this.snackBar.open('Request submitted. Our team will review it.', undefined, { duration: 4000 });
+          this.snackBar.open(this.i18n.t('portal.create.success'), undefined, { duration: 4000 });
           void this.router.navigate(['/portal/tickets', ticket.id]);
         },
         error: (error: HttpErrorResponse) => {
-          this.error.set(error.status === 404 ? NOT_LINKED : describeHttpError(error, 'Could not submit your request.'));
+          this.error.set(error.status === 404 ? this.i18n.t('portal.notLinked') : describeHttpError(error, this.i18n.t('portal.create.failure'), this.i18n.t));
           this.submitting.set(false);
         },
       });

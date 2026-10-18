@@ -11,4 +11,10 @@ public sealed record AdminAuditEntryDetails(
 
 public sealed record OrganizationSettingsDetails(
     bool IsConfigured, string? DisplayName, string? SupportEmail, string? SupportPhone, string? SupportInformation,
+    string? AccentColor, bool HasLogo, string? LogoContentType, int? LogoSizeBytes, DateTimeOffset? LogoUpdatedAtUtc, int LogoVersion,
     DateTimeOffset? UpdatedAtUtc, string? UpdatedByName, byte[] Version);
+
+/// <summary>Anonymous branding: nothing but these three public values. LogoVersion null = no logo.</summary>
+public sealed record PublicBrandingDetails(string? DisplayName, string? AccentColor, int? LogoVersion);
+
+public sealed record OrganizationLogoFile(byte[] Content, string ContentType);

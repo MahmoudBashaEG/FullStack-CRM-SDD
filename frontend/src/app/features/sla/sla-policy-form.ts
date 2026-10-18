@@ -1,15 +1,19 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormArray, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { describeHttpError } from '../../core/api/describe-http-error';
+import { I18n } from '../../core/i18n/i18n';
+import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { TICKET_PRIORITIES, TicketPriority } from '../tickets/ticket-models';
 import { SlaApi } from './sla-api';
 import { describeSaveError } from './sla-errors';
@@ -27,9 +31,12 @@ const DEMO_DEFAULTS: Record<TicketPriority, [number, number]> = {
   selector: 'crm-sla-policy-form',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    DatePipe,
+    LocalizedDatePipe,
+    TranslatePipe,
+    ErrorState,
     ReactiveFormsModule,
     MatButtonModule,
+    MatCardModule,
     MatFormFieldModule,
     MatInputModule,
     MatProgressBarModule,
@@ -39,6 +46,7 @@ const DEMO_DEFAULTS: Record<TicketPriority, [number, number]> = {
   styleUrl: './sla-admin.scss',
 })
 export class SlaPolicyForm {
+  protected readonly i18n = inject(I18n);
   private readonly api = inject(SlaApi);
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly snackBar = inject(MatSnackBar);
@@ -84,7 +92,7 @@ export class SlaPolicyForm {
           this.loading.set(false);
         },
         error: (error: HttpErrorResponse) => {
-          this.loadError.set(describeHttpError(error, 'Could not load the SLA policy.'));
+          this.loadError.set(describeHttpError(error, this.i18n.t('sla.policy.loadFailed'), this.i18n.t));
           this.loading.set(false);
         },
       });
@@ -112,11 +120,11 @@ export class SlaPolicyForm {
         next: policy => {
           this.show(policy);
           this.saving.set(false);
-          this.snackBar.open('SLA policy saved.', undefined, { duration: 3000 });
+          this.snackBar.open(this.i18n.t('sla.policy.saved'), undefined, { duration: 3000 });
         },
         error: (error: HttpErrorResponse) => {
           this.saving.set(false);
-          this.saveError.set(describeSaveError(error, 'Could not save the SLA policy.'));
+          this.saveError.set(describeSaveError(error, this.i18n.t('sla.policy.saveFailed'), this.i18n.t));
         },
       });
   }

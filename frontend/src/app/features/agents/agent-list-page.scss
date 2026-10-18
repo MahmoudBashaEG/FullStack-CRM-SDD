@@ -1,17 +1,8 @@
-.toolbar {
-  display: flex;
-  justify-content: flex-end;
-  margin-block-end: var(--crm-space-4);
-}
-
-.table-container {
-  overflow-x: auto;
-}
-
-table {
-  inline-size: 100%;
-}
-
-.error {
-  color: var(--mat-sys-error);
+.visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

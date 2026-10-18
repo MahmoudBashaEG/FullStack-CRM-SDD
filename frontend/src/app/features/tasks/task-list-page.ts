@@ -1,9 +1,9 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -15,6 +15,11 @@ import { RouterLink } from '@angular/router';
 import { EMPTY, Subject, catchError, debounceTime, switchMap } from 'rxjs';
 import { describeHttpError } from '../../core/api/describe-http-error';
 import { AuthService } from '../../core/auth/auth-service';
+import { I18n } from '../../core/i18n/i18n';
+import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { EmptyState } from '../../shared/ui/empty-state/empty-state';
+import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
 import { Agent } from '../agents/agent-models';
@@ -28,7 +33,11 @@ import { TasksApi } from './tasks-api';
   imports: [
     ReactiveFormsModule,
     RouterLink,
-    DatePipe,
+    LocalizedDatePipe,
+    TranslatePipe,
+    EmptyState,
+    ErrorState,
+    MatCardModule,
     PageHeader,
     StatusBadge,
     MatPaginatorModule,
@@ -42,8 +51,21 @@ import { TasksApi } from './tasks-api';
   ],
   templateUrl: './task-list-page.html',
   styleUrl: '../../shared/ui/productivity-page.scss',
+  styles: `
+    .filters-card {
+      margin-block-end: var(--crm-space-4);
+    }
+    td.wrap {
+      overflow-wrap: anywhere;
+      min-inline-size: 10rem;
+    }
+    .mat-mdc-paginator {
+      margin-block-start: var(--crm-space-3);
+    }
+  `,
 })
 export class TaskListPage {
+  private readonly i18n = inject(I18n);
   private readonly api = inject(TasksApi);
   private readonly auth = inject(AuthService);
   private readonly agentsApi = inject(AgentsApi);
@@ -74,7 +96,7 @@ export class TaskListPage {
         switchMap(params =>
           this.api.list(params).pipe(
             catchError((error: HttpErrorResponse) => {
-              this.error.set(describeHttpError(error, 'Could not load tasks.'));
+              this.error.set(describeHttpError(error, this.i18n.t('tasks.list.loadFailed'), this.i18n.t));
               this.loading.set(false);
               return EMPTY;
             }),

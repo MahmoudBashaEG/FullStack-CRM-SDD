@@ -1,41 +1,44 @@
 <crm-page-header
-  [title]="'Welcome, ' + (user()?.firstName ?? '')"
-  subtitle="You are signed in to Support CRM. Modules appear here as they are delivered." />
+  icon="home"
+  [title]="'home.welcome' | t: { name: user()?.firstName ?? '' }"
+  [subtitle]="'home.subtitle' | t" />
 
-@if (isCustomer()) {
+<div class="crm-grid">
+  @if (isCustomer()) {
+    <mat-card appearance="outlined" class="status-card">
+      <mat-card-header><mat-card-title>{{ 'home.customer.title' | t }}</mat-card-title></mat-card-header>
+      <mat-card-content><p>{{ 'home.customer.body' | t }}</p></mat-card-content>
+      <mat-card-actions align="end">
+        <a mat-button routerLink="/portal/help-center">{{ 'home.customer.helpCenter' | t }}</a>
+        <a mat-flat-button routerLink="/portal">{{ 'home.customer.openPortal' | t }}</a>
+      </mat-card-actions>
+    </mat-card>
+  }
+
   <mat-card appearance="outlined" class="status-card">
-    <mat-card-header><mat-card-title>Customer support</mat-card-title></mat-card-header>
-    <mat-card-content><p>Submit a request, follow its progress and find answers in the Help Center.</p></mat-card-content>
+    <mat-card-header>
+      <mat-card-title>{{ 'home.status.title' | t }}</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      @let state = connection();
+      @switch (state.kind) {
+        @case ('checking') {
+          <crm-status-badge [label]="'home.status.checking' | t" tone="pending" />
+        }
+        @case ('online') {
+          <crm-status-badge [label]="'home.status.online' | t" tone="success" />
+          <p>{{ 'home.status.report' | t: { service: state.health.service, status: state.health.status, time: (state.health.checkedAtUtc | crmDate: 'medium') } }}</p>
+        }
+        @case ('offline') {
+          <crm-status-badge [label]="'home.status.offline' | t" tone="error" />
+          <p>{{ state.message }}</p>
+        }
+      }
+    </mat-card-content>
     <mat-card-actions align="end">
-      <a mat-button routerLink="/portal/help-center">Help Center</a>
-      <a mat-flat-button routerLink="/portal">Open Support Portal</a>
+      <button mat-stroked-button type="button" (click)="checkConnection()" [disabled]="connection().kind === 'checking'">
+        <mat-icon>refresh</mat-icon> {{ 'home.status.checkAgain' | t }}
+      </button>
     </mat-card-actions>
   </mat-card>
-}
-
-<mat-card appearance="outlined" class="status-card">
-  <mat-card-header>
-    <mat-card-title>System status</mat-card-title>
-  </mat-card-header>
-  <mat-card-content>
-    @let state = connection();
-    @switch (state.kind) {
-      @case ('checking') {
-        <crm-status-badge label="Checking..." tone="pending" />
-      }
-      @case ('online') {
-        <crm-status-badge label="API connected" tone="success" />
-        <p>{{ state.health.service }} reported {{ state.health.status }} at {{ state.health.checkedAtUtc | date: 'medium' }}.</p>
-      }
-      @case ('offline') {
-        <crm-status-badge label="API unavailable" tone="error" />
-        <p>{{ state.message }}</p>
-      }
-    }
-  </mat-card-content>
-  <mat-card-actions align="end">
-    <button mat-stroked-button type="button" (click)="checkConnection()" [disabled]="connection().kind === 'checking'">
-      <mat-icon>refresh</mat-icon> Check again
-    </button>
-  </mat-card-actions>
-</mat-card>
+</div>

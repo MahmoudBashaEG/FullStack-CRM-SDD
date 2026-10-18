@@ -70,14 +70,53 @@ namespace Crm.Infrastructure.Persistence.Migrations
                     b.ToTable("AdminAuditLogs", (string)null);
                 });
 
+            modelBuilder.Entity("Crm.Domain.Administration.OrganizationLogo", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("Content")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("OrganizationLogos", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_OrganizationLogos_Singleton", "[Id] = 1");
+                        });
+                });
+
             modelBuilder.Entity("Crm.Domain.Administration.OrganizationSettings", b =>
                 {
                     b.Property<int>("Id")
                         .HasColumnType("int");
 
+                    b.Property<string>("AccentColor")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<string>("DisplayName")
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("LogoContentType")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int?>("LogoSizeBytes")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("LogoUpdatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("LogoVersion")
+                        .HasColumnType("int");
 
                     b.Property<string>("SupportEmail")
                         .HasMaxLength(256)

@@ -1,3 +1,4 @@
+import { Translate, englishT } from '../../core/i18n/translate-fn';
 import { StatusTone } from '../../shared/ui/status-badge/status-badge';
 
 export type KnowledgeArticleType = 'Faq' | 'HelpArticle' | 'Solution' | 'Guide';
@@ -7,16 +8,12 @@ export type KnowledgeArticleVisibility = 'Internal' | 'Public';
 export const ARTICLE_TYPES: readonly KnowledgeArticleType[] = ['Faq', 'HelpArticle', 'Solution', 'Guide'];
 export const ARTICLE_VISIBILITIES: readonly KnowledgeArticleVisibility[] = ['Internal', 'Public'];
 
-const TYPE_LABELS: Record<KnowledgeArticleType, string> = { Faq: 'FAQ', HelpArticle: 'Help Article', Solution: 'Solution', Guide: 'Guide' };
-const STATUS_LABELS: Record<KnowledgeArticleStatus, string> = {
-  Draft: 'Draft', ReadyForPublication: 'Ready for Publication', Published: 'Published', Archived: 'Archived',
-};
 const STATUS_TONES: Record<KnowledgeArticleStatus, StatusTone> = {
   Draft: 'neutral', ReadyForPublication: 'pending', Published: 'success', Archived: 'neutral',
 };
 
-export const articleTypeLabel = (t: KnowledgeArticleType) => TYPE_LABELS[t];
-export const articleStatusLabel = (s: KnowledgeArticleStatus) => STATUS_LABELS[s];
+export const articleTypeLabel = (type: KnowledgeArticleType, t: Translate = englishT) => t(`kb.types.${type}`);
+export const articleStatusLabel = (status: KnowledgeArticleStatus, t: Translate = englishT) => t(`kb.status.${status}`);
 export const articleStatusTone = (s: KnowledgeArticleStatus) => STATUS_TONES[s];
 
 /** Matches Crm.Api KnowledgeCategoryResponse. */

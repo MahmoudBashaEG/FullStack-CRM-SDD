@@ -69,4 +69,18 @@ export class AdminApi {
       headers: { 'If-Match': `"${version}"` },
     });
   }
+
+  setLogo(version: string, file: File): Observable<OrganizationSettings> {
+    const body = new FormData();
+    body.append('file', file, file.name);
+    return this.http.put<OrganizationSettings>(this.apiUrl.versioned('admin/organization-settings/logo'), body, {
+      headers: { 'If-Match': `"${version}"` },
+    });
+  }
+
+  removeLogo(version: string): Observable<OrganizationSettings> {
+    return this.http.delete<OrganizationSettings>(this.apiUrl.versioned('admin/organization-settings/logo'), {
+      headers: { 'If-Match': `"${version}"` },
+    });
+  }
 }

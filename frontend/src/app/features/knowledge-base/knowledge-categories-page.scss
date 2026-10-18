@@ -1,0 +1,21 @@
+@use '../../shared/ui/productivity-page';
+
+.section-card {
+  margin-block-end: var(--crm-space-4);
+}
+
+.toolbar {
+  justify-content: flex-start;
+  margin-block-start: var(--crm-space-3);
+}
+
+.rows {
+  margin-block-start: var(--crm-space-4);
+}
+
+@media (max-width: 600px) {
+  .search {
+    flex-basis: 100%;
+    max-inline-size: none;
+  }
+}

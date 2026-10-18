@@ -1,4 +1,5 @@
 import { CurrentUser } from '../../core/auth/auth-models';
+import { Translate, englishT } from '../../core/i18n/translate-fn';
 import { Ticket, TicketStatus } from './ticket-models';
 
 export interface TicketTransition {
@@ -17,6 +18,14 @@ export const TICKET_TRANSITIONS: Readonly<Record<TicketStatus, readonly TicketTr
   Closed: [{ to: 'Open', label: 'Reopen' }],
 };
 
+const TRANSITION_KEYS: Readonly<Record<string, string>> = {
+  'Start progress': 'tickets.transitions.startProgress',
+  Resolve: 'tickets.transitions.resolve',
+  Close: 'tickets.transitions.close',
+  Resume: 'tickets.transitions.resume',
+  Reopen: 'tickets.transitions.reopen',
+};
+
 export interface TicketActions {
   transitions: readonly TicketTransition[];
   canAssign: boolean;
@@ -28,12 +37,13 @@ export interface TicketActions {
 export function ticketActions(
   ticket: Pick<Ticket, 'status' | 'isEscalated' | 'assignedAgentUserId'>,
   user: Pick<CurrentUser, 'id' | 'role'> | null,
+  t: Translate = englishT,
 ): TicketActions {
   const isSuperAdmin = user?.role === 'SuperAdmin';
   const canAct = isSuperAdmin || (user?.role === 'Agent' && ticket.assignedAgentUserId === user.id);
   const active = ticket.status === 'Open' || ticket.status === 'InProgress';
   return {
-    transitions: canAct ? TICKET_TRANSITIONS[ticket.status] : [],
+    transitions: canAct ? TICKET_TRANSITIONS[ticket.status].map(tr => ({ to: tr.to, label: t(TRANSITION_KEYS[tr.label]) })) : [],
     canAssign: isSuperAdmin,
     canEscalate: canAct && active && !ticket.isEscalated,
     canClearEscalation: isSuperAdmin && ticket.isEscalated,

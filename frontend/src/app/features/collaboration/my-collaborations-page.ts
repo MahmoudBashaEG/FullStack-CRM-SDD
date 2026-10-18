@@ -1,33 +1,37 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { RouterLink } from '@angular/router';
 import { EMPTY, Subject, catchError, switchMap } from 'rxjs';
 import { describeHttpError } from '../../core/api/describe-http-error';
+import { I18n } from '../../core/i18n/i18n';
+import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { EmptyState } from '../../shared/ui/empty-state/empty-state';
+import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
-import { priorityTone, statusLabel, statusTone } from '../tickets/ticket-models';
+import { priorityTone, statusTone } from '../tickets/ticket-models';
 import { CollaborationApi } from './collaboration-api';
 import { MyCollaboration } from './collaboration-models';
 
 @Component({
   selector: 'crm-my-collaborations-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, RouterLink, PageHeader, StatusBadge, MatButtonModule, MatPaginatorModule, MatProgressBarModule],
+  imports: [LocalizedDatePipe, TranslatePipe, RouterLink, EmptyState, ErrorState, PageHeader, StatusBadge, MatCardModule, MatPaginatorModule, MatProgressBarModule],
   templateUrl: './my-collaborations-page.html',
   styleUrl: '../../shared/ui/productivity-page.scss',
 })
 export class MyCollaborationsPage {
   private readonly api = inject(CollaborationApi);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly i18n = inject(I18n);
   private readonly requests = new Subject<number>();
 
   protected readonly priorityTone = priorityTone;
-  protected readonly statusLabel = statusLabel;
   protected readonly statusTone = statusTone;
   protected readonly items = signal<MyCollaboration[]>([]);
   protected readonly totalCount = signal(0);
@@ -42,7 +46,7 @@ export class MyCollaborationsPage {
         switchMap(page =>
           this.api.mine(page, this.pageSize()).pipe(
             catchError((error: HttpErrorResponse) => {
-              this.error.set(describeHttpError(error, 'Could not load your collaborations.'));
+              this.error.set(describeHttpError(error, this.i18n.t('collaboration.mine.loadError'), this.i18n.t));
               this.loading.set(false);
               return EMPTY;
             }),

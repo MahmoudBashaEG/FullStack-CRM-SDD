@@ -3,36 +3,35 @@
 }
 
 @if (loadError(); as message) {
-  <p class="form-error" role="alert">{{ message }}</p>
-  <button mat-stroked-button type="button" (click)="load()">Retry</button>
+  <crm-error-state [message]="message" (retry)="load()" />
 }
 
 @if (!loadError()) {
   <div class="stack">
     <div class="inline">
-      <button mat-flat-button type="button" (click)="newRule()" [disabled]="editing() !== null">New rule</button>
-      <span class="hint">Rules run in sort order. Rules are never deleted — disable them. Notify and escalate on breach are two separate rules.</span>
+      <button mat-flat-button type="button" (click)="newRule()" [disabled]="editing() !== null">{{ 'sla.rules.new' | t }}</button>
+      <span class="hint">{{ 'sla.rules.hint' | t }}</span>
     </div>
 
     @if (editing() !== null) {
       <mat-card appearance="outlined">
         <mat-card-header>
-          <mat-card-title>{{ editing() ? 'Edit rule' : 'New rule' }}</mat-card-title>
+          <mat-card-title>{{ (editing() ? 'sla.rules.edit' : 'sla.rules.new') | t }}</mat-card-title>
         </mat-card-header>
         <mat-card-content>
           <form [formGroup]="form" (ngSubmit)="save()" class="stack">
             <mat-form-field appearance="outline">
-              <mat-label>Name</mat-label>
+              <mat-label>{{ 'common.name' | t }}</mat-label>
               <input matInput formControlName="name" maxlength="100" />
               @if (form.controls.name.invalid) {
-                <mat-error>A name is required (max 100 characters)</mat-error>
+                <mat-error>{{ 'sla.rules.nameError' | t }}</mat-error>
               }
             </mat-form-field>
-            <mat-slide-toggle formControlName="isEnabled">Enabled</mat-slide-toggle>
+            <mat-slide-toggle formControlName="isEnabled">{{ 'sla.rules.enabled' | t }}</mat-slide-toggle>
 
             <div class="grid">
               <mat-form-field appearance="outline">
-                <mat-label>Trigger</mat-label>
+                <mat-label>{{ 'sla.rules.trigger' | t }}</mat-label>
                 <mat-select formControlName="trigger" (selectionChange)="onTriggerChange($event.value)">
                   @for (t of triggers; track t) {
                     <mat-option [value]="t">{{ triggerLabel(t) }}</mat-option>
@@ -40,7 +39,7 @@
                 </mat-select>
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>Action</mat-label>
+                <mat-label>{{ 'sla.rules.action' | t }}</mat-label>
                 <mat-select formControlName="action" (selectionChange)="onActionChange($event.value)">
                   @for (a of availableActions(); track a) {
                     <mat-option [value]="a">{{ actionLabel(a) }}</mat-option>
@@ -51,69 +50,69 @@
 
             @if (action() === 'AssignToAgent') {
               <mat-form-field appearance="outline">
-                <mat-label>Assign to agent</mat-label>
+                <mat-label>{{ 'sla.rules.assignToAgent' | t }}</mat-label>
                 <mat-select formControlName="targetAgentUserId">
                   @for (agent of activeAgents(); track agent.id) {
                     <mat-option [value]="agent.id">{{ agent.firstName }} {{ agent.lastName }}</mat-option>
                   }
                 </mat-select>
-                <mat-hint>Only active Agents. Applies to tickets created without an assignee.</mat-hint>
+                <mat-hint>{{ 'sla.rules.assignHint' | t }}</mat-hint>
               </mat-form-field>
             }
 
             @if (trigger() === 'SlaWarningDue') {
               <mat-form-field appearance="outline">
-                <mat-label>Warn this many business minutes before due</mat-label>
+                <mat-label>{{ 'sla.rules.warnLead' | t }}</mat-label>
                 <input matInput type="number" min="1" max="10080" step="1" formControlName="warningLeadMinutes" />
                 <mat-hint>1 – 10080</mat-hint>
               </mat-form-field>
-              <p class="hint">Recipients: the assigned Agent, or all SuperAdmins when the ticket is unassigned.</p>
+              <p class="hint">{{ 'sla.rules.recipientsWarning' | t }}</p>
             }
             @if (trigger() === 'SlaBreached' && action() === 'CreateInAppNotification') {
-              <p class="hint">Recipients: the assigned Agent and all SuperAdmins.</p>
+              <p class="hint">{{ 'sla.rules.recipientsBreached' | t }}</p>
             }
 
             <div class="grid">
               <mat-form-field appearance="outline">
-                <mat-label>Category</mat-label>
+                <mat-label>{{ 'sla.rules.category' | t }}</mat-label>
                 <mat-select formControlName="categoryCondition">
-                  <mat-option [value]="null">Any</mat-option>
+                  <mat-option [value]="null">{{ 'sla.rules.any' | t }}</mat-option>
                   @for (c of categories; track c) {
-                    <mat-option [value]="c">{{ c }}</mat-option>
+                    <mat-option [value]="c">{{ 'enums.ticketCategory.' + c | t }}</mat-option>
                   }
                 </mat-select>
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>Priority</mat-label>
+                <mat-label>{{ 'sla.rules.priority' | t }}</mat-label>
                 <mat-select formControlName="priorityCondition">
-                  <mat-option [value]="null">Any</mat-option>
+                  <mat-option [value]="null">{{ 'sla.rules.any' | t }}</mat-option>
                   @for (p of priorities; track p) {
-                    <mat-option [value]="p">{{ p }}</mat-option>
+                    <mat-option [value]="p">{{ 'enums.ticketPriority.' + p | t }}</mat-option>
                   }
                 </mat-select>
               </mat-form-field>
               @if (trigger() !== 'TicketCreated') {
                 <mat-form-field appearance="outline">
-                  <mat-label>Assignment</mat-label>
+                  <mat-label>{{ 'sla.rules.assignment' | t }}</mat-label>
                   <mat-select formControlName="assignedCondition">
-                    <mat-option [value]="null">Any</mat-option>
-                    <mat-option [value]="true">Assigned</mat-option>
-                    <mat-option [value]="false">Unassigned</mat-option>
+                    <mat-option [value]="null">{{ 'sla.rules.any' | t }}</mat-option>
+                    <mat-option [value]="true">{{ 'sla.rules.assigned' | t }}</mat-option>
+                    <mat-option [value]="false">{{ 'sla.rules.unassigned' | t }}</mat-option>
                   </mat-select>
                 </mat-form-field>
                 <mat-form-field appearance="outline">
-                  <mat-label>SLA target</mat-label>
+                  <mat-label>{{ 'sla.rules.slaTarget' | t }}</mat-label>
                   <mat-select formControlName="slaKindCondition">
-                    <mat-option [value]="null">Both</mat-option>
-                    <mat-option value="FirstResponse">First response</mat-option>
-                    <mat-option value="Resolution">Resolution</mat-option>
+                    <mat-option [value]="null">{{ 'sla.rules.both' | t }}</mat-option>
+                    <mat-option value="FirstResponse">{{ 'sla.kind.FirstResponse' | t }}</mat-option>
+                    <mat-option value="Resolution">{{ 'sla.kind.Resolution' | t }}</mat-option>
                   </mat-select>
                 </mat-form-field>
               }
               <mat-form-field appearance="outline">
-                <mat-label>Sort order</mat-label>
+                <mat-label>{{ 'sla.rules.sortOrder' | t }}</mat-label>
                 <input matInput type="number" min="1" max="1000" step="1" formControlName="sortOrder" />
-                <mat-hint>1 – 1000, lowest runs first</mat-hint>
+                <mat-hint>{{ 'sla.rules.sortHint' | t }}</mat-hint>
               </mat-form-field>
             </div>
 
@@ -121,8 +120,8 @@
               <p class="form-error" role="alert">{{ message }}</p>
             }
             <div class="inline">
-              <button mat-flat-button type="submit" [disabled]="saving()">Save rule</button>
-              <button mat-stroked-button type="button" (click)="cancel()" [disabled]="saving()">Cancel</button>
+              <button mat-flat-button type="submit" [disabled]="saving()">{{ 'sla.rules.save' | t }}</button>
+              <button mat-stroked-button type="button" (click)="cancel()" [disabled]="saving()">{{ 'common.cancel' | t }}</button>
             </div>
           </form>
         </mat-card-content>
@@ -130,27 +129,50 @@
     }
 
     @if (!loading() && rules().length === 0) {
-      <p>No automation rules yet.</p>
+      <crm-empty-state icon="rule" [title]="'sla.rules.empty' | t" />
+    } @else if (rules().length > 0) {
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">{{ 'common.name' | t }}</th>
+              <th scope="col">{{ 'sla.rules.flow' | t }}</th>
+              <th scope="col">{{ 'sla.rules.conditions' | t }}</th>
+              <th scope="col">{{ 'common.status' | t }}</th>
+              <th scope="col"><span class="visually-hidden">{{ 'common.actions' | t }}</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of rules(); track r.id) {
+              <tr>
+                <td>{{ r.sortOrder }}</td>
+                <td class="wrap"><strong>{{ r.name }}</strong></td>
+                <td class="wrap">{{ triggerLabel(r.trigger) }} → {{ actionLabel(r.action) }}</td>
+                <td class="wrap">
+                  {{ conditions(r) }}
+                  @if (parameters(r)) {
+                    · {{ parameters(r) }}
+                  }
+                </td>
+                <td>
+                  <div class="inline">
+                    <crm-status-badge
+                      [label]="(r.isEnabled ? 'sla.rules.statusEnabled' : 'sla.rules.statusDisabled') | t"
+                      [tone]="r.isEnabled ? 'success' : 'neutral'" />
+                    @if (r.targetAgentIsActive === false) {
+                      <crm-status-badge [label]="'sla.rules.agentInactive' | t" tone="error" />
+                    }
+                  </div>
+                </td>
+                <td>
+                  <button mat-stroked-button type="button" (click)="edit(r)" [disabled]="editing() !== null">{{ 'common.edit' | t }}</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
     }
-    <ul class="list">
-      @for (r of rules(); track r.id) {
-        <li class="list-item">
-          <div class="grow">
-            <strong>{{ r.name }}</strong>
-            <div class="hint">
-              #{{ r.sortOrder }} · {{ triggerLabel(r.trigger) }} → {{ actionLabel(r.action) }} · {{ conditions(r) }}
-              @if (parameters(r)) {
-                · {{ parameters(r) }}
-              }
-            </div>
-          </div>
-          <crm-status-badge [label]="r.isEnabled ? 'Enabled' : 'Disabled'" [tone]="r.isEnabled ? 'success' : 'neutral'" />
-          @if (r.targetAgentIsActive === false) {
-            <crm-status-badge label="Target agent inactive" tone="error" />
-          }
-          <button mat-stroked-button type="button" (click)="edit(r)" [disabled]="editing() !== null">Edit</button>
-        </li>
-      }
-    </ul>
   </div>
 }

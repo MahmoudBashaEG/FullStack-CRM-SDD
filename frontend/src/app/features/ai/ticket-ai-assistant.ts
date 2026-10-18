@@ -1,5 +1,4 @@
 import { Clipboard } from '@angular/cdk/clipboard';
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
@@ -25,6 +24,9 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
 import { RouterLink } from '@angular/router';
 import { Observable, Subject, takeUntil } from 'rxjs';
+import { I18n } from '../../core/i18n/i18n';
+import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
 import { copyQuickReply } from '../quick-replies/copy-quick-reply';
 import { Ticket } from '../tickets/ticket-models';
@@ -34,7 +36,6 @@ import { describeAiError } from './ai-errors';
 import {
   AI_REPLY_INSTRUCTION_MAX_LENGTH,
   AI_REPLY_TONES,
-  AI_REVIEW_LABEL,
   AiCategorySuggestion,
   AiReplyTone,
   AiSolutions,
@@ -51,7 +52,8 @@ import {
   imports: [
     ReactiveFormsModule,
     RouterLink,
-    DatePipe,
+    TranslatePipe,
+    LocalizedDatePipe,
     StatusBadge,
     MatTabsModule,
     MatButtonModule,
@@ -77,7 +79,7 @@ export class TicketAiAssistant implements OnInit, OnChanges {
   readonly accessLost = output<void>();
 
   protected readonly tones = AI_REPLY_TONES;
-  protected readonly reviewLabel = AI_REVIEW_LABEL;
+  protected readonly i18n = inject(I18n);
   protected readonly instructionMax = AI_REPLY_INSTRUCTION_MAX_LENGTH;
 
   protected readonly suggestion = signal<AiCategorySuggestion | null>(null);
@@ -136,14 +138,14 @@ export class TicketAiAssistant implements OnInit, OnChanges {
   protected suggestCategory(): void {
     const id = this.ticket().id;
     this.applied.set(null);
-    this.run(this.ai.categorySuggestion(id), id, this.suggestionBusy, this.suggestionError, 'Could not analyze the category.', s => {
+    this.run(this.ai.categorySuggestion(id), id, this.suggestionBusy, this.suggestionError, this.i18n.t('ai.ticket.categoryFailed'), s => {
       this.suggestion.set(s);
     });
   }
 
   protected generateSummary(): void {
     const id = this.ticket().id;
-    this.run(this.ai.summary(id), id, this.summaryBusy, this.summaryError, 'Could not summarize the ticket.', s => this.summary.set(s));
+    this.run(this.ai.summary(id), id, this.summaryBusy, this.summaryError, this.i18n.t('ai.ticket.summaryFailed'), s => this.summary.set(s));
   }
 
   protected generateDraft(): void {
@@ -152,7 +154,7 @@ export class TicketAiAssistant implements OnInit, OnChanges {
       return;
     }
     const id = this.ticket().id;
-    this.run(this.ai.replyDraft(id, tone, this.instructions.value), id, this.draftBusy, this.draftError, 'Could not draft a reply.', r => {
+    this.run(this.ai.replyDraft(id, tone, this.instructions.value), id, this.draftBusy, this.draftError, this.i18n.t('ai.ticket.draftFailed'), r => {
       this.draftResult.set(r);
       this.draft.setValue(r.text);
     });
@@ -165,7 +167,7 @@ export class TicketAiAssistant implements OnInit, OnChanges {
 
   protected generateSolutions(): void {
     const id = this.ticket().id;
-    this.run(this.ai.solutions(id), id, this.solutionsBusy, this.solutionsError, 'Could not suggest solutions.', s => this.solutions.set(s));
+    this.run(this.ai.solutions(id), id, this.solutionsBusy, this.solutionsError, this.i18n.t('ai.ticket.solutionsFailed'), s => this.solutions.set(s));
   }
 
   protected dismiss(): void {
@@ -183,8 +185,8 @@ export class TicketAiAssistant implements OnInit, OnChanges {
         next: updated => {
           this.suggestionBusy.set(false);
           this.suggestion.set(null);
-          this.applied.set(`Category changed to ${updated.category}.`);
-          this.snackBar.open('Category updated.', 'OK', { duration: 4000 });
+          this.applied.set(this.i18n.t('ai.ticket.applied', { category: this.i18n.t(`enums.ticketCategory.${updated.category}`) }));
+          this.snackBar.open(this.i18n.t('ai.ticket.categoryUpdated'), this.i18n.t('quickReplies.ok'), { duration: 4000 });
           this.ticketUpdated.emit(updated);
         },
         error: (error: HttpErrorResponse) => {
@@ -193,7 +195,7 @@ export class TicketAiAssistant implements OnInit, OnChanges {
             this.accessLost.emit();
             return;
           }
-          this.suggestionError.set(describeAiError(error, 'The category could not be changed.'));
+          this.suggestionError.set(describeAiError(error, this.i18n.t('ai.ticket.applyFailed'), this.i18n.t));
           if (error.status === 409) {
             this.refreshTicket(current.id);
           }
@@ -202,7 +204,7 @@ export class TicketAiAssistant implements OnInit, OnChanges {
   }
 
   protected copy(text: string): void {
-    copyQuickReply(this.clipboard, this.snackBar, text);
+    copyQuickReply(this.clipboard, this.snackBar, text, this.i18n.t);
   }
 
   protected copyAllSolutions(s: AiSolutions): void {
@@ -211,7 +213,7 @@ export class TicketAiAssistant implements OnInit, OnChanges {
       lines.push(r.articleTitle, ...r.steps.map(step => `- ${step}`));
     }
     if (s.generalRecommendations.length > 0) {
-      lines.push('General suggestions (not verified against the Knowledge Base):', ...s.generalRecommendations.map(g => `- ${g}`));
+      lines.push(this.i18n.t('ai.ticket.copyGeneralHeading'), ...s.generalRecommendations.map(g => `- ${g}`));
     }
     this.copy(lines.join('\n'));
   }
@@ -254,7 +256,7 @@ export class TicketAiAssistant implements OnInit, OnChanges {
           this.accessLost.emit();
           return;
         }
-        error.set(describeAiError(e, fallback));
+        error.set(describeAiError(e, fallback, this.i18n.t));
       },
     });
   }

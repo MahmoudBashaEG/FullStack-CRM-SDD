@@ -11,24 +11,26 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { RouterLink } from '@angular/router';
 import { EMPTY, catchError, debounceTime, startWith, switchMap, tap } from 'rxjs';
 import { describeHttpError } from '../../core/api/describe-http-error';
+import { I18n } from '../../core/i18n/i18n';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { copyQuickReply } from './copy-quick-reply';
-import { QUICK_REPLY_COPY_HINT, QuickReply } from './quick-reply-models';
+import { QuickReply } from './quick-reply-models';
 import { QuickRepliesApi } from './quick-replies-api';
 
 /** Compact searchable list for Ticket Details. Copy only — nothing is sent to the customer. */
 @Component({
   selector: 'crm-quick-reply-panel',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink, MatButtonModule, MatFormFieldModule, MatInputModule, MatIconModule],
+  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, MatButtonModule, MatFormFieldModule, MatInputModule, MatIconModule],
   templateUrl: './quick-reply-panel.html',
   styleUrl: '../../shared/ui/productivity-page.scss',
 })
 export class QuickReplyPanel {
+  private readonly i18n = inject(I18n);
   private readonly api = inject(QuickRepliesApi);
   private readonly clipboard = inject(Clipboard);
   private readonly snackBar = inject(MatSnackBar);
 
-  protected readonly hint = QUICK_REPLY_COPY_HINT;
   protected readonly search = new FormControl('', { nonNullable: true });
   protected readonly items = signal<QuickReply[]>([]);
   protected readonly error = signal<string | null>(null);
@@ -43,7 +45,7 @@ export class QuickReplyPanel {
         switchMap(term =>
           this.api.list({ page: 1, pageSize: 5, search: term, category: null, scope: null, archived: false }).pipe(
             catchError((error: HttpErrorResponse) => {
-              this.error.set(describeHttpError(error, 'Could not load quick replies.'));
+              this.error.set(describeHttpError(error, this.i18n.t('quickReplies.list.loadFailed'), this.i18n.t));
               return EMPTY;
             }),
           ),
@@ -54,6 +56,6 @@ export class QuickReplyPanel {
   }
 
   protected copy(item: QuickReply): void {
-    copyQuickReply(this.clipboard, this.snackBar, item.body);
+    copyQuickReply(this.clipboard, this.snackBar, item.body, this.i18n.t);
   }
 }

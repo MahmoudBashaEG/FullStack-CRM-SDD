@@ -1,9 +1,6 @@
-<crm-page-header
-  title="Agent Performance"
-  subtitle="Current workload per Agent and recorded resolution actions in the selected period."
-/>
+<crm-page-header icon="support_agent" [title]="'reports.agent.title' | t" [subtitle]="'reports.agent.subtitle' | t" />
 
-<p><a mat-button routerLink="/reports" queryParamsHandling="preserve">← Management Dashboard</a></p>
+<crm-reports-nav />
 
 <crm-report-period-filter
   [value]="period()"
@@ -13,9 +10,9 @@
 />
 
 @if (report(); as r) {
-  <p class="hint">
-    Period: {{ formatUtcDay(r.period.from) }} – {{ formatUtcDay(r.period.to) }} (UTC calendar days) · Updated
-    {{ r.generatedAtUtc | date: 'medium' : 'UTC' }} UTC
+  <p class="hint note">
+    {{ 'reports.periodNote' | t: { from: formatDay(r.period.from), to: formatDay(r.period.to) } }} ·
+    {{ 'reports.updated' | t: { time: (r.generatedAtUtc | crmDate: 'medium' : 'UTC') } }}
   </p>
 }
 
@@ -24,93 +21,66 @@
 }
 
 @if (error(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
-  <button mat-stroked-button type="button" (click)="refresh()">Retry</button>
+  <crm-error-state [message]="message" (retry)="refresh()" />
 }
 
 @if (report(); as r) {
   <section aria-labelledby="totals-heading">
-    <h2 id="totals-heading">Totals</h2>
+    <h2 id="totals-heading">{{ 'reports.agent.totals' | t }}</h2>
     <div class="summary-grid">
-      <mat-card appearance="outlined" class="summary-card">
-        <mat-card-content>
-          <span class="scope">Live snapshot</span>
-          <span>Active assigned to Agents</span>
-          <span class="count">{{ r.totals.activeAssignedToAgents }}</span>
-        </mat-card-content>
-      </mat-card>
-      <mat-card appearance="outlined" class="summary-card">
-        <mat-card-content>
-          <span class="scope">Live snapshot</span>
-          <span>Overdue (breached SLA)</span>
-          <span class="count">{{ r.totals.overdueActiveAssignedToAgents }}</span>
-        </mat-card-content>
-      </mat-card>
-      <mat-card appearance="outlined" class="summary-card">
-        <mat-card-content>
-          <span class="scope">Live snapshot</span>
-          <span>Unassigned active</span>
-          <span class="count">{{ r.totals.unassignedActive }}</span>
-        </mat-card-content>
-      </mat-card>
-      <mat-card appearance="outlined" class="summary-card">
-        <mat-card-content>
-          <span class="scope">Period · by event date</span>
-          <span>Resolution actions by Agents</span>
-          <span class="count">{{ r.totals.resolutionActionsByAgents }}</span>
-        </mat-card-content>
-      </mat-card>
+      <crm-kpi-card [label]="'reports.agent.activeAssigned' | t" [value]="'' + r.totals.activeAssignedToAgents" [scope]="'common.live' | t" icon="assignment_ind" />
+      <crm-kpi-card [label]="'reports.agent.overdue' | t" [value]="'' + r.totals.overdueActiveAssignedToAgents" [scope]="'common.live' | t" icon="warning" />
+      <crm-kpi-card [label]="'reports.agent.unassigned' | t" [value]="'' + r.totals.unassignedActive" [scope]="'common.live' | t" icon="person_off" />
+      <crm-kpi-card [label]="'reports.agent.resolutionActions' | t" [value]="'' + r.totals.resolutionActionsByAgents" [scope]="'common.period' | t" icon="task_alt">
+        <span class="hint">{{ 'reports.basis.event' | t }}</span>
+      </crm-kpi-card>
     </div>
     @if (r.totals.resolutionActionsByOthers > 0) {
-      <p class="hint">
-        {{ r.totals.resolutionActionsByOthers }} resolution actions in this period were performed by SuperAdmin or other
-        non-Agent accounts and are not credited to any Agent.
-      </p>
+      <p class="hint">{{ 'reports.agent.othersNote' | t: { count: r.totals.resolutionActionsByOthers } }}</p>
     }
   </section>
 
-  <section aria-labelledby="workload-heading">
-    <h2 id="workload-heading">Active workload (live)</h2>
-    <mat-card appearance="outlined" class="chart-card">
-      <mat-card-content>
-        <crm-report-bars label="Active tickets per Agent" [items]="workloadBars()" emptyText="No active tickets are assigned to Agents." />
-      </mat-card-content>
-    </mat-card>
+  <section>
+    <crm-chart-card
+      [title]="'reports.agent.workload' | t"
+      [empty]="workloadEmpty()"
+      [emptyText]="'reports.agent.workloadEmpty' | t"
+      [rows]="workloadRows()"
+    >
+      <crm-chart type="horizontalBar" [stacked]="true" [height]="workloadHeight()" [labels]="workloadLabels()" [series]="workloadSeries()" [ariaLabel]="'reports.agent.workloadAria' | t" />
+    </crm-chart-card>
   </section>
 
   <section aria-labelledby="table-heading">
-    <h2 id="table-heading">Per Agent</h2>
+    <h2 id="table-heading">{{ 'reports.agent.perAgent' | t }}</h2>
     @if (r.agents.length === 0) {
-      <p class="hint">No Agent accounts exist yet.</p>
+      <p class="hint">{{ 'reports.agent.noAgents' | t }}</p>
     } @else {
+      <p class="hint">{{ 'reports.agent.tableNote' | t }}</p>
       <div class="table-scroll">
         <table>
-          <caption class="hint">
-            Live columns reflect current assignment and are not affected by the date filter. "Resolution actions" are
-            transitions to Resolved recorded by the Agent in the period; a ticket resolved again after reopening counts
-            again ("Tickets" counts it once).
-          </caption>
+          <caption class="visually-hidden">{{ 'reports.agent.perAgent' | t }}</caption>
           <thead>
             <tr>
-              <th scope="col">Agent</th>
-              <th scope="col" class="num">Open</th>
-              <th scope="col" class="num">In Progress</th>
-              <th scope="col" class="num">Active</th>
-              <th scope="col" class="num">Overdue</th>
-              <th scope="col">Active by priority</th>
-              <th scope="col" class="num">Resolved*</th>
-              <th scope="col" class="num">Closed*</th>
-              <th scope="col" class="num">Resolution actions</th>
-              <th scope="col" class="num">Tickets resolved</th>
+              <th scope="col">{{ 'reports.agent.colAgent' | t }}</th>
+              <th scope="col" class="num">{{ 'reports.agent.colOpen' | t }}</th>
+              <th scope="col" class="num">{{ 'reports.agent.colInProgress' | t }}</th>
+              <th scope="col" class="num">{{ 'reports.agent.colActive' | t }}</th>
+              <th scope="col" class="num">{{ 'reports.agent.colOverdue' | t }}</th>
+              <th scope="col">{{ 'reports.agent.colByPriority' | t }}</th>
+              <th scope="col" class="num">{{ 'reports.agent.colResolved' | t }}</th>
+              <th scope="col" class="num">{{ 'reports.agent.colClosed' | t }}</th>
+              <th scope="col" class="num">{{ 'reports.agent.colActions' | t }}</th>
+              <th scope="col" class="num">{{ 'reports.agent.colTickets' | t }}</th>
             </tr>
           </thead>
           <tbody>
             @for (a of r.agents; track a.agentUserId) {
               <tr>
                 <td>
-                  {{ a.name }}
+                  <bdi>{{ a.name }}</bdi>
                   @if (!a.isActive) {
-                    <crm-status-badge label="Inactive" tone="neutral" />
+                    <crm-status-badge [label]="'reports.agent.inactive' | t" tone="neutral" />
                   }
                 </td>
                 <td class="num">{{ a.open }}</td>
@@ -127,7 +97,7 @@
           </tbody>
         </table>
       </div>
-      <p class="hint">* currently assigned tickets with this status (supplementary, not historical).</p>
+      <p class="hint">{{ 'reports.agent.footnote' | t }}</p>
     }
   </section>
 }

@@ -1,0 +1,30 @@
+import type { Translations } from '../translations';
+
+export const nav: Translations['nav'] = {
+  group: {
+    portal: 'بوابة الدعم',
+    workspace: 'مساحة العمل',
+    knowledge: 'المعرفة والأدوات',
+    management: 'الإدارة',
+    account: 'الحساب',
+  },
+  home: 'الرئيسية',
+  supportPortal: 'بوابة الدعم',
+  myTickets: 'تذاكري',
+  newTicket: 'تذكرة جديدة',
+  helpCenter: 'مركز المساعدة',
+  myDashboard: 'لوحة التحكم الخاصة بي',
+  tickets: 'التذاكر',
+  customers: 'العملاء',
+  tasks: 'المهام',
+  quickReplies: 'الردود السريعة',
+  knowledgeBase: 'قاعدة المعرفة',
+  aiAssistant: 'مساعد الذكاء الاصطناعي',
+  myCollaborations: 'تعاوناتي',
+  agents: 'الوكلاء',
+  slaAndAutomation: 'اتفاقية مستوى الخدمة (SLA) والأتمتة',
+  reports: 'التقارير',
+  administration: 'الإدارة',
+  profile: 'الملف الشخصي',
+  notifications: 'الإشعارات',
+};

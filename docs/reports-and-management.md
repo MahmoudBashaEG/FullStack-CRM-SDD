@@ -74,6 +74,24 @@ Rating metrics use the submission cohort (`TicketFeedback.CreatedAtUtc`) with th
 
 All routes: `GET /api/v1/reports/{tickets|sla|agents|customer-satisfaction}?preset=&from=&to=`. SuperAdmin only: 200; anonymous 401; Agent/Customer 403; invalid period 400.
 
+
+### Charts (PLAT-001)
+
+The former CSS bars are Chart.js charts (`crm-chart` in `shared/charts`, lazily loaded by the report routes only) inside `crm-chart-card`s. Only the existing API fields are charted: no metric, endpoint or calculation changed, and the numbers are identical for the same period.
+
+| Screen | Charts |
+|---|---|
+| Ticket report | Current status (doughnut), Category and Priority (horizontal bars), Creation trend (bars) |
+| SLA report | First response vs Resolution compliance trend (lines), Outcome split per target (two doughnuts) |
+| Agent report | Active workload per Agent, Open + In Progress (stacked horizontal bars, Live) |
+| CSAT report | Rating distribution (bars) |
+| Management dashboard | Tickets created, Active per Agent (Live), Rating distribution |
+
+- An undefined compliance rate is **N/A** (`null`): the line has a gap and the tooltip prints N/A; it is never drawn or printed as 0 %. When every value is null the card shows "N/A — nothing decided yet."; no chart of zeros is drawn for empty data.
+- Every chart card also shows its numbers as a data table (visible when short, a keyboard-operable `<details>` when long). **That table is the supported keyboard/screen-reader equivalent**; individual chart points are not keyboard-focusable (the canvas is `role="img"` with a summary label).
+- Time axes are not mirrored in Arabic; legends/tooltips are right-to-left; horizontal bars grow from the inline start.
+- The custom period is chosen with a date-range picker (calendar or typed `yyyy-mm-dd`); the API still receives the same `yyyy-MM-dd` UTC days and there is no client-side maximum date (the server stays authoritative).
+
 ## 9. Angular routes
 
 `/reports`, `/reports/tickets`, `/reports/sla`, `/reports/agents`, `/reports/customer-satisfaction` (guard `roleGuard('SuperAdmin')`). The period travels in the URL query string and is preserved by the dashboard links. Navigation entry "Reports" is SuperAdmin-only.

@@ -8,3 +8,19 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+.filters-card {
+  margin-block: var(--crm-space-3) var(--crm-space-4);
+}
+
+.toolbar {
+  justify-content: flex-start;
+}
+
+@media (max-width: 600px) {
+  .search,
+  .filter {
+    flex-basis: 100%;
+    max-inline-size: none;
+  }
+}

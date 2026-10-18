@@ -13,6 +13,11 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { forkJoin, of, startWith } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { describeHttpError } from '../../core/api/describe-http-error';
+import { I18n } from '../../core/i18n/i18n';
+import { Translate, englishT } from '../../core/i18n/translate-fn';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { EmptyState } from '../../shared/ui/empty-state/empty-state';
+import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
 import { Agent } from '../agents/agent-models';
 import { AgentsApi } from '../agents/agents-api';
@@ -29,17 +34,13 @@ import {
   SlaKind,
 } from './sla-models';
 
-const TRIGGER_LABELS: Record<AutomationTrigger, string> = {
-  TicketCreated: 'Ticket created',
-  SlaWarningDue: 'SLA warning due',
-  SlaBreached: 'SLA breached',
-};
+export function triggerLabel(trigger: AutomationTrigger, t: Translate = englishT): string {
+  return t(`sla.triggers.${trigger}`);
+}
 
-const ACTION_LABELS: Record<AutomationAction, string> = {
-  AssignToAgent: 'Assign to agent',
-  CreateInAppNotification: 'Create in-app notification',
-  EscalateTicket: 'Escalate ticket',
-};
+export function actionLabel(action: AutomationAction, t: Translate = englishT): string {
+  return t(`sla.actions.${action}`);
+}
 
 /** SLA-001 capabilities 3, 5, 6: SuperAdmin-managed rules. Only the server-valid trigger/action combinations are offered. */
 @Component({
@@ -47,6 +48,9 @@ const ACTION_LABELS: Record<AutomationAction, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ReactiveFormsModule,
+    TranslatePipe,
+    ErrorState,
+    EmptyState,
     StatusBadge,
     MatButtonModule,
     MatCardModule,
@@ -60,6 +64,7 @@ const ACTION_LABELS: Record<AutomationAction, string> = {
   styleUrl: './sla-admin.scss',
 })
 export class AutomationRules {
+  protected readonly i18n = inject(I18n);
   private readonly api = inject(SlaApi);
   private readonly agentsApi = inject(AgentsApi);
   private readonly fb = inject(NonNullableFormBuilder);
@@ -69,8 +74,8 @@ export class AutomationRules {
   protected readonly triggers = AUTOMATION_TRIGGERS;
   protected readonly categories: readonly TicketCategory[] = TICKET_CATEGORIES;
   protected readonly priorities: readonly TicketPriority[] = TICKET_PRIORITIES;
-  protected readonly triggerLabel = (t: AutomationTrigger) => TRIGGER_LABELS[t];
-  protected readonly actionLabel = (a: AutomationAction) => ACTION_LABELS[a];
+  protected readonly triggerLabel = (trigger: AutomationTrigger) => triggerLabel(trigger, this.i18n.t);
+  protected readonly actionLabel = (action: AutomationAction) => actionLabel(action, this.i18n.t);
 
   protected readonly rules = signal<AutomationRule[]>([]);
   protected readonly agents = signal<Agent[]>([]);
@@ -121,7 +126,7 @@ export class AutomationRules {
           this.loading.set(false);
         },
         error: (error: HttpErrorResponse) => {
-          this.loadError.set(describeHttpError(error, 'Could not load automation rules.'));
+          this.loadError.set(describeHttpError(error, this.i18n.t('sla.rules.loadFailed'), this.i18n.t));
           this.loading.set(false);
         },
       });
@@ -193,17 +198,19 @@ export class AutomationRules {
   }
 
   protected conditions(rule: AutomationRule): string {
+    const t = this.i18n.t;
     const parts: string[] = [];
-    if (rule.categoryCondition) parts.push(`Category ${rule.categoryCondition}`);
-    if (rule.priorityCondition) parts.push(`Priority ${rule.priorityCondition}`);
-    if (rule.assignedCondition !== null) parts.push(rule.assignedCondition ? 'Assigned' : 'Unassigned');
-    if (rule.slaKindCondition) parts.push(rule.slaKindCondition === 'FirstResponse' ? 'First response' : 'Resolution');
-    return parts.length > 0 ? parts.join(' · ') : 'Any ticket';
+    if (rule.categoryCondition) parts.push(t('sla.rules.conditionCategory', { value: t(`enums.ticketCategory.${rule.categoryCondition}`) }));
+    if (rule.priorityCondition) parts.push(t('sla.rules.conditionPriority', { value: t(`enums.ticketPriority.${rule.priorityCondition}`) }));
+    if (rule.assignedCondition !== null) parts.push(t(rule.assignedCondition ? 'sla.rules.assigned' : 'sla.rules.unassigned'));
+    if (rule.slaKindCondition) parts.push(t(`sla.kind.${rule.slaKindCondition}`));
+    return parts.length > 0 ? parts.join(' · ') : t('sla.rules.anyTicket');
   }
 
   protected parameters(rule: AutomationRule): string {
-    if (rule.action === 'AssignToAgent') return `Agent: ${rule.targetAgentName ?? 'unknown'}`;
-    if (rule.trigger === 'SlaWarningDue') return `${rule.warningLeadMinutes} business min before due`;
+    const t = this.i18n.t;
+    if (rule.action === 'AssignToAgent') return t('sla.rules.paramAgent', { name: rule.targetAgentName ?? t('common.unknown') });
+    if (rule.trigger === 'SlaWarningDue') return t('sla.rules.paramLead', { minutes: rule.warningLeadMinutes ?? '' });
     return '';
   }
 
@@ -233,12 +240,12 @@ export class AutomationRules {
       next: () => {
         this.saving.set(false);
         this.editing.set(null);
-        this.snackBar.open('Automation rule saved.', undefined, { duration: 3000 });
+        this.snackBar.open(this.i18n.t('sla.rules.saved'), undefined, { duration: 3000 });
         this.load();
       },
       error: (error: HttpErrorResponse) => {
         this.saving.set(false);
-        this.saveError.set(describeSaveError(error, 'Could not save the rule.'));
+        this.saveError.set(describeSaveError(error, this.i18n.t('sla.rules.saveFailed'), this.i18n.t));
       },
     });
   }

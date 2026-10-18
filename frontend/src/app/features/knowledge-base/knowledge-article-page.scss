@@ -16,3 +16,14 @@
     overflow-wrap: anywhere;
   }
 }
+
+.meta-card,
+.body-card {
+  margin-block-end: var(--crm-space-4);
+}
+
+@media (max-width: 600px) {
+  .readonly-list {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,32 +1,32 @@
-<p class="hint">Collaborators can read and post in this discussion only. They cannot open, edit or act on the ticket.</p>
+<p class="hint">{{ 'collaboration.collab.hint' | t }}</p>
 
 <ul class="rows">
   @for (c of collaborators(); track c.agentUserId) {
     <li class="row">
-      <span class="row-title">{{ c.agentName }}{{ c.isActive ? '' : ' (inactive)' }}</span>
-      <span class="hint">Invited by {{ c.addedByName }} on {{ c.addedAtUtc | date: 'medium' }}</span>
+      <span class="row-title">{{ c.agentName }}{{ c.isActive ? '' : ' (' + ('collaboration.collab.inactive' | t) + ')' }}</span>
+      <span class="hint">{{ 'collaboration.collab.invitedBy' | t: { name: c.addedByName, date: (c.addedAtUtc | crmDate: 'medium') } }}</span>
       @if (canManage()) {
-        <button mat-button type="button" [disabled]="busy()" (click)="remove(c)">Remove</button>
+        <button mat-button type="button" [disabled]="busy()" (click)="remove(c)">{{ 'common.remove' | t }}</button>
       }
     </li>
   } @empty {
-    <li class="hint">No collaborators yet.</li>
+    <li class="hint">{{ 'collaboration.collab.none' | t }}</li>
   }
 </ul>
 
 @if (canManage()) {
   <div class="actions">
     <mat-form-field appearance="outline">
-      <mat-label>Invite an Agent</mat-label>
+      <mat-label>{{ 'collaboration.collab.inviteLabel' | t }}</mat-label>
       <mat-select [formControl]="selection">
         @for (a of candidates(); track a.agentUserId) {
           <mat-option [value]="a.agentUserId">{{ a.agentName }}</mat-option>
         } @empty {
-          <mat-option disabled>No Agents available.</mat-option>
+          <mat-option disabled>{{ 'collaboration.collab.noAgents' | t }}</mat-option>
         }
       </mat-select>
     </mat-form-field>
-    <button mat-flat-button type="button" [disabled]="busy() || !selection.value" (click)="invite()">Invite</button>
+    <button mat-flat-button type="button" [disabled]="busy() || !selection.value" (click)="invite()">{{ 'collaboration.collab.invite' | t }}</button>
   </div>
 }
 

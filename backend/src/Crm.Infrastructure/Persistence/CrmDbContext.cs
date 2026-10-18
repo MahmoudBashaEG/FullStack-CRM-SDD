@@ -43,6 +43,7 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options)
     public DbSet<TicketFeedback> TicketFeedback => Set<TicketFeedback>();
     public DbSet<AdminAuditEntry> AdminAuditLogs => Set<AdminAuditEntry>();
     public DbSet<OrganizationSettings> OrganizationSettings => Set<OrganizationSettings>();
+    public DbSet<OrganizationLogo> OrganizationLogos => Set<OrganizationLogo>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -1,0 +1,15 @@
+export const shell = {
+  skipToContent: 'Skip to content',
+  mainNavigation: 'Main navigation',
+  openNavigation: 'Open navigation',
+  collapseNavigation: 'Collapse navigation',
+  expandNavigation: 'Expand navigation',
+  breadcrumbs: 'Breadcrumb',
+  language: 'Language',
+  themeToDark: 'Switch to dark theme',
+  themeToLight: 'Switch to light theme',
+  userMenu: 'User menu',
+  profile: 'Profile',
+  signOut: 'Sign out',
+  home: 'Home',
+};

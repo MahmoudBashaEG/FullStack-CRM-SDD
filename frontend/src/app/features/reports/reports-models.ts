@@ -4,11 +4,12 @@ export const REPORT_PRESETS = ['Last7Days', 'Last30Days', 'Last90Days', 'Custom'
 export type ReportPreset = (typeof REPORT_PRESETS)[number];
 export const DEFAULT_PRESET: ReportPreset = 'Last30Days';
 
-export const PRESET_LABELS: Readonly<Record<ReportPreset, string>> = {
-  Last7Days: 'Last 7 days',
-  Last30Days: 'Last 30 days',
-  Last90Days: 'Last 90 days',
-  Custom: 'Custom',
+/** Dictionary keys of the preset labels (reports.preset.*). */
+export const PRESET_LABEL_KEYS: Readonly<Record<ReportPreset, string>> = {
+  Last7Days: 'reports.preset.Last7Days',
+  Last30Days: 'reports.preset.Last30Days',
+  Last90Days: 'reports.preset.Last90Days',
+  Custom: 'reports.preset.Custom',
 };
 
 /** What travels in the URL and to the API. from/to (yyyy-MM-dd) are only meaningful for Custom. */

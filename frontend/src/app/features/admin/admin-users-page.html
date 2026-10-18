@@ -1,65 +1,71 @@
-<crm-page-header title="Administration" subtitle="Users, roles, audit logs and organization settings." />
-<crm-admin-section-nav />
+<crm-page-header [title]="'admin.users.title' | t" [subtitle]="'admin.users.subtitle' | t" icon="admin_panel_settings">
+  <a mat-flat-button actions routerLink="/agents/new"><mat-icon>person_add</mat-icon> {{ 'admin.users.newAgent' | t }}</a>
+</crm-page-header>
 
-<div class="toolbar" [formGroup]="filters">
-  <mat-form-field appearance="outline" class="search">
-    <mat-label>Search</mat-label>
-    <input matInput type="search" formControlName="search" placeholder="Name or email" maxlength="100" />
-    <mat-icon matSuffix>search</mat-icon>
-  </mat-form-field>
+<crm-admin-section-nav>
+  <mat-card appearance="outlined">
+    <div class="card-body">
+      <div class="toolbar" [formGroup]="filters">
+        <mat-form-field appearance="outline" class="search">
+          <mat-label>{{ 'admin.users.search' | t }}</mat-label>
+          <input matInput type="search" formControlName="search" [placeholder]="'admin.users.searchPlaceholder' | t" maxlength="100" />
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
 
-  <mat-form-field appearance="outline" class="filter">
-    <mat-label>Role</mat-label>
-    <mat-select formControlName="role">
-      <mat-option value="">All</mat-option>
-      @for (r of roles; track r) {
-        <mat-option [value]="r">{{ r }}</mat-option>
+        <mat-form-field appearance="outline" class="filter">
+          <mat-label>{{ 'admin.users.role' | t }}</mat-label>
+          <mat-select formControlName="role">
+            <mat-option value="">{{ 'common.all' | t }}</mat-option>
+            @for (r of roles; track r) {
+              <mat-option [value]="r">{{ 'enums.role.' + r | t }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filter">
+          <mat-label>{{ 'admin.users.status' | t }}</mat-label>
+          <mat-select formControlName="status">
+            <mat-option value="">{{ 'common.all' | t }}</mat-option>
+            <mat-option value="active">{{ 'admin.status.active' | t }}</mat-option>
+            <mat-option value="inactive">{{ 'admin.status.inactive' | t }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      @if (loading()) {
+        <mat-progress-bar mode="indeterminate" />
       }
-    </mat-select>
-  </mat-form-field>
 
-  <mat-form-field appearance="outline" class="filter">
-    <mat-label>Status</mat-label>
-    <mat-select formControlName="status">
-      <mat-option value="">All</mat-option>
-      <mat-option value="active">Active</mat-option>
-      <mat-option value="inactive">Inactive</mat-option>
-    </mat-select>
-  </mat-form-field>
-
-  <a mat-flat-button routerLink="/agents/new"><mat-icon>person_add</mat-icon> New Agent</a>
-</div>
-
-@if (loading()) {
-  <mat-progress-bar mode="indeterminate" />
-}
-
-@if (error(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
-  <button mat-stroked-button type="button" (click)="reload()">Retry</button>
-}
-
-@if (!loading() && !error()) {
-  @if (items().length === 0) {
-    <p>No accounts match these filters.</p>
-  } @else {
-    <ul class="rows">
-      @for (a of items(); track a.id) {
-        <li class="row">
-          <span class="row-title user-text">{{ a.firstName }} {{ a.lastName }}</span>
-          <span class="hint user-text">{{ a.email }}</span>
-          <span class="hint">{{ a.role }}</span>
-          <crm-status-badge [label]="a.isActive ? 'Active' : 'Inactive'" [tone]="a.isActive ? 'success' : 'neutral'" />
-          <a mat-button [routerLink]="['/admin/users', a.id]">Manage</a>
-        </li>
+      @if (error(); as message) {
+        <crm-error-state [message]="message" (retry)="reload()" />
       }
-    </ul>
-    <mat-paginator
-      [length]="totalCount()"
-      [pageIndex]="page() - 1"
-      [pageSize]="pageSize()"
-      [pageSizeOptions]="pageSizeOptions"
-      (page)="onPage($event)"
-      aria-label="Select page of accounts" />
-  }
-}
+
+      @if (!loading() && !error()) {
+        @if (items().length === 0) {
+          <crm-empty-state icon="group_off" [title]="'admin.users.empty' | t" />
+        } @else {
+          <ul class="rows">
+            @for (a of items(); track a.id) {
+              <li class="row">
+                <span class="row-title user-text">{{ a.firstName }} {{ a.lastName }}</span>
+                <span class="hint user-text ltr-value">{{ a.email }}</span>
+                <span class="hint">{{ 'enums.role.' + a.role | t }}</span>
+                <crm-status-badge
+                  [label]="(a.isActive ? 'admin.status.active' : 'admin.status.inactive') | t"
+                  [tone]="a.isActive ? 'success' : 'neutral'" />
+                <a mat-button [routerLink]="['/admin/users', a.id]">{{ 'admin.users.manage' | t }}</a>
+              </li>
+            }
+          </ul>
+          <mat-paginator
+            [length]="totalCount()"
+            [pageIndex]="page() - 1"
+            [pageSize]="pageSize()"
+            [pageSizeOptions]="pageSizeOptions"
+            (page)="onPage($event)"
+            [attr.aria-label]="'admin.users.pageAria' | t" />
+        }
+      }
+    </div>
+  </mat-card>
+</crm-admin-section-nav>

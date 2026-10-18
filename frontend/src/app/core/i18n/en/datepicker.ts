@@ -1,0 +1,15 @@
+export const datepicker = {
+  calendar: 'Calendar',
+  openCalendar: 'Open calendar',
+  closeCalendar: 'Close calendar',
+  prevMonth: 'Previous month',
+  nextMonth: 'Next month',
+  prevYear: 'Previous year',
+  nextYear: 'Next year',
+  prevMultiYear: 'Previous 24 years',
+  nextMultiYear: 'Next 24 years',
+  switchToMonthView: 'Choose month and day',
+  switchToMultiYearView: 'Choose month and year',
+  startDate: 'Start date',
+  endDate: 'End date',
+};

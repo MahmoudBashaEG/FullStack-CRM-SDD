@@ -1,9 +1,9 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -15,6 +15,11 @@ import { RouterLink } from '@angular/router';
 import { EMPTY, Subject, catchError, debounceTime, switchMap } from 'rxjs';
 import { describeHttpError } from '../../core/api/describe-http-error';
 import { AuthService } from '../../core/auth/auth-service';
+import { I18n } from '../../core/i18n/i18n';
+import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { EmptyState } from '../../shared/ui/empty-state/empty-state';
+import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
 import { Customer } from '../customers/customer-models';
@@ -33,7 +38,7 @@ import {
   statusTone,
 } from './ticket-models';
 import { TicketsApi } from './tickets-api';
-import { slaIndicatorLabel, slaIndicatorTone } from '../sla/sla-models';
+import { slaIndicatorTone } from '../sla/sla-models';
 
 @Component({
   selector: 'crm-ticket-list-page',
@@ -41,7 +46,11 @@ import { slaIndicatorLabel, slaIndicatorTone } from '../sla/sla-models';
   imports: [
     ReactiveFormsModule,
     RouterLink,
-    DatePipe,
+    LocalizedDatePipe,
+    TranslatePipe,
+    EmptyState,
+    ErrorState,
+    MatCardModule,
     PageHeader,
     StatusBadge,
     CustomerPicker,
@@ -62,6 +71,7 @@ export class TicketListPage {
   private readonly destroyRef = inject(DestroyRef);
   private readonly requests = new Subject<TicketListParams>();
   private readonly auth = inject(AuthService);
+  protected readonly i18n = inject(I18n);
 
   protected readonly isSuperAdmin = computed(() => this.auth.role() === 'SuperAdmin'); // wording only; the API scopes the data
   protected readonly columns = ['subject', 'customer', 'category', 'priority', 'status', 'sla', 'assignee', 'created', 'actions'];
@@ -72,7 +82,6 @@ export class TicketListPage {
   protected readonly priorityTone = priorityTone;
   protected readonly statusLabel = statusLabel;
   protected readonly statusTone = statusTone;
-  protected readonly slaIndicatorLabel = slaIndicatorLabel;
   protected readonly slaIndicatorTone = slaIndicatorTone;
   protected readonly filters = inject(NonNullableFormBuilder).group({
     search: [''],
@@ -98,7 +107,7 @@ export class TicketListPage {
         switchMap(params =>
           this.api.list(params).pipe(
             catchError((error: HttpErrorResponse) => {
-              this.error.set(describeHttpError(error, 'Could not load tickets.'));
+              this.error.set(describeHttpError(error, this.i18n.t('tickets.list.loadError'), this.i18n.t));
               this.loading.set(false);
               return EMPTY;
             }),
@@ -137,6 +146,10 @@ export class TicketListPage {
   protected onPage(event: PageEvent): void {
     this.pageSize.set(event.pageSize);
     this.load(event.pageIndex + 1);
+  }
+
+  protected reload(): void {
+    this.load(this.page());
   }
 
   private load(page: number): void {

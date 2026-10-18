@@ -12,10 +12,12 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { describeHttpError } from '../../core/api/describe-http-error';
 import { AuthService } from '../../core/auth/auth-service';
+import { I18n } from '../../core/i18n/i18n';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { TICKET_CATEGORIES, TicketCategory } from '../tickets/ticket-models';
 import { copyQuickReply } from './copy-quick-reply';
-import { QUICK_REPLY_COPY_HINT, QuickReply } from './quick-reply-models';
+import { QuickReply } from './quick-reply-models';
 import { QuickRepliesApi } from './quick-replies-api';
 
 @Component({
@@ -25,6 +27,7 @@ import { QuickRepliesApi } from './quick-replies-api';
     ReactiveFormsModule,
     RouterLink,
     PageHeader,
+    TranslatePipe,
     MatCardModule,
     MatFormFieldModule,
     MatInputModule,
@@ -36,6 +39,7 @@ import { QuickRepliesApi } from './quick-replies-api';
   styleUrl: '../../shared/ui/productivity-page.scss',
 })
 export class QuickReplyEditPage {
+  private readonly i18n = inject(I18n);
   private readonly api = inject(QuickRepliesApi);
   private readonly auth = inject(AuthService);
   private readonly clipboard = inject(Clipboard);
@@ -44,7 +48,6 @@ export class QuickReplyEditPage {
 
   protected readonly id = inject(ActivatedRoute).snapshot.paramMap.get('id');
   protected readonly isNew = this.id === null;
-  protected readonly hint = QUICK_REPLY_COPY_HINT;
   protected readonly categories = TICKET_CATEGORIES;
   protected readonly item = signal<QuickReply | null>(null);
   protected readonly loadError = signal<string | null>(null);
@@ -61,14 +64,14 @@ export class QuickReplyEditPage {
       this.api.get(this.id).subscribe({
         next: q => this.apply(q),
         error: (error: HttpErrorResponse) =>
-          this.loadError.set(error.status === 404 ? 'This quick reply is no longer available to you.' : describeHttpError(error, 'Could not load the quick reply.')),
+          this.loadError.set(error.status === 404 ? this.i18n.t('quickReplies.edit.unavailable') : describeHttpError(error, this.i18n.t('quickReplies.edit.loadFailed'), this.i18n.t)),
       });
     }
   }
 
   protected scopeLine(): string {
     const scope = this.item()?.scope ?? (this.auth.role() === 'SuperAdmin' ? 'Shared' : 'Personal');
-    return scope === 'Shared' ? 'Scope: Shared (all Agents)' : 'Scope: Personal (only you)';
+    return this.i18n.t(scope === 'Shared' ? 'quickReplies.edit.scopeShared' : 'quickReplies.edit.scopePersonal');
   }
 
   protected save(): void {
@@ -79,7 +82,7 @@ export class QuickReplyEditPage {
     const v = this.form.getRawValue();
     const body = { title: v.title.trim(), body: v.body.trim(), category: v.category };
     this.run(this.id ? this.api.update(this.id, body) : this.api.create(body), q => {
-      this.snackBar.open('Quick reply saved.', 'OK', { duration: 4000 });
+      this.snackBar.open(this.i18n.t('quickReplies.edit.saved'), this.i18n.t('quickReplies.ok'), { duration: 4000 });
       if (this.isNew) {
         void this.router.navigate(['/quick-replies', q.id]);
       } else {
@@ -94,7 +97,7 @@ export class QuickReplyEditPage {
   }
 
   protected copy(): void {
-    copyQuickReply(this.clipboard, this.snackBar, this.item()?.body ?? this.form.controls.body.value);
+    copyQuickReply(this.clipboard, this.snackBar, this.item()?.body ?? this.form.controls.body.value, this.i18n.t);
   }
 
   private run(request: ReturnType<QuickRepliesApi['get']>, done: (q: QuickReply) => void): void {
@@ -107,7 +110,7 @@ export class QuickReplyEditPage {
       },
       error: (error: HttpErrorResponse) => {
         this.busy.set(false);
-        this.error.set(describeHttpError(error, 'Could not save the quick reply.'));
+        this.error.set(describeHttpError(error, this.i18n.t('quickReplies.edit.saveFailed'), this.i18n.t));
       },
     });
   }

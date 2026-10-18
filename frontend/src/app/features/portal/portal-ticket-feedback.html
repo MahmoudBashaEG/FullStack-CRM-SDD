@@ -1,36 +1,36 @@
 <mat-card appearance="outlined">
-  <mat-card-header><mat-card-title>Your feedback</mat-card-title></mat-card-header>
+  <mat-card-header><mat-card-title>{{ 'portal.feedback.title' | t }}</mat-card-title></mat-card-header>
   <mat-card-content>
     @let saved = feedback();
     @if (saved && !editing()) {
-      <p>Rating: <strong>{{ saved.rating }} / 5</strong></p>
+      <p>{{ 'portal.feedback.rating' | t }} <strong>{{ saved.rating }} / 5</strong></p>
       @if (saved.comment) {
         <p class="user-text">{{ saved.comment }}</p>
       }
-      <p class="hint">Last updated {{ saved.updatedAtUtc | date: 'medium' }}</p>
+      <p class="hint">{{ 'portal.feedback.lastUpdated' | t: { date: (saved.updatedAtUtc | crmDate: 'medium') } }}</p>
       @if (canSubmit()) {
-        <button mat-stroked-button type="button" (click)="startEdit()">Edit feedback</button>
+        <button mat-stroked-button type="button" (click)="startEdit()">{{ 'portal.feedback.edit' | t }}</button>
       } @else {
-        <p class="hint">You can update your feedback after this request is resolved again.</p>
+        <p class="hint">{{ 'portal.feedback.cannotUpdate' | t }}</p>
       }
     } @else if (canSubmit()) {
       <form [formGroup]="form" (ngSubmit)="save()" class="form">
-        <p>How satisfied are you with how we handled this request?</p>
-        <mat-button-toggle-group formControlName="rating" aria-label="Rating from 1 to 5">
+        <p>{{ 'portal.feedback.question' | t }}</p>
+        <mat-button-toggle-group formControlName="rating" [attr.aria-label]="'portal.feedback.ratingAria' | t">
           @for (r of ratings; track r) {
-            <mat-button-toggle [value]="r" [attr.aria-label]="r + ' out of 5'">{{ r }} ★</mat-button-toggle>
+            <mat-button-toggle [value]="r" [attr.aria-label]="'portal.feedback.ratingOption' | t: { n: r }">{{ r }} ★</mat-button-toggle>
           }
         </mat-button-toggle-group>
         @if (form.controls.rating.invalid && form.controls.rating.touched) {
-          <p class="form-error">Choose a rating from 1 to 5</p>
+          <p class="form-error">{{ 'portal.feedback.chooseRating' | t }}</p>
         }
 
         <mat-form-field appearance="outline">
-          <mat-label>Comment (optional)</mat-label>
+          <mat-label>{{ 'portal.feedback.comment' | t }}</mat-label>
           <textarea matInput formControlName="comment" rows="3"></textarea>
           <mat-hint align="end">{{ form.controls.comment.value.length }} / {{ commentMax }}</mat-hint>
           @if (form.controls.comment.invalid) {
-            <mat-error>Comment is too long (max {{ commentMax }} characters)</mat-error>
+            <mat-error>{{ 'portal.feedback.commentError' | t: { max: commentMax } }}</mat-error>
           }
         </mat-form-field>
 
@@ -40,9 +40,11 @@
 
         <div class="actions">
           @if (editing()) {
-            <button mat-button type="button" (click)="cancelEdit()">Cancel</button>
+            <button mat-button type="button" (click)="cancelEdit()">{{ 'common.cancel' | t }}</button>
           }
-          <button mat-flat-button type="submit" [disabled]="saving()">{{ editing() ? 'Save' : 'Submit feedback' }}</button>
+          <button mat-flat-button type="submit" [disabled]="saving()">
+            {{ (editing() ? 'common.save' : 'portal.feedback.submit') | t }}
+          </button>
         </div>
       </form>
     }

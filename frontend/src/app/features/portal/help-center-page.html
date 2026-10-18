@@ -1,66 +1,71 @@
-<crm-page-header title="Help Center" subtitle="FAQs, help articles, solutions and guides." />
+<crm-page-header icon="menu_book" [title]="'portal.helpCenter.title' | t" [subtitle]="'portal.helpCenter.subtitle' | t" />
 
-<div class="toolbar" [formGroup]="filters">
-  <mat-form-field appearance="outline" class="search">
-    <mat-label>Search</mat-label>
-    <input matInput type="search" formControlName="search" placeholder="Title, summary or text" />
-    <mat-icon matSuffix>search</mat-icon>
-  </mat-form-field>
+<mat-card appearance="outlined">
+  <mat-card-content class="crm-stack">
+    <div class="toolbar" [formGroup]="filters">
+      <mat-form-field appearance="outline" class="search">
+        <mat-label>{{ 'common.search' | t }}</mat-label>
+        <input matInput type="search" formControlName="search" [placeholder]="'portal.helpCenter.searchPlaceholder' | t" />
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
 
-  <mat-form-field appearance="outline" class="filter">
-    <mat-label>Type</mat-label>
-    <mat-select formControlName="type">
-      <mat-option [value]="null">Any</mat-option>
-      @for (t of types; track t) {
-        <mat-option [value]="t">{{ typeLabel(t) }}</mat-option>
-      }
-    </mat-select>
-  </mat-form-field>
-
-  @if (categories().length > 0) {
-    <mat-form-field appearance="outline" class="filter">
-      <mat-label>Category</mat-label>
-      <mat-select formControlName="categoryId">
-        <mat-option [value]="null">Any</mat-option>
-        @for (c of categories(); track c.id) {
-          <mat-option [value]="c.id">{{ c.name }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
-  }
-</div>
-
-@if (loading()) {
-  <mat-progress-bar mode="indeterminate" />
-}
-
-@if (error(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
-  <button mat-stroked-button type="button" (click)="reload()">Retry</button>
-}
-
-@if (!loading() && !error()) {
-  @if (items().length === 0) {
-    <p>{{ hasFilters() ? 'No articles match your search.' : 'No help articles are available yet.' }}</p>
-  } @else {
-    <ul class="rows">
-      @for (a of items(); track a.id) {
-        <li class="row">
-          <a class="row-title" [routerLink]="['/portal/help-center', a.id]">{{ a.title }}</a>
-          <span class="hint">{{ typeLabel(a.type) }} · {{ a.categoryName }}</span>
-          <p class="meta">Published {{ a.publishedAtUtc | date: 'mediumDate' }}</p>
-          @if (a.summary) {
-            <p class="user-text">{{ a.summary }}</p>
+      <mat-form-field appearance="outline" class="filter">
+        <mat-label>{{ 'portal.helpCenter.type' | t }}</mat-label>
+        <mat-select formControlName="type">
+          <mat-option [value]="null">{{ 'portal.any' | t }}</mat-option>
+          @for (t of types; track t) {
+            <mat-option [value]="t">{{ ('portal.articleType.' + t) | t }}</mat-option>
           }
-        </li>
+        </mat-select>
+      </mat-form-field>
+
+      @if (categories().length > 0) {
+        <mat-form-field appearance="outline" class="filter">
+          <mat-label>{{ 'portal.category' | t }}</mat-label>
+          <mat-select formControlName="categoryId">
+            <mat-option [value]="null">{{ 'portal.any' | t }}</mat-option>
+            @for (c of categories(); track c.id) {
+              <mat-option [value]="c.id">{{ c.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
       }
-    </ul>
-    <mat-paginator
-      [length]="totalCount()"
-      [pageIndex]="page() - 1"
-      [pageSize]="pageSize()"
-      [pageSizeOptions]="pageSizeOptions"
-      (page)="onPage($event)"
-      aria-label="Select page of help articles" />
-  }
-}
+    </div>
+
+    @if (loading()) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+
+    @if (error(); as message) {
+      <crm-error-state [message]="message" (retry)="reload()" />
+    }
+
+    @if (!loading() && !error()) {
+      @if (items().length === 0) {
+        <crm-empty-state
+          icon="menu_book"
+          [message]="(hasFilters() ? 'portal.helpCenter.noMatch' : 'portal.helpCenter.empty') | t" />
+      } @else {
+        <ul class="rows">
+          @for (a of items(); track a.id) {
+            <li class="row">
+              <a class="row-title" [routerLink]="['/portal/help-center', a.id]">{{ a.title }}</a>
+              <span class="hint">{{ ('portal.articleType.' + a.type) | t }} · {{ a.categoryName }}</span>
+              <p class="meta">{{ 'portal.helpCenter.published' | t: { date: (a.publishedAtUtc | crmDate: 'date') } }}</p>
+              @if (a.summary) {
+                <p class="user-text">{{ a.summary }}</p>
+              }
+            </li>
+          }
+        </ul>
+        <mat-paginator
+          [length]="totalCount()"
+          [pageIndex]="page() - 1"
+          [pageSize]="pageSize()"
+          [pageSizeOptions]="pageSizeOptions"
+          (page)="onPage($event)"
+          [attr.aria-label]="'portal.helpCenter.paginatorAria' | t" />
+      }
+    }
+  </mat-card-content>
+</mat-card>

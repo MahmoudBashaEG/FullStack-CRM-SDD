@@ -1,0 +1,53 @@
+/** PLAT-001: English source strings for the 'dashboard' namespace (values copy the previous literals verbatim). */
+export const dashboard = {
+  title: 'My Dashboard',
+  subtitle: 'Live overview of the tickets currently assigned to you.',
+  updated: 'Updated {date}',
+  loadError: 'Could not load your dashboard.',
+  tasksLoadError: 'Could not load your tasks.',
+  tabs: {
+    overview: 'Overview',
+    tasks: 'My tasks',
+  },
+  actions: {
+    aria: 'Quick links',
+    createTicket: 'Create ticket',
+    viewAll: 'View all my tickets',
+    tasks: 'My Tasks',
+    notifications: 'Notifications',
+    quickReplies: 'Quick Replies',
+    collaborations: 'My Collaborations',
+  },
+  workload: {
+    title: 'Workload',
+    hint: '{active} active tickets (Open + In Progress). Counts overlap — one ticket can appear in several cards.',
+    escalated: 'Escalated',
+    highOrUrgent: 'High / Urgent',
+  },
+  queue: {
+    title: 'Needs attention',
+    hint: 'Top {limit} of your Open and In Progress tickets: escalated first, then Urgent, High, Medium, Low, then longest without an update. This is a display order, not an SLA.',
+    empty: 'No Open or In Progress tickets are assigned to you right now.',
+    updated: 'Updated {date}',
+    showing: 'Showing {shown} of {total} active tickets.',
+  },
+  tasks: {
+    title: 'My tasks',
+    hint: 'Overdue and Due soon are part of Pending. Due soon = within 7 days.',
+    pending: 'Pending',
+    overdue: 'Overdue',
+    dueSoon: 'Due soon',
+    empty: 'No pending tasks.',
+    due: 'Due {date}',
+    noDue: 'No due date',
+    reminder: 'Reminder {date}',
+    viewAll: 'View all my tasks',
+  },
+  sla: {
+    NotTracked: 'Not tracked',
+    OnTrack: 'On track',
+    Warning: 'Warning',
+    Breached: 'Breached',
+    Met: 'Met',
+  },
+};

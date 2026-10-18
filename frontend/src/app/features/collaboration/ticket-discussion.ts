@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -11,6 +10,9 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { EMPTY, Subject, catchError, map, switchMap } from 'rxjs';
 import { describeHttpError } from '../../core/api/describe-http-error';
+import { I18n } from '../../core/i18n/i18n';
+import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { CollaborationApi } from './collaboration-api';
 import { TicketMessage } from './collaboration-models';
 
@@ -20,13 +22,14 @@ const PAGE_SIZE = 20;
 @Component({
   selector: 'crm-ticket-discussion',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule],
+  imports: [LocalizedDatePipe, TranslatePipe, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule],
   templateUrl: './ticket-discussion.html',
   styleUrl: './ticket-discussion.scss',
 })
 export class TicketDiscussion {
   private readonly api = inject(CollaborationApi);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly i18n = inject(I18n);
   private readonly destroyRef = inject(DestroyRef);
   private readonly requests = new Subject<{ id: string; page: number }>();
   private nextPage = 1;
@@ -56,7 +59,7 @@ export class TicketDiscussion {
               if (error.status === 404) {
                 this.accessLost.emit();
               } else {
-                this.error.set(describeHttpError(error, 'Could not load the discussion.'));
+                this.error.set(describeHttpError(error, this.i18n.t('collaboration.loadError'), this.i18n.t));
               }
               return EMPTY;
             }),
@@ -97,17 +100,17 @@ export class TicketDiscussion {
         this.items.update(current => [message, ...current.filter(m => m.id !== message.id)]);
         this.totalCount.update(n => n + 1);
         this.composer.reset('');
-        this.snackBar.open('Message posted.', 'OK', { duration: 3000 });
+        this.snackBar.open(this.i18n.t('collaboration.discussion.posted'), this.i18n.t('collaboration.ok'), { duration: 3000 });
       },
       error: (error: HttpErrorResponse) => {
         this.posting.set(false);
         if (error.status === 404) {
           this.accessLost.emit();
         } else if (error.status === 503) {
-          this.postError.set('Your message may have been posted. Check the thread before posting again.');
+          this.postError.set(this.i18n.t('collaboration.discussion.maybePosted'));
           this.load(this.ticketId(), 1); // keep the typed text
         } else {
-          this.postError.set(describeHttpError(error, 'Could not post the message.'));
+          this.postError.set(describeHttpError(error, this.i18n.t('collaboration.discussion.postError'), this.i18n.t));
         }
       },
     });

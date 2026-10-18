@@ -12,6 +12,8 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
 import { describeHttpError } from '../../core/api/describe-http-error';
 import { AuthService } from '../../core/auth/auth-service';
+import { I18n } from '../../core/i18n/i18n';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
 import { Agent } from '../agents/agent-models';
@@ -29,6 +31,7 @@ import { TicketsApi } from './tickets-api';
     RouterLink,
     PageHeader,
     StatusBadge,
+    TranslatePipe,
     CustomerPicker,
     MatCardModule,
     MatFormFieldModule,
@@ -44,6 +47,7 @@ export class TicketCreatePage {
   private readonly api = inject(TicketsApi);
   private readonly agentsApi = inject(AgentsApi);
   private readonly auth = inject(AuthService);
+  private readonly i18n = inject(I18n);
   private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);
   private readonly destroyRef = inject(DestroyRef);
@@ -74,7 +78,7 @@ export class TicketCreatePage {
         .subscribe({
           next: agents => this.activeAgents.set(agents.filter(a => a.isActive)),
           error: (error: HttpErrorResponse) =>
-            this.agentsError.set(describeHttpError(error, 'Could not load agents.') + ' You can still create the ticket unassigned.'),
+            this.agentsError.set(describeHttpError(error, this.i18n.t('tickets.create.agentsError'), this.i18n.t) + ' ' + this.i18n.t('tickets.create.agentsErrorSuffix')),
         });
     }
   }
@@ -106,11 +110,11 @@ export class TicketCreatePage {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: ticket => {
-          this.snackBar.open('Ticket created.', undefined, { duration: 3000 });
+          this.snackBar.open(this.i18n.t('tickets.create.created'), undefined, { duration: 3000 });
           void this.router.navigate(['/tickets', ticket.id]);
         },
         error: (error: HttpErrorResponse) => {
-          this.error.set(describeHttpError(error, 'Could not create the ticket.'));
+          this.error.set(describeHttpError(error, this.i18n.t('tickets.create.createError'), this.i18n.t));
           this.submitting.set(false);
         },
       });

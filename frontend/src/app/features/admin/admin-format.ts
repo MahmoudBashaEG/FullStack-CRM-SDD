@@ -1,46 +1,44 @@
+import { Translate, englishT } from '../../core/i18n/translate-fn';
 import { AuditAction, AuditChange } from './admin-models';
 
-const ACTION_LABELS: Record<AuditAction, string> = {
-  AgentCreated: 'Agent created',
-  AccountDeactivated: 'Account deactivated',
-  AccountReactivated: 'Account reactivated',
-  OrganizationSettingsUpdated: 'Organization settings updated',
-};
-
-const FIELD_LABELS: Record<string, string> = {
-  displayName: 'Display name',
-  supportEmail: 'Support email',
-  supportPhone: 'Support phone',
-  supportInformation: 'Support information',
-  isActive: 'Active',
-  role: 'Role',
-};
-
-export function auditActionLabel(action: AuditAction): string {
-  return ACTION_LABELS[action];
+export function auditActionLabel(action: AuditAction, t: Translate = englishT): string {
+  return t(`admin.audit.action.${action}`);
 }
 
-export function auditFieldLabel(field: string): string {
-  return FIELD_LABELS[field] ?? field;
+const KNOWN_FIELDS = new Set([
+  'displayName',
+  'supportEmail',
+  'supportPhone',
+  'supportInformation',
+  'isActive',
+  'role',
+  'accentColor',
+  'logo',
+]);
+
+export function auditFieldLabel(field: string, t: Translate = englishT): string {
+  return KNOWN_FIELDS.has(field) ? t(`admin.audit.field.${field}`) : field;
 }
 
-function auditValue(value: string | null): string {
+function auditValue(value: string | null, t: Translate): string {
   if (value === null || value === '') {
-    return '(empty)';
+    return t('admin.audit.empty');
   }
-  return value === 'true' ? 'Yes' : value === 'false' ? 'No' : value;
+  return value === 'true' ? t('common.yes') : value === 'false' ? t('common.no') : value;
 }
 
-/** e.g. "Display name: (empty) → Acme Support", "Active: Yes → No". Plain text: render with interpolation only. */
-export function describeAuditChange(change: AuditChange): string {
-  return `${auditFieldLabel(change.field)}: ${auditValue(change.oldValue)} → ${auditValue(change.newValue)}`;
+/** e.g. "Display name: (empty) → Acme Support", "Active: Yes → No". Plain text: render with interpolation only. Old/new values are data and never translated. */
+export function describeAuditChange(change: AuditChange, t: Translate = englishT): string {
+  return `${auditFieldLabel(change.field, t)}: ${auditValue(change.oldValue, t)} → ${auditValue(change.newValue, t)}`;
 }
 
-export function statusConfirmation(account: { firstName: string; lastName: string; email: string; role: string }, activate: boolean): string {
+export function statusConfirmation(
+  account: { firstName: string; lastName: string; email: string; role: string },
+  activate: boolean,
+  t: Translate = englishT,
+): string {
   const who = `${account.firstName} ${account.lastName} (${account.email})`;
-  return activate
-    ? `Reactivate ${who}? They can sign in again with their existing password.`
-    : `Deactivate ${who}? They are signed out everywhere immediately and cannot sign in until reactivated. Their tickets and history are kept.`;
+  return t(activate ? 'admin.statusConfirm.reactivate' : 'admin.statusConfirm.deactivate', { who });
 }
 
 /** UX only: the server refuses self-deactivation and the last active SuperAdmin regardless. */

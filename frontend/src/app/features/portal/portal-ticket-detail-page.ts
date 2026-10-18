@@ -1,5 +1,4 @@
 import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -11,11 +10,15 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { EMPTY, Subject, catchError, combineLatest, forkJoin, map, startWith, switchMap, tap } from 'rxjs';
 import { describeHttpError } from '../../core/api/describe-http-error';
+import { I18n } from '../../core/i18n/i18n';
+import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
-import { statusLabel, statusTone } from '../tickets/ticket-models';
+import { statusTone } from '../tickets/ticket-models';
 import { PortalApi } from './portal-api';
-import { NOT_LINKED, PortalTicket, PortalTimelineEntry } from './portal-models';
+import { PortalTicket, PortalTimelineEntry } from './portal-models';
 import { PortalTicketFeedback } from './portal-ticket-feedback';
 import { describeTimelineEntry } from './portal-timeline';
 
@@ -24,8 +27,10 @@ import { describeTimelineEntry } from './portal-timeline';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     RouterLink,
-    DatePipe,
+    LocalizedDatePipe,
+    TranslatePipe,
     ClipboardModule,
+    ErrorState,
     PageHeader,
     StatusBadge,
     PortalTicketFeedback,
@@ -40,6 +45,7 @@ import { describeTimelineEntry } from './portal-timeline';
 export class PortalTicketDetailPage {
   private readonly api = inject(PortalApi);
   private readonly snackBar = inject(MatSnackBar);
+  protected readonly i18n = inject(I18n);
   private readonly clipboard = inject(Clipboard);
   private readonly retry = new Subject<void>();
 
@@ -48,7 +54,6 @@ export class PortalTicketDetailPage {
   protected readonly loading = signal(true);
   protected readonly loadError = signal<string | null>(null);
   protected readonly describe = describeTimelineEntry;
-  protected readonly statusLabel = statusLabel;
   protected readonly statusTone = statusTone;
 
   constructor() {
@@ -90,15 +95,15 @@ export class PortalTicketDetailPage {
 
   protected copyReference(id: string): void {
     this.clipboard.copy(id);
-    this.snackBar.open('Reference copied.', undefined, { duration: 2000 });
+    this.snackBar.open(this.i18n.t('portal.detail.copied'), undefined, { duration: 2000 });
   }
 
   // The 404 text is the same for a missing ticket and another customer's ticket.
   private describeLoadError(error: HttpErrorResponse): string {
     if (error.status === 404) {
       const detail = (error.error as { detail?: string } | null)?.detail;
-      return detail === 'Customer profile not found.' ? NOT_LINKED : 'This request was not found.';
+      return detail === 'Customer profile not found.' ? this.i18n.t('portal.notLinked') : this.i18n.t('portal.detail.notFound');
     }
-    return describeHttpError(error, 'Could not load the request.');
+    return describeHttpError(error, this.i18n.t('portal.detail.loadError'), this.i18n.t);
   }
 }

@@ -1,4 +1,4 @@
-<p class="hint">Only tickets you are allowed to open are listed.</p>
+<p class="hint">{{ 'customers.tickets.hint' | t }}</p>
 
 @if (loading()) {
   <mat-progress-bar mode="indeterminate" />
@@ -6,11 +6,11 @@
 
 @if (error(); as message) {
   <p class="form-error" role="alert">{{ message }}</p>
-  <button mat-button type="button" (click)="retry()">Retry</button>
+  <button mat-button type="button" (click)="retry()">{{ 'common.retry' | t }}</button>
 }
 
 @if (loaded() && items().length === 0 && !error()) {
-  <p class="hint">No tickets you can access for this customer.</p>
+  <crm-empty-state icon="confirmation_number" [message]="'customers.tickets.empty' | t" />
 }
 
 <div class="thread">
@@ -18,14 +18,14 @@
     <article>
       <header class="record-meta">
         <a [routerLink]="['/tickets', t.id]">{{ t.subject }}</a>
-        <crm-status-badge [label]="statusLabel(t.status)" [tone]="statusTone(t.status)" />
-        <crm-status-badge [label]="t.priority" [tone]="priorityTone(t.priority)" />
-        <span class="hint">{{ t.createdAtUtc | date: 'mediumDate' }}</span>
+        <crm-status-badge [label]="('enums.ticketStatus.' + t.status) | t" [tone]="statusTone(t.status)" />
+        <crm-status-badge [label]="('enums.ticketPriority.' + t.priority) | t" [tone]="priorityTone(t.priority)" />
+        <span class="hint">{{ t.createdAtUtc | crmDate: 'date' }}</span>
       </header>
     </article>
   }
 </div>
 
 @if (hasMore() && !loading()) {
-  <button mat-button type="button" (click)="loadMore()">Load more tickets</button>
+  <button mat-button type="button" (click)="loadMore()">{{ 'customers.tickets.loadMore' | t }}</button>
 }

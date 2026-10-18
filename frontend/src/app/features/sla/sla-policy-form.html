@@ -3,56 +3,59 @@
 }
 
 @if (loadError(); as message) {
-  <p class="form-error" role="alert">{{ message }}</p>
-  <button mat-stroked-button type="button" (click)="load()">Retry</button>
+  <crm-error-state [message]="message" (retry)="load()" />
 }
 
 @if (policy(); as p) {
   <div class="stack">
     @if (!p.isConfigured) {
-      <p class="banner" role="status">
-        No SLA configured. New tickets are not tracked until a policy is saved and enabled. The values below are suggestions only.
-      </p>
+      <p class="banner" role="status">{{ 'sla.policy.notConfigured' | t }}</p>
     }
 
     <form [formGroup]="form" (ngSubmit)="save()" class="stack">
-      <mat-slide-toggle formControlName="isEnabled">SLA tracking enabled for new tickets</mat-slide-toggle>
-      <p class="hint">
-        Targets are business minutes (working hours from the Calendar tab). A change applies to tickets created afterwards; existing
-        deadlines never change.
-      </p>
+      <mat-card appearance="outlined">
+        <mat-card-content class="card-body">
+          <mat-slide-toggle formControlName="isEnabled">{{ 'sla.policy.enabled' | t }}</mat-slide-toggle>
+          <p class="hint">{{ 'sla.policy.hint' | t }}</p>
+        </mat-card-content>
+      </mat-card>
 
-      <div formArrayName="rows" class="stack">
-        @for (row of rows.controls; track $index) {
-          <div class="row-line" [formGroupName]="$index">
-            <strong>{{ row.value.priority }}</strong>
-            <mat-form-field appearance="outline">
-              <mat-label>First response (min)</mat-label>
-              <input matInput type="number" min="1" step="1" formControlName="first" />
-              <mat-hint>{{ format(+row.value.first || 0) }}</mat-hint>
-              @if (row.controls['first'].invalid) {
-                <mat-error>1 – 525600 whole minutes</mat-error>
-              }
-            </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Resolution (min)</mat-label>
-              <input matInput type="number" min="1" step="1" formControlName="resolution" />
-              <mat-hint>{{ format(+row.value.resolution || 0) }}</mat-hint>
-              @if (row.controls['resolution'].invalid) {
-                <mat-error>1 – 525600 whole minutes</mat-error>
-              }
-            </mat-form-field>
-          </div>
-        }
-      </div>
+      <mat-card appearance="outlined">
+        <mat-card-header>
+          <mat-card-title>{{ 'sla.policy.targets' | t }}</mat-card-title>
+        </mat-card-header>
+        <mat-card-content class="card-body" formArrayName="rows">
+          @for (row of rows.controls; track $index) {
+            <div class="row-line" [formGroupName]="$index">
+              <strong>{{ 'enums.ticketPriority.' + row.value.priority | t }}</strong>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'sla.policy.firstResponse' | t }}</mat-label>
+                <input matInput type="number" min="1" step="1" formControlName="first" />
+                <mat-hint>{{ format(+row.value.first || 0, i18n.t) }}</mat-hint>
+                @if (row.controls['first'].invalid) {
+                  <mat-error>{{ 'sla.policy.rangeError' | t }}</mat-error>
+                }
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'sla.policy.resolution' | t }}</mat-label>
+                <input matInput type="number" min="1" step="1" formControlName="resolution" />
+                <mat-hint>{{ format(+row.value.resolution || 0, i18n.t) }}</mat-hint>
+                @if (row.controls['resolution'].invalid) {
+                  <mat-error>{{ 'sla.policy.rangeError' | t }}</mat-error>
+                }
+              </mat-form-field>
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
 
       @if (saveError(); as message) {
         <p class="form-error" role="alert">{{ message }}</p>
       }
       <div class="inline">
-        <button mat-flat-button type="submit" [disabled]="saving()">Save policy</button>
+        <button mat-flat-button type="submit" [disabled]="saving()">{{ 'sla.policy.save' | t }}</button>
         @if (p.isConfigured && p.updatedAtUtc) {
-          <span class="hint">Last saved {{ p.updatedAtUtc | date: 'medium' }} by {{ p.updatedByName }}</span>
+          <span class="hint">{{ 'sla.policy.lastSaved' | t: { when: (p.updatedAtUtc | crmDate: 'medium'), name: p.updatedByName ?? '' } }}</span>
         }
       </div>
     </form>

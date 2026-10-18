@@ -1,3 +1,4 @@
+import { Translate, englishT } from '../../core/i18n/translate-fn';
 import { StatusTone } from '../../shared/ui/status-badge/status-badge';
 import { TicketCategory, TicketPriority, TicketStatus } from '../tickets/ticket-models';
 
@@ -152,15 +153,8 @@ export interface SlaOverview {
   generatedAtUtc: string;
 }
 
-export function slaIndicatorLabel(indicator: SlaIndicator): string {
-  switch (indicator) {
-    case 'NotTracked':
-      return 'Not tracked';
-    case 'OnTrack':
-      return 'On track';
-    default:
-      return indicator;
-  }
+export function slaIndicatorLabel(indicator: SlaIndicator, t: Translate = englishT): string {
+  return t(`sla.indicator.${indicator}`);
 }
 
 export function slaIndicatorTone(indicator: SlaIndicator): StatusTone {
@@ -176,17 +170,17 @@ export function slaIndicatorTone(indicator: SlaIndicator): StatusTone {
   }
 }
 
-export function slaKindLabel(kind: SlaKind): string {
-  return kind === 'FirstResponse' ? 'First response' : 'Resolution';
+export function slaKindLabel(kind: SlaKind, t: Translate = englishT): string {
+  return t(`sla.kind.${kind}`);
 }
 
 /** 135 → '2 h 15 min'; 45 → '45 min'; 120 → '2 h'. Callers handle the overdue sign. */
-export function formatBusinessMinutes(minutes: number): string {
+export function formatBusinessMinutes(minutes: number, t: Translate = englishT): string {
   const total = Math.max(0, Math.round(minutes));
   const hours = Math.floor(total / 60);
   const rest = total % 60;
   if (hours === 0) {
-    return `${rest} min`;
+    return t('sla.duration.min', { n: rest });
   }
-  return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
+  return rest === 0 ? t('sla.duration.hours', { n: hours }) : t('sla.duration.hoursMin', { h: hours, m: rest });
 }

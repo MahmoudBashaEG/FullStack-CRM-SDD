@@ -1,19 +1,24 @@
 <div class="detail-stack">
-  <p><a mat-button routerLink="/portal/help-center">Back to Help Center</a></p>
+  <p class="back-link">
+    <a mat-button routerLink="/portal/help-center"><mat-icon class="dir-icon">arrow_back</mat-icon> {{ 'portal.helpCenter.back' | t }}</a>
+  </p>
 
   @if (loading()) {
     <mat-progress-bar mode="indeterminate" />
   }
 
   @if (loadError(); as message) {
-    <p class="error" role="alert">{{ message }}</p>
+    <crm-error-state [message]="message" [retryable]="false" />
   }
 
   @if (article(); as a) {
     <mat-card appearance="outlined">
       <mat-card-content>
-        <h2>{{ a.title }}</h2>
-        <p class="hint">{{ typeLabel(a.type) }} · {{ a.categoryName }} · Published {{ a.publishedAtUtc | date: 'mediumDate' }}</p>
+        <h1>{{ a.title }}</h1>
+        <p class="hint">
+          {{ ('portal.articleType.' + a.type) | t }} · {{ a.categoryName }} ·
+          {{ 'portal.helpCenter.published' | t: { date: (a.publishedAtUtc | crmDate: 'date') } }}
+        </p>
         @if (a.summary) {
           <p class="user-text">{{ a.summary }}</p>
         }

@@ -8,6 +8,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { catchError, debounceTime, distinctUntilChanged, filter, map, of, startWith, switchMap, tap } from 'rxjs';
 import { describeHttpError } from '../../core/api/describe-http-error';
+import { I18n } from '../../core/i18n/i18n';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { Customer } from '../customers/customer-models';
 import { CustomersApi } from '../customers/customers-api';
 
@@ -18,22 +20,22 @@ import { CustomersApi } from '../customers/customers-api';
 @Component({
   selector: 'crm-customer-picker',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatAutocompleteModule, MatIconModule],
+  imports: [ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatAutocompleteModule, MatIconModule, TranslatePipe],
   template: `
     <mat-form-field appearance="outline" class="picker">
-      <mat-label>{{ label() }}</mat-label>
+      <mat-label>{{ label() ?? ('tickets.picker.customer' | t) }}</mat-label>
       <input
         matInput
         type="search"
         [formControl]="query"
         [matAutocomplete]="auto"
-        placeholder="Search by name, email or phone" />
+        [placeholder]="'tickets.picker.placeholder' | t" />
       <mat-icon matSuffix>person_search</mat-icon>
       <mat-autocomplete #auto="matAutocomplete" [displayWith]="display" (optionSelected)="selected.emit($event.option.value)">
         @for (c of options(); track c.id) {
-          <mat-option [value]="c">{{ c.firstName }} {{ c.lastName }} · {{ c.email }}</mat-option>
+          <mat-option [value]="c">{{ c.firstName }} {{ c.lastName }} · <span class="ltr-value">{{ c.email }}</span></mat-option>
         } @empty {
-          <mat-option disabled>No customers match.</mat-option>
+          <mat-option disabled>{{ 'tickets.picker.noMatch' | t }}</mat-option>
         }
       </mat-autocomplete>
       @if (lookupError(); as message) {
@@ -54,8 +56,9 @@ import { CustomersApi } from '../customers/customers-api';
 })
 export class CustomerPicker {
   private readonly api = inject(CustomersApi);
+  private readonly i18n = inject(I18n);
 
-  readonly label = input('Customer');
+  readonly label = input<string>();
   readonly hint = input<string>();
   readonly selected = output<Customer | null>();
 
@@ -86,7 +89,7 @@ export class CustomerPicker {
           this.api.list({ page: 1, pageSize: 10, search }).pipe(
             map(page => page.items),
             catchError((error: HttpErrorResponse) => {
-              this.lookupError.set(describeHttpError(error, 'Could not search customers.'));
+              this.lookupError.set(describeHttpError(error, this.i18n.t('tickets.picker.searchError'), this.i18n.t));
               return of([] as Customer[]);
             }),
           ),

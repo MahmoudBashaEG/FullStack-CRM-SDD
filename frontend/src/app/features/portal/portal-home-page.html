@@ -1,37 +1,50 @@
-<crm-page-header title="Support Portal" subtitle="Submit requests, track their progress and browse help articles." />
+<crm-page-header
+  icon="support_agent"
+  [title]="'portal.home.welcome' | t: { org: branding.orgName() }"
+  [subtitle]="'portal.home.subtitle' | t" />
 
-<div class="stack">
-  <div class="quick-actions">
-    <a mat-flat-button routerLink="/portal/new-ticket"><mat-icon>add</mat-icon> New support request</a>
-    <a mat-stroked-button routerLink="/portal/tickets">My tickets</a>
-    <a mat-stroked-button routerLink="/portal/help-center">Help Center</a>
-  </div>
+<div class="portal-home">
+  <nav class="quick-actions" [attr.aria-label]="'portal.home.quickActions' | t">
+    <a class="action-card" routerLink="/portal/new-ticket">
+      <span class="icon" aria-hidden="true"><mat-icon>add_circle</mat-icon></span>
+      <span class="text"><strong>{{ 'portal.home.newRequest' | t }}</strong>{{ 'portal.home.newRequestText' | t }}</span>
+    </a>
+    <a class="action-card" routerLink="/portal/tickets">
+      <span class="icon" aria-hidden="true"><mat-icon>confirmation_number</mat-icon></span>
+      <span class="text"><strong>{{ 'portal.home.myRequests' | t }}</strong>{{ 'portal.home.myRequestsText' | t }}</span>
+    </a>
+    <a class="action-card" routerLink="/portal/help-center">
+      <span class="icon" aria-hidden="true"><mat-icon>menu_book</mat-icon></span>
+      <span class="text"><strong>{{ 'portal.helpCenter.title' | t }}</strong>{{ 'portal.home.helpText' | t }}</span>
+    </a>
+  </nav>
 
   <mat-card appearance="outlined">
-    <mat-card-header><mat-card-title>Recent requests</mat-card-title></mat-card-header>
+    <mat-card-header><mat-card-title>{{ 'portal.home.recent' | t }}</mat-card-title></mat-card-header>
     <mat-card-content>
       @if (loading()) {
         <mat-progress-bar mode="indeterminate" />
       }
       @if (error(); as message) {
-        <p class="error" role="alert">{{ message }}</p>
-        <button mat-stroked-button type="button" (click)="load()">Retry</button>
+        <crm-error-state [message]="message" (retry)="load()" />
       }
       @if (!loading() && !error()) {
         @if (recent().length === 0) {
-          <p>You have no support requests yet. <a routerLink="/portal/new-ticket">Submit your first request</a>.</p>
+          <crm-empty-state icon="inbox" [message]="'portal.home.empty' | t">
+            <a mat-flat-button routerLink="/portal/new-ticket">{{ 'portal.home.submitFirst' | t }}</a>
+          </crm-empty-state>
         } @else {
           <ul class="rows">
             @for (t of recent(); track t.id) {
               <li class="row">
                 <a class="row-title" [routerLink]="['/portal/tickets', t.id]">{{ t.subject }}</a>
-                <crm-status-badge [label]="statusLabel(t.status)" [tone]="statusTone(t.status)" />
-                <p class="meta">Created {{ t.createdAtUtc | date: 'medium' }}</p>
+                <crm-status-badge [label]="('enums.ticketStatus.' + t.status) | t" [tone]="statusTone(t.status)" />
+                <p class="meta">{{ 'portal.created' | t: { date: (t.createdAtUtc | crmDate: 'medium') } }}</p>
               </li>
             }
           </ul>
           @if (totalCount() > recentCount) {
-            <p><a mat-button routerLink="/portal/tickets">View all ({{ totalCount() }})</a></p>
+            <p><a mat-button routerLink="/portal/tickets">{{ 'portal.home.viewAll' | t: { count: totalCount() } }}</a></p>
           }
         }
       }

@@ -9,6 +9,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
 import { describeHttpError } from '../../core/api/describe-http-error';
+import { I18n } from '../../core/i18n/i18n';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { AgentsApi } from './agents-api';
 
@@ -19,6 +21,7 @@ import { AgentsApi } from './agents-api';
     ReactiveFormsModule,
     RouterLink,
     PageHeader,
+    TranslatePipe,
     MatCardModule,
     MatFormFieldModule,
     MatInputModule,
@@ -29,6 +32,7 @@ import { AgentsApi } from './agents-api';
 })
 export class AgentCreatePage {
   private readonly api = inject(AgentsApi);
+  private readonly i18n = inject(I18n);
   private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);
   private readonly destroyRef = inject(DestroyRef);
@@ -63,11 +67,11 @@ export class AgentCreatePage {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: agent => {
-          this.snackBar.open('Agent created.', undefined, { duration: 3000 });
+          this.snackBar.open(this.i18n.t('agents.create.created'), undefined, { duration: 3000 });
           void this.router.navigate(['/agents', agent.id]);
         },
         error: (error: HttpErrorResponse) => {
-          this.error.set(describeHttpError(error, 'Could not create the agent.'));
+          this.error.set(describeHttpError(error, this.i18n.t('agents.create.failed'), this.i18n.t));
           this.submitting.set(false);
         },
       });

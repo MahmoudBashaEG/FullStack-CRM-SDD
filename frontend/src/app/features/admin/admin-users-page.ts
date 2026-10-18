@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -13,6 +14,10 @@ import { RouterLink } from '@angular/router';
 import { EMPTY, Subject, catchError, debounceTime, switchMap } from 'rxjs';
 import { describeHttpError } from '../../core/api/describe-http-error';
 import { UserRole } from '../../core/auth/auth-models';
+import { I18n } from '../../core/i18n/i18n';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { EmptyState } from '../../shared/ui/empty-state/empty-state';
+import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
 import { AdminApi } from './admin-api';
@@ -28,6 +33,10 @@ import { AdminSectionNav } from './admin-section-nav';
     PageHeader,
     StatusBadge,
     AdminSectionNav,
+    EmptyState,
+    ErrorState,
+    TranslatePipe,
+    MatCardModule,
     MatPaginatorModule,
     MatFormFieldModule,
     MatInputModule,
@@ -41,6 +50,7 @@ import { AdminSectionNav } from './admin-section-nav';
 })
 export class AdminUsersPage {
   private readonly api = inject(AdminApi);
+  private readonly i18n = inject(I18n);
   private readonly destroyRef = inject(DestroyRef);
   private readonly requests = new Subject<AccountListParams>();
 
@@ -64,7 +74,7 @@ export class AdminUsersPage {
         switchMap(params =>
           this.api.listUsers(params).pipe(
             catchError((error: HttpErrorResponse) => {
-              this.error.set(describeHttpError(error, 'Could not load accounts.'));
+              this.error.set(describeHttpError(error, this.i18n.t('admin.users.loadError'), this.i18n.t));
               this.loading.set(false);
               return EMPTY;
             }),

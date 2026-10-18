@@ -1,16 +1,24 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTimepickerModule } from '@angular/material/timepicker';
 import { describeHttpError } from '../../core/api/describe-http-error';
+import { I18n } from '../../core/i18n/i18n';
+import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { combineLocalDateTime, fromTimeOfDay, toDateOnly, toTimeOfDay } from '../../shared/date/date-only';
+import { ErrorState } from '../../shared/ui/error-state/error-state';
+import { formatUtcDay } from '../reports/report-format';
 import { SlaApi } from './sla-api';
 import { describeSaveError } from './sla-errors';
 import { BusinessCalendar, Holiday, SlaDuePreview, WEEK_DAYS, WeekDay } from './sla-models';
@@ -34,10 +42,15 @@ function toApiTime(value: string): string {
   selector: 'crm-business-calendar-form',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    DatePipe,
+    LocalizedDatePipe,
+    TranslatePipe,
+    ErrorState,
     ReactiveFormsModule,
     MatButtonModule,
+    MatCardModule,
     MatCheckboxModule,
+    MatDatepickerModule,
+    MatTimepickerModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
@@ -47,6 +60,7 @@ function toApiTime(value: string): string {
   styleUrl: './sla-admin.scss',
 })
 export class BusinessCalendarForm {
+  protected readonly i18n = inject(I18n);
   private readonly api = inject(SlaApi);
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly snackBar = inject(MatSnackBar);
@@ -62,23 +76,26 @@ export class BusinessCalendarForm {
 
   protected readonly form = this.fb.group({
     timeZoneId: ['Africa/Cairo', [Validators.required, Validators.maxLength(64)]],
-    opensAt: ['09:00', Validators.required],
-    closesAt: ['17:00', Validators.required],
+    opensAt: [fromTimeOfDay('09:00') as Date | null, Validators.required],
+    closesAt: [fromTimeOfDay('17:00') as Date | null, Validators.required],
   });
   protected readonly workingDays = signal<WeekDay[]>(['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday']);
   protected readonly holidays = signal<Holiday[]>([]);
-  protected readonly holidayDate = new FormControl('', { nonNullable: true });
+  protected readonly holidayDate = new FormControl<Date | null>(null);
   protected readonly holidayName = new FormControl('', { nonNullable: true, validators: [Validators.maxLength(100)] });
   protected readonly sortedHolidays = computed(() => [...this.holidays()].sort((a, b) => a.date.localeCompare(b.date)));
   protected readonly clientError = computed(() => {
-    const { opensAt, closesAt } = this.form.getRawValue();
-    if (this.workingDays().length === 0) return 'Select at least one working day.';
-    if (opensAt && closesAt && opensAt >= closesAt) return 'Closing time must be after opening time.';
+    const { opensAt: opens, closesAt: closes } = this.form.getRawValue();
+    const opensAt = toTimeOfDay(opens);
+    const closesAt = toTimeOfDay(closes);
+    if (this.workingDays().length === 0) return this.i18n.t('sla.calendar.workingDayRequired');
+    if (opensAt && closesAt && opensAt >= closesAt) return this.i18n.t('sla.calendar.closeAfterOpen');
     return null;
   });
 
   // Due-date preview
-  protected readonly previewStart = new FormControl('', { nonNullable: true });
+  protected readonly previewDay = new FormControl<Date | null>(null);
+  protected readonly previewTime = new FormControl<Date | null>(null);
   protected readonly previewMinutes = new FormControl(240, { nonNullable: true, validators: [Validators.required, Validators.min(1)] });
   protected readonly preview = signal<SlaDuePreview | null>(null);
   protected readonly previewError = signal<string | null>(null);
@@ -100,11 +117,13 @@ export class BusinessCalendarForm {
           this.loading.set(false);
         },
         error: (error: HttpErrorResponse) => {
-          this.loadError.set(describeHttpError(error, 'Could not load the business calendar.'));
+          this.loadError.set(describeHttpError(error, this.i18n.t('sla.calendar.loadFailed'), this.i18n.t));
           this.loading.set(false);
         },
       });
   }
+
+  protected readonly formatDay = (day: string) => formatUtcDay(day, this.i18n.locale());
 
   protected isWorkingDay(day: WeekDay): boolean {
     return this.workingDays().includes(day);
@@ -115,19 +134,19 @@ export class BusinessCalendarForm {
   }
 
   protected addHoliday(): void {
-    const date = this.holidayDate.value;
+    const date = toDateOnly(this.holidayDate.value);
     const name = this.holidayName.value.trim();
     if (!date || !name || this.holidayName.invalid) {
-      this.saveError.set('Enter a date and a name for the holiday.');
+      this.saveError.set(this.i18n.t('sla.calendar.holidayRequired'));
       return;
     }
     if (this.holidays().some(h => h.date === date)) {
-      this.saveError.set('That holiday date is already in the list.');
+      this.saveError.set(this.i18n.t('sla.calendar.holidayDuplicate'));
       return;
     }
     this.saveError.set(null);
     this.holidays.update(list => [...list, { date, name }]);
-    this.holidayDate.reset('');
+    this.holidayDate.reset(null);
     this.holidayName.reset('');
   }
 
@@ -147,8 +166,8 @@ export class BusinessCalendarForm {
       .saveCalendar({
         timeZoneId: value.timeZoneId.trim(),
         workingDays: WEEK_DAYS.filter(d => this.workingDays().includes(d)),
-        opensAt: toApiTime(value.opensAt),
-        closesAt: toApiTime(value.closesAt),
+        opensAt: toApiTime(toTimeOfDay(value.opensAt) ?? ''),
+        closesAt: toApiTime(toTimeOfDay(value.closesAt) ?? ''),
         holidays: this.sortedHolidays(),
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -156,11 +175,11 @@ export class BusinessCalendarForm {
         next: calendar => {
           this.show(calendar);
           this.saving.set(false);
-          this.snackBar.open('Business calendar saved.', undefined, { duration: 3000 });
+          this.snackBar.open(this.i18n.t('sla.calendar.saved'), undefined, { duration: 3000 });
         },
         error: (error: HttpErrorResponse) => {
           this.saving.set(false);
-          this.saveError.set(describeSaveError(error, 'Could not save the business calendar.'));
+          this.saveError.set(describeSaveError(error, this.i18n.t('sla.calendar.saveFailed'), this.i18n.t));
         },
       });
   }
@@ -169,7 +188,13 @@ export class BusinessCalendarForm {
     if (this.previewMinutes.invalid || this.previewing()) {
       return;
     }
-    const start = this.previewStart.value ? new Date(this.previewStart.value).toISOString() : null;
+    const day = this.previewDay.value;
+    const time = this.previewTime.value;
+    if (this.previewDay.invalid || this.previewTime.invalid || (day && !time) || (!day && time)) {
+      this.previewError.set(this.i18n.t(day ? 'validation.timeRequired' : 'validation.dateRequired'));
+      return;
+    }
+    const start = combineLocalDateTime(day, time); // both empty ⇒ null ⇒ start now
     this.previewing.set(true);
     this.previewError.set(null);
     this.api
@@ -185,8 +210,8 @@ export class BusinessCalendarForm {
           this.previewing.set(false);
           this.previewError.set(
             error.status === 409
-              ? 'Save the business calendar first.'
-              : describeSaveError(error, 'Could not calculate the due date.'),
+              ? this.i18n.t('sla.calendar.saveFirst')
+              : describeSaveError(error, this.i18n.t('sla.calendar.previewFailed'), this.i18n.t),
           );
         },
       });
@@ -199,8 +224,8 @@ export class BusinessCalendarForm {
     }
     this.form.reset({
       timeZoneId: calendar.timeZoneId ?? '',
-      opensAt: (calendar.opensAt ?? '09:00:00').slice(0, 5),
-      closesAt: (calendar.closesAt ?? '17:00:00').slice(0, 5),
+      opensAt: fromTimeOfDay((calendar.opensAt ?? '09:00:00').slice(0, 5)),
+      closesAt: fromTimeOfDay((calendar.closesAt ?? '17:00:00').slice(0, 5)),
     });
     this.workingDays.set(calendar.workingDays);
     this.holidays.set(calendar.holidays);

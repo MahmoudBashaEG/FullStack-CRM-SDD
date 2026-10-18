@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -11,6 +10,10 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { EMPTY, Subject, catchError, map, switchMap } from 'rxjs';
 import { describeHttpError } from '../../core/api/describe-http-error';
+import { I18n } from '../../core/i18n/i18n';
+import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { EmptyState } from '../../shared/ui/empty-state/empty-state';
 import { CustomerRecordsApi } from './customer-records-api';
 import { CustomerNote, describeFieldError } from './customer-records-models';
 
@@ -20,11 +23,12 @@ const PAGE_SIZE = 10;
 @Component({
   selector: 'crm-customer-notes',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule],
+  imports: [LocalizedDatePipe, TranslatePipe, EmptyState, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule],
   templateUrl: './customer-notes.html',
   styleUrl: './customer-records.scss',
 })
 export class CustomerNotes {
+  private readonly i18n = inject(I18n);
   private readonly api = inject(CustomerRecordsApi);
   private readonly snackBar = inject(MatSnackBar);
   private readonly destroyRef = inject(DestroyRef);
@@ -51,7 +55,7 @@ export class CustomerNotes {
             map(result => ({ r, result })),
             catchError((error: HttpErrorResponse) => {
               this.loading.set(false);
-              this.error.set(describeHttpError(error, 'Could not load notes.'));
+              this.error.set(describeHttpError(error, this.i18n.t('customers.notes.loadFailed'), this.i18n.t));
               return EMPTY;
             }),
           ),
@@ -91,11 +95,11 @@ export class CustomerNotes {
         this.items.update(current => [note, ...current.filter(n => n.id !== note.id)]);
         this.totalCount.update(n => n + 1);
         this.composer.reset('');
-        this.snackBar.open('Note added.', 'OK', { duration: 3000 });
+        this.snackBar.open(this.i18n.t('customers.notes.added'), 'OK', { duration: 3000 });
       },
       error: (error: HttpErrorResponse) => {
         this.posting.set(false);
-        this.postError.set(describeFieldError(error, 'body', 'Could not add the note.'));
+        this.postError.set(describeFieldError(error, 'body', this.i18n.t('customers.notes.addFailed'), this.i18n.t));
       },
     });
   }

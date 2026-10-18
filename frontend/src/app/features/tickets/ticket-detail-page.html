@@ -1,240 +1,311 @@
-<crm-page-header title="Ticket" subtitle="Ticket details." />
-
-<p><a mat-button routerLink="/tickets">Back to tickets</a></p>
+@if (ticket(); as current) {
+  <crm-page-header icon="confirmation_number" [title]="current.subject">
+    <a mat-stroked-button actions routerLink="/tickets">
+      <mat-icon class="dir-icon">arrow_back</mat-icon> {{ 'tickets.detail.back' | t }}
+    </a>
+  </crm-page-header>
+  <p class="header-meta">
+    <span class="ltr-value">{{ current.id }}</span>
+    <crm-status-badge [label]="'enums.ticketStatus.' + current.status | t" [tone]="statusTone(current.status)" />
+    <crm-status-badge [label]="'enums.ticketPriority.' + current.priority | t" [tone]="priorityTone(current.priority)" />
+    @if (current.isEscalated) {
+      <crm-status-badge [label]="'tickets.detail.summary.escalated' | t" tone="error" />
+    }
+  </p>
+} @else {
+  <crm-page-header icon="confirmation_number" [title]="'tickets.detail.title' | t" [subtitle]="'tickets.detail.subtitle' | t">
+    <a mat-stroked-button actions routerLink="/tickets">
+      <mat-icon class="dir-icon">arrow_back</mat-icon> {{ 'tickets.detail.back' | t }}
+    </a>
+  </crm-page-header>
+}
 
 @if (loadError(); as message) {
   <p class="form-error" role="alert">{{ message }}</p>
 }
 
 @if (ticket(); as current) {
-  <div class="detail-stack">
-    <mat-card appearance="outlined">
-      <mat-card-header>
-        <mat-card-title>Summary</mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        <dl class="readonly-list">
-          <dt>Ticket ID</dt>
-          <dd>{{ current.id }}</dd>
-          <dt>Status</dt>
-          <dd><crm-status-badge [label]="statusLabel(current.status)" [tone]="statusTone(current.status)" /></dd>
-          @if (current.isEscalated) {
-            <dt>Escalation</dt>
-            <dd>
-              <crm-status-badge label="Escalated" tone="error" /> {{ current.escalationReason }}
-              <span class="hint">— {{ current.escalatedByName ?? 'Automation' }}, {{ current.escalatedAtUtc | date: 'medium' }}</span>
-            </dd>
-          }
-          <dt>Priority</dt>
-          <dd><crm-status-badge [label]="current.priority" [tone]="priorityTone(current.priority)" /></dd>
-          <dt>Category</dt>
-          <dd>{{ current.category }}</dd>
-          <dt>Customer</dt>
-          <dd>
-            <a [routerLink]="['/customers', current.customerId]">{{ current.customerName }}</a> · {{ current.customerEmail }}
-          </dd>
-          <dt>Created by</dt>
-          <dd>{{ current.createdByName }}</dd>
-          <dt>Assigned agent</dt>
-          <dd>{{ current.assignedAgentName ?? 'Unassigned' }}</dd>
-          <dt>Created</dt>
-          <dd>{{ current.createdAtUtc | date: 'medium' }}</dd>
-          <dt>Last updated</dt>
-          <dd>{{ current.updatedAtUtc | date: 'medium' }}</dd>
-        </dl>
-        <p class="hint">Status, assignment and escalation change only through the actions below.</p>
-      </mat-card-content>
-    </mat-card>
-
-    <mat-card appearance="outlined">
-      <mat-card-header>
-        <mat-card-title>SLA</mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        <crm-ticket-sla-card
-          [ticket]="current"
-          [canMarkResponded]="canMarkResponded()"
-          [busy]="busy() || saving()"
-          (markResponded)="markResponded()"
-        />
-      </mat-card-content>
-    </mat-card>
-
-    @if (actions(); as a) {
-      <mat-card appearance="outlined">
-        <mat-card-header>
-          <mat-card-title>Workflow</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <div class="actions">
-            @for (t of a.transitions; track t.to) {
-              <button mat-stroked-button type="button" [disabled]="busy() || saving()" (click)="transition(current, t.to)">
-                {{ t.label }}
-              </button>
-            }
-            @if (a.canClearEscalation) {
-              <button mat-stroked-button type="button" [disabled]="busy() || saving()" (click)="clearEscalation()">
-                Clear escalation
-              </button>
-            }
-          </div>
-          @if (a.transitions.length === 0) {
-            <p class="hint">No workflow actions are available to you for this ticket.</p>
-          }
-
-          @if (a.canEscalate) {
-            <div class="form-grid">
-              <mat-form-field appearance="outline">
-                <mat-label>Escalation reason</mat-label>
-                <textarea matInput [formControl]="escalationReason" rows="3"></textarea>
-                <mat-hint align="end">{{ escalationReason.value.length }}/500</mat-hint>
-                @if (escalationReason.invalid) {
-                  <mat-error>A reason is required (max 500 characters)</mat-error>
-                }
-              </mat-form-field>
-              <div>
-                <button mat-flat-button type="button" [disabled]="busy() || saving()" (click)="escalate()">Escalate</button>
-              </div>
-            </div>
-          }
-
-          @if (actionError(); as message) {
-            <p class="form-error" role="alert">{{ message }}</p>
-          }
-        </mat-card-content>
-      </mat-card>
-
-      @if (a.canAssign) {
+  <mat-tab-group
+    [selectedIndex]="tabs.index()"
+    (selectedIndexChange)="tabs.select($event)"
+    [preserveContent]="true"
+    animationDuration="0ms"
+    mat-stretch-tabs="false"
+    mat-align-tabs="start">
+    <mat-tab [label]="'tickets.detail.tabs.overview' | t">
+      <div class="tab-body crm-grid--two">
         <mat-card appearance="outlined">
           <mat-card-header>
-            <mat-card-title>Assignment</mat-card-title>
+            <mat-card-title>{{ 'tickets.detail.summary.title' | t }}</mat-card-title>
           </mat-card-header>
           <mat-card-content>
-            <div class="form-grid">
-              <mat-form-field appearance="outline">
-                <mat-label>Assigned agent</mat-label>
-                <mat-select [value]="selectedAssignee()" (selectionChange)="selectedAssignee.set($event.value)">
-                  <mat-option [value]="null">Unassigned</mat-option>
-                  @for (agent of activeAgents(); track agent.id) {
-                    <mat-option [value]="agent.id">{{ agent.firstName }} {{ agent.lastName }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
-              @if (agentsError(); as message) {
-                <p class="form-error" role="alert">{{ message }}</p>
+            <dl class="readonly-list">
+              <dt>{{ 'tickets.detail.summary.ticketId' | t }}</dt>
+              <dd><span class="ltr-value">{{ current.id }}</span></dd>
+              <dt>{{ 'tickets.detail.summary.status' | t }}</dt>
+              <dd><crm-status-badge [label]="'enums.ticketStatus.' + current.status | t" [tone]="statusTone(current.status)" /></dd>
+              @if (current.isEscalated) {
+                <dt>{{ 'tickets.detail.summary.escalation' | t }}</dt>
+                <dd>
+                  <crm-status-badge [label]="'tickets.detail.summary.escalated' | t" tone="error" /> {{ current.escalationReason }}
+                  <span class="hint"
+                    >— {{ current.escalatedByName ?? ('tickets.detail.summary.automation' | t) }},
+                    {{ current.escalatedAtUtc | crmDate: 'medium' }}</span
+                  >
+                </dd>
               }
-              @if (current.assignedAgentUserId && !isAgentActive(current.assignedAgentUserId)) {
-                <p class="hint">
-                  Current agent {{ current.assignedAgentName }} is inactive; choose an active Agent or Unassigned.
-                </p>
-              }
-              <div>
-                <button
-                  mat-flat-button
-                  type="button"
-                  [disabled]="busy() || saving() || selectedAssignee() === current.assignedAgentUserId"
-                  (click)="saveAssignee()"
-                >
-                  Save assignment
-                </button>
-              </div>
-            </div>
+              <dt>{{ 'tickets.detail.summary.priority' | t }}</dt>
+              <dd><crm-status-badge [label]="'enums.ticketPriority.' + current.priority | t" [tone]="priorityTone(current.priority)" /></dd>
+              <dt>{{ 'tickets.detail.summary.category' | t }}</dt>
+              <dd>{{ 'enums.ticketCategory.' + current.category | t }}</dd>
+              <dt>{{ 'tickets.detail.summary.customer' | t }}</dt>
+              <dd>
+                <a [routerLink]="['/customers', current.customerId]">{{ current.customerName }}</a> ·
+                <span class="ltr-value">{{ current.customerEmail }}</span>
+              </dd>
+              <dt>{{ 'tickets.detail.summary.createdBy' | t }}</dt>
+              <dd>{{ current.createdByName }}</dd>
+              <dt>{{ 'tickets.detail.summary.assignedAgent' | t }}</dt>
+              <dd>{{ current.assignedAgentName ?? ('tickets.detail.summary.unassigned' | t) }}</dd>
+              <dt>{{ 'tickets.detail.summary.created' | t }}</dt>
+              <dd>{{ current.createdAtUtc | crmDate: 'medium' }}</dd>
+              <dt>{{ 'tickets.detail.summary.lastUpdated' | t }}</dt>
+              <dd>{{ current.updatedAtUtc | crmDate: 'medium' }}</dd>
+            </dl>
+            <p class="hint">{{ 'tickets.detail.summary.hint' | t }}</p>
           </mat-card-content>
         </mat-card>
-      }
-    }
 
-    <mat-card appearance="outlined">
-      <mat-card-header>
-        <mat-card-title>Edit details</mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        <form [formGroup]="form" (ngSubmit)="save()" class="form-grid">
-          <mat-form-field appearance="outline">
-            <mat-label>Subject</mat-label>
-            <input matInput formControlName="subject" />
-            @if (form.controls.subject.invalid) {
-              <mat-error>Subject is required (max 200 characters)</mat-error>
-            }
-          </mat-form-field>
+        <mat-card appearance="outlined">
+          <mat-card-header>
+            <mat-card-title>{{ 'tickets.detail.sla' | t }}</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <crm-ticket-sla-card
+              [ticket]="current"
+              [canMarkResponded]="canMarkResponded()"
+              [busy]="busy() || saving()"
+              (markResponded)="markResponded()"
+            />
+          </mat-card-content>
+        </mat-card>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Description</mat-label>
-            <textarea matInput formControlName="description" rows="6"></textarea>
-            @if (form.controls.description.invalid) {
-              <mat-error>Description is required (max 4000 characters)</mat-error>
-            }
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Category</mat-label>
-            <mat-select formControlName="category">
-              @for (c of categories; track c) {
-                <mat-option [value]="c">{{ c }}</mat-option>
+        @if (actions(); as a) {
+          <mat-card appearance="outlined">
+            <mat-card-header>
+              <mat-card-title>{{ 'tickets.detail.workflow.title' | t }}</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <div class="actions">
+                @for (t of a.transitions; track t.to) {
+                  <button mat-stroked-button type="button" [disabled]="busy() || saving()" (click)="transition(current, t.to)">
+                    {{ t.label }}
+                  </button>
+                }
+                @if (a.canClearEscalation) {
+                  <button mat-stroked-button type="button" [disabled]="busy() || saving()" (click)="clearEscalation()">
+                    {{ 'tickets.detail.workflow.clearEscalation' | t }}
+                  </button>
+                }
+              </div>
+              @if (a.transitions.length === 0) {
+                <p class="hint">{{ 'tickets.detail.workflow.none' | t }}</p>
               }
-            </mat-select>
-          </mat-form-field>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Priority</mat-label>
-            <mat-select formControlName="priority">
-              @for (p of priorities; track p) {
-                <mat-option [value]="p">{{ p }}</mat-option>
+              @if (a.canEscalate) {
+                <div class="form-grid">
+                  <mat-form-field appearance="outline">
+                    <mat-label>{{ 'tickets.detail.workflow.escalationReason' | t }}</mat-label>
+                    <textarea matInput [formControl]="escalationReason" rows="3"></textarea>
+                    <mat-hint align="end">{{ escalationReason.value.length }}/500</mat-hint>
+                    @if (escalationReason.invalid) {
+                      <mat-error>{{ 'tickets.detail.workflow.reasonRequired' | t }}</mat-error>
+                    }
+                  </mat-form-field>
+                  <div>
+                    <button mat-flat-button type="button" [disabled]="busy() || saving()" (click)="escalate()">
+                      {{ 'tickets.detail.workflow.escalate' | t }}
+                    </button>
+                  </div>
+                </div>
               }
-            </mat-select>
-          </mat-form-field>
 
-          @if (saveError(); as message) {
-            <p class="form-error" role="alert">{{ message }}</p>
+              @if (actionError(); as message) {
+                <p class="form-error" role="alert">{{ message }}</p>
+              }
+            </mat-card-content>
+          </mat-card>
+
+          @if (a.canAssign) {
+            <mat-card appearance="outlined">
+              <mat-card-header>
+                <mat-card-title>{{ 'tickets.detail.assignment.title' | t }}</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <div class="form-grid">
+                  <mat-form-field appearance="outline">
+                    <mat-label>{{ 'tickets.detail.assignment.assignedAgent' | t }}</mat-label>
+                    <mat-select [value]="selectedAssignee()" (selectionChange)="selectedAssignee.set($event.value)">
+                      <mat-option [value]="null">{{ 'tickets.detail.assignment.unassigned' | t }}</mat-option>
+                      @for (agent of activeAgents(); track agent.id) {
+                        <mat-option [value]="agent.id">{{ agent.firstName }} {{ agent.lastName }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                  @if (agentsError(); as message) {
+                    <p class="form-error" role="alert">{{ message }}</p>
+                  }
+                  @if (current.assignedAgentUserId && !isAgentActive(current.assignedAgentUserId)) {
+                    <p class="hint">
+                      {{ 'tickets.detail.assignment.inactive' | t: { name: current.assignedAgentName ?? '' } }}
+                    </p>
+                  }
+                  <div>
+                    <button
+                      mat-flat-button
+                      type="button"
+                      [disabled]="busy() || saving() || selectedAssignee() === current.assignedAgentUserId"
+                      (click)="saveAssignee()"
+                    >
+                      {{ 'tickets.detail.assignment.save' | t }}
+                    </button>
+                  </div>
+                </div>
+              </mat-card-content>
+            </mat-card>
           }
+        }
+      </div>
+    </mat-tab>
 
-          <div>
-            <button mat-flat-button type="submit" [disabled]="saving() || busy()">Save</button>
-          </div>
-        </form>
-      </mat-card-content>
-    </mat-card>
+    <mat-tab>
+      <ng-template mat-tab-label>
+        {{ 'tickets.detail.tabs.details' | t }}
+        @if (form.dirty) {
+          <span class="dirty" aria-hidden="true">•</span>
+          <span class="sr-only">{{ 'tickets.unsaved' | t }}</span>
+        }
+      </ng-template>
+      <ng-template matTabContent>
+        <div class="tab-body">
+          <mat-card appearance="outlined" class="narrow">
+            <mat-card-header>
+              <mat-card-title>{{ 'tickets.detail.edit.title' | t }}</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <form [formGroup]="form" (ngSubmit)="save()" class="form-grid">
+                <mat-form-field appearance="outline">
+                  <mat-label>{{ 'tickets.detail.edit.subject' | t }}</mat-label>
+                  <input matInput formControlName="subject" />
+                  @if (form.controls.subject.invalid) {
+                    <mat-error>{{ 'tickets.detail.edit.subjectError' | t }}</mat-error>
+                  }
+                </mat-form-field>
 
-    <mat-card appearance="outlined">
-      <mat-card-header>
-        <mat-card-title>Activity</mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        <crm-ticket-activity-list [ticketId]="current.id" [refresh]="activityRefresh()" />
-      </mat-card-content>
-    </mat-card>
+                <mat-form-field appearance="outline">
+                  <mat-label>{{ 'tickets.detail.edit.description' | t }}</mat-label>
+                  <textarea matInput formControlName="description" rows="6"></textarea>
+                  @if (form.controls.description.invalid) {
+                    <mat-error>{{ 'tickets.detail.edit.descriptionError' | t }}</mat-error>
+                  }
+                </mat-form-field>
 
-    <mat-card appearance="outlined">
-      <mat-card-header><mat-card-title>Internal discussion</mat-card-title></mat-card-header>
-      <mat-card-content>
-        <crm-ticket-discussion [ticketId]="current.id" (accessLost)="onAccessLost()" />
-      </mat-card-content>
-    </mat-card>
+                <mat-form-field appearance="outline">
+                  <mat-label>{{ 'tickets.detail.edit.category' | t }}</mat-label>
+                  <mat-select formControlName="category">
+                    @for (c of categories; track c) {
+                      <mat-option [value]="c">{{ 'enums.ticketCategory.' + c | t }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
 
-    <mat-card appearance="outlined">
-      <mat-card-header><mat-card-title>Collaborators</mat-card-title></mat-card-header>
-      <mat-card-content>
-        <crm-ticket-collaborators [ticketId]="current.id" [canManage]="true" />
-      </mat-card-content>
-    </mat-card>
+                <mat-form-field appearance="outline">
+                  <mat-label>{{ 'tickets.detail.edit.priority' | t }}</mat-label>
+                  <mat-select formControlName="priority">
+                    @for (p of priorities; track p) {
+                      <mat-option [value]="p">{{ 'enums.ticketPriority.' + p | t }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
 
-    <mat-card appearance="outlined">
-      <mat-card-header><mat-card-title>Quick replies</mat-card-title></mat-card-header>
-      <mat-card-content><crm-quick-reply-panel /></mat-card-content>
-    </mat-card>
+                @if (saveError(); as message) {
+                  <p class="form-error" role="alert">{{ message }}</p>
+                }
 
-    <mat-card appearance="outlined">
-      <mat-card-header><mat-card-title>Knowledge Base</mat-card-title></mat-card-header>
-      <mat-card-content>
-        <crm-ticket-knowledge-articles [ticketId]="current.id" (accessLost)="onAccessLost()" />
-      </mat-card-content>
-    </mat-card>
+                <div>
+                  <button mat-flat-button type="submit" [disabled]="saving() || busy()">{{ 'tickets.detail.edit.save' | t }}</button>
+                </div>
+              </form>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </ng-template>
+    </mat-tab>
 
-    <mat-card appearance="outlined">
-      <mat-card-header><mat-card-title>AI assistance</mat-card-title></mat-card-header>
-      <mat-card-content>
-        <crm-ticket-ai-assistant [ticket]="current" (ticketUpdated)="onTicketUpdated($event)" (accessLost)="onAccessLost()" />
-      </mat-card-content>
-    </mat-card>
-  </div>
+    <mat-tab [label]="'tickets.detail.tabs.activity' | t">
+      <ng-template matTabContent>
+        <div class="tab-body">
+          <mat-card appearance="outlined">
+            <mat-card-header>
+              <mat-card-title>{{ 'tickets.detail.sections.activity' | t }}</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <crm-ticket-activity-list [ticketId]="current.id" [refresh]="activityRefresh()" />
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </ng-template>
+    </mat-tab>
+
+    <mat-tab [label]="'tickets.detail.tabs.collaboration' | t">
+      <ng-template matTabContent>
+        <div class="tab-body crm-stack">
+          <mat-card appearance="outlined">
+            <mat-card-header><mat-card-title>{{ 'tickets.detail.sections.discussion' | t }}</mat-card-title></mat-card-header>
+            <mat-card-content>
+              <crm-ticket-discussion [ticketId]="current.id" (accessLost)="onAccessLost()" />
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card appearance="outlined">
+            <mat-card-header><mat-card-title>{{ 'tickets.detail.sections.collaborators' | t }}</mat-card-title></mat-card-header>
+            <mat-card-content>
+              <crm-ticket-collaborators [ticketId]="current.id" [canManage]="true" />
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </ng-template>
+    </mat-tab>
+
+    <mat-tab [label]="'tickets.detail.tabs.knowledge' | t">
+      <ng-template matTabContent>
+        <div class="tab-body crm-stack">
+          <mat-card appearance="outlined">
+            <mat-card-header><mat-card-title>{{ 'tickets.detail.sections.knowledge' | t }}</mat-card-title></mat-card-header>
+            <mat-card-content>
+              <crm-ticket-knowledge-articles [ticketId]="current.id" (accessLost)="onAccessLost()" />
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card appearance="outlined">
+            <mat-card-header><mat-card-title>{{ 'tickets.detail.sections.quickReplies' | t }}</mat-card-title></mat-card-header>
+            <mat-card-content><crm-quick-reply-panel /></mat-card-content>
+          </mat-card>
+        </div>
+      </ng-template>
+    </mat-tab>
+
+    <mat-tab [label]="'tickets.detail.tabs.ai' | t">
+      <ng-template matTabContent>
+        <div class="tab-body">
+          <mat-card appearance="outlined">
+            <mat-card-header><mat-card-title>{{ 'tickets.detail.sections.ai' | t }}</mat-card-title></mat-card-header>
+            <mat-card-content>
+              <crm-ticket-ai-assistant [ticket]="current" (ticketUpdated)="onTicketUpdated($event)" (accessLost)="onAccessLost()" />
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </ng-template>
+    </mat-tab>
+  </mat-tab-group>
 }

@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -7,8 +6,12 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { RouterLink } from '@angular/router';
 import { EMPTY, Subject, catchError, map, switchMap } from 'rxjs';
 import { describeHttpError } from '../../core/api/describe-http-error';
+import { I18n } from '../../core/i18n/i18n';
+import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { EmptyState } from '../../shared/ui/empty-state/empty-state';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
-import { Ticket, priorityTone, statusLabel, statusTone } from '../tickets/ticket-models';
+import { Ticket, priorityTone, statusTone } from '../tickets/ticket-models';
 import { TicketsApi } from '../tickets/tickets-api';
 
 const PAGE_SIZE = 10;
@@ -17,11 +20,12 @@ const PAGE_SIZE = 10;
 @Component({
   selector: 'crm-customer-related-tickets',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, RouterLink, StatusBadge, MatButtonModule, MatProgressBarModule],
+  imports: [LocalizedDatePipe, TranslatePipe, EmptyState, RouterLink, StatusBadge, MatButtonModule, MatProgressBarModule],
   templateUrl: './customer-related-tickets.html',
   styleUrl: './customer-records.scss',
 })
 export class CustomerRelatedTickets {
+  private readonly i18n = inject(I18n);
   private readonly api = inject(TicketsApi);
   private readonly destroyRef = inject(DestroyRef);
   private readonly requests = new Subject<{ id: string; page: number }>();
@@ -29,7 +33,6 @@ export class CustomerRelatedTickets {
 
   readonly customerId = input.required<string>();
 
-  protected readonly statusLabel = statusLabel;
   protected readonly statusTone = statusTone;
   protected readonly priorityTone = priorityTone;
   protected readonly items = signal<Ticket[]>([]);
@@ -49,7 +52,7 @@ export class CustomerRelatedTickets {
               map(result => ({ r, result })),
               catchError((error: HttpErrorResponse) => {
                 this.loading.set(false);
-                this.error.set(describeHttpError(error, 'Could not load related tickets.'));
+                this.error.set(describeHttpError(error, this.i18n.t('customers.tickets.loadFailed'), this.i18n.t));
                 return EMPTY;
               }),
             ),

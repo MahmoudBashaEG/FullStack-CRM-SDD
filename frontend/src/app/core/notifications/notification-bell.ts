@@ -7,6 +7,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
 import { catchError, exhaustMap, forkJoin, merge, of, switchMap, timer } from 'rxjs';
 import { AuthService } from '../auth/auth-service';
+import { I18n } from '../i18n/i18n';
 import { SlaAlertCount, TaskReminderCheck } from './notification-models';
 import { NotificationsApi } from './notifications-api';
 import { ReminderBadgeRefresh } from './reminder-badge-refresh';
@@ -41,13 +42,14 @@ export class NotificationBell {
   private readonly slaAlerts = inject(SlaAlertsApi);
   private readonly refresh = inject(ReminderBadgeRefresh);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly i18n = inject(I18n);
   private readonly router = inject(Router);
   private previousSlaUnread: number | null = null;
 
   protected readonly unread = signal<number | null>(null);
   protected readonly label = computed(() => {
     const n = this.unread();
-    return n ? `Notifications, ${n} unread` : 'Notifications';
+    return n ? this.i18n.t('notifications.bell.unreadLabel', { count: n }) : this.i18n.t('notifications.title');
   });
 
   constructor() {
@@ -78,12 +80,15 @@ export class NotificationBell {
     this.unread.set(reminders || sla ? (reminders?.unreadCount ?? 0) + (sla?.unreadCount ?? 0) : null);
 
     if (reminders && reminders.issuedNow > 0) {
-      const text = reminders.issuedNow === 1 ? 'You have 1 new task reminder.' : `You have ${reminders.issuedNow} new task reminders.`;
+      const text =
+        reminders.issuedNow === 1
+          ? this.i18n.t('notifications.bell.oneReminder')
+          : this.i18n.t('notifications.bell.manyReminders', { count: reminders.issuedNow });
       this.notify(text);
     }
     if (sla) {
       if (this.previousSlaUnread !== null && sla.unreadCount > this.previousSlaUnread) {
-        this.notify('You have new SLA alerts.');
+        this.notify(this.i18n.t('notifications.bell.newSla'));
       }
       this.previousSlaUnread = sla.unreadCount;
     }
@@ -91,7 +96,7 @@ export class NotificationBell {
 
   private notify(text: string): void {
     this.snackBar
-      .open(text, 'View', { duration: 8000 })
+      .open(text, this.i18n.t('notifications.bell.view'), { duration: 8000 })
       .onAction()
       .subscribe(() => void this.router.navigate(['/notifications']));
   }

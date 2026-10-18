@@ -1,50 +1,84 @@
-<mat-sidenav-container class="shell">
+<a class="skip-link" href="#main" (click)="$event.preventDefault(); main.focus()">{{ 'shell.skipToContent' | t }}</a>
+
+<mat-sidenav-container class="shell" autosize>
   <mat-sidenav
     #drawer
     class="shell__nav"
+    [class.shell__nav--rail]="rail()"
     [mode]="isHandset() ? 'over' : 'side'"
-    [opened]="!isHandset()">
+    [opened]="!isHandset()"
+    [attr.aria-label]="'shell.mainNavigation' | t">
     <div class="shell__brand">
-      <mat-icon aria-hidden="true">support_agent</mat-icon>
-      <span>Support CRM</span>
-    </div>
-    <mat-nav-list aria-label="Main navigation">
-      @for (item of navItems(); track item.path) {
-        <a
-          mat-list-item
-          [routerLink]="item.path"
-          routerLinkActive
-          #rla="routerLinkActive"
-          [routerLinkActiveOptions]="{ exact: item.exact }"
-          [activated]="rla.isActive"
-          (click)="isHandset() && drawer.close()">
-          <mat-icon matListItemIcon aria-hidden="true">{{ item.icon }}</mat-icon>
-          <span matListItemTitle>{{ item.label }}</span>
-        </a>
+      @if (branding.logoUrl(); as logo) {
+        <img class="shell__logo" [src]="logo" alt="" (error)="branding.logoFailed.set(true)" />
+      } @else {
+        <span class="shell__logo-icon" aria-hidden="true"><mat-icon>support_agent</mat-icon></span>
       }
-    </mat-nav-list>
+      @if (!rail()) {
+        <span class="shell__org">{{ branding.orgName() }}</span>
+      }
+    </div>
+
+    <nav class="shell__menu" [attr.aria-label]="'shell.mainNavigation' | t">
+      @for (section of navGroups(); track section.group) {
+        @if (!rail()) {
+          <h2 class="shell__group">{{ 'nav.group.' + section.group | t }}</h2>
+        } @else {
+          <hr class="shell__divider" />
+        }
+        @for (item of section.items; track item.path) {
+          <a
+            class="shell__link"
+            [routerLink]="item.path"
+            routerLinkActive="is-active"
+            ariaCurrentWhenActive="page"
+            [routerLinkActiveOptions]="{ exact: item.exact }"
+            [matTooltip]="rail() ? (item.labelKey | t) : ''"
+            matTooltipPosition="after"
+            (click)="isHandset() && drawer.close()">
+            <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon>
+            <span class="shell__label" [class.visually-hidden]="rail()">{{ item.labelKey | t }}</span>
+          </a>
+        }
+      }
+    </nav>
   </mat-sidenav>
 
   <mat-sidenav-content>
     <mat-toolbar class="shell__toolbar">
       @if (isHandset()) {
-        <button mat-icon-button type="button" aria-label="Open navigation" (click)="drawer.toggle()">
+        <button mat-icon-button type="button" [attr.aria-label]="'shell.openNavigation' | t" aria-haspopup="true" [attr.aria-expanded]="drawer.opened" (click)="drawer.toggle()">
           <mat-icon>menu</mat-icon>
         </button>
+      } @else {
+        <button
+          mat-icon-button
+          type="button"
+          [attr.aria-label]="(collapsed() ? 'shell.expandNavigation' : 'shell.collapseNavigation') | t"
+          [attr.aria-expanded]="!collapsed()"
+          (click)="toggleCollapsed()">
+          <mat-icon class="dir-icon">{{ collapsed() ? 'menu' : 'menu_open' }}</mat-icon>
+        </button>
       }
-      <span class="shell__title">Customer Support CRM</span>
+      <crm-breadcrumbs />
       <span class="shell__spacer"></span>
+      <crm-topbar-controls />
       @if (isStaff()) {
         <crm-notification-bell />
       }
-      @if (user(); as user) {
-        <span class="shell__user">{{ user.firstName }} {{ user.lastName }}</span>
+      @if (user(); as account) {
+        <button mat-button type="button" class="shell__user" [matMenuTriggerFor]="userMenu" [attr.aria-label]="'shell.userMenu' | t">
+          <span class="shell__avatar" aria-hidden="true">{{ initials() }}</span>
+          <span class="shell__username">{{ account.firstName }} {{ account.lastName }}</span>
+          <mat-icon aria-hidden="true">arrow_drop_down</mat-icon>
+        </button>
+        <mat-menu #userMenu="matMenu" xPosition="before">
+          <a mat-menu-item routerLink="/profile"><mat-icon>account_circle</mat-icon>{{ 'shell.profile' | t }}</a>
+          <button mat-menu-item type="button" (click)="signOut()"><mat-icon class="dir-icon">logout</mat-icon>{{ 'shell.signOut' | t }}</button>
+        </mat-menu>
       }
-      <button mat-icon-button type="button" aria-label="Sign out" (click)="signOut()">
-        <mat-icon>logout</mat-icon>
-      </button>
     </mat-toolbar>
-    <main class="shell__content">
+    <main id="main" #main class="shell__content" tabindex="-1">
       <router-outlet />
     </main>
   </mat-sidenav-content>

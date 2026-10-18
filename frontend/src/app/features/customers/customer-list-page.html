@@ -1,15 +1,15 @@
-<crm-page-header title="Customers" subtitle="Registered customers and contacts managed by the support team." />
+<crm-page-header icon="groups" [title]="'customers.list.title' | t" [subtitle]="'customers.list.subtitle' | t">
+  <a mat-flat-button actions routerLink="new">
+    <mat-icon>person_add</mat-icon> {{ 'customers.list.newCustomer' | t }}
+  </a>
+</crm-page-header>
 
 <div class="toolbar">
   <mat-form-field appearance="outline" class="search">
-    <mat-label>Search</mat-label>
-    <input matInput type="search" [formControl]="searchControl" placeholder="Name, email or phone" />
+    <mat-label>{{ 'customers.list.search' | t }}</mat-label>
+    <input matInput type="search" [formControl]="searchControl" [placeholder]="'customers.list.searchPlaceholder' | t" />
     <mat-icon matSuffix>search</mat-icon>
   </mat-form-field>
-
-  <a mat-flat-button routerLink="new">
-    <mat-icon>person_add</mat-icon> New customer
-  </a>
 </div>
 
 @if (loading()) {
@@ -17,50 +17,52 @@
 }
 
 @if (error(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
+  <crm-error-state [message]="message" (retry)="reload()" />
 }
 
 @if (!loading() && !error()) {
   @if (customers().length === 0) {
-    <p>{{ searchControl.value ? 'No customers match your search.' : 'No customers yet. Create the first contact.' }}</p>
+    <crm-empty-state
+      icon="groups"
+      [message]="(searchControl.value ? 'customers.list.noMatch' : 'customers.list.empty') | t" />
   } @else {
-    <div class="table-container">
+    <div class="table-scroll">
       <table mat-table [dataSource]="customers()">
         <ng-container matColumnDef="name">
-          <th mat-header-cell *matHeaderCellDef>Name</th>
+          <th mat-header-cell *matHeaderCellDef>{{ 'customers.list.columns.name' | t }}</th>
           <td mat-cell *matCellDef="let c">{{ c.firstName }} {{ c.lastName }}</td>
         </ng-container>
 
         <ng-container matColumnDef="email">
-          <th mat-header-cell *matHeaderCellDef>Email</th>
-          <td mat-cell *matCellDef="let c">{{ c.email }}</td>
+          <th mat-header-cell *matHeaderCellDef>{{ 'customers.list.columns.email' | t }}</th>
+          <td mat-cell *matCellDef="let c"><span class="ltr-value">{{ c.email }}</span></td>
         </ng-container>
 
         <ng-container matColumnDef="phone">
-          <th mat-header-cell *matHeaderCellDef>Phone</th>
-          <td mat-cell *matCellDef="let c">{{ c.phoneNumber ?? '—' }}</td>
+          <th mat-header-cell *matHeaderCellDef>{{ 'customers.list.columns.phone' | t }}</th>
+          <td mat-cell *matCellDef="let c"><span class="ltr-value">{{ c.phoneNumber ?? '—' }}</span></td>
         </ng-container>
 
         <ng-container matColumnDef="company">
-          <th mat-header-cell *matHeaderCellDef>Company</th>
+          <th mat-header-cell *matHeaderCellDef>{{ 'customers.list.columns.company' | t }}</th>
           <td mat-cell *matCellDef="let c">{{ c.company ?? '—' }}</td>
         </ng-container>
 
         <ng-container matColumnDef="type">
-          <th mat-header-cell *matHeaderCellDef>Type</th>
+          <th mat-header-cell *matHeaderCellDef>{{ 'customers.list.columns.type' | t }}</th>
           <td mat-cell *matCellDef="let c">
             @if (c.isRegistered) {
-              <crm-status-badge label="Registered" tone="success" />
+              <crm-status-badge [label]="'customers.type.registered' | t" tone="success" />
             } @else {
-              <crm-status-badge label="Contact only" tone="neutral" />
+              <crm-status-badge [label]="'customers.type.contactOnly' | t" tone="neutral" />
             }
           </td>
         </ng-container>
 
         <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef></th>
+          <th mat-header-cell *matHeaderCellDef><span class="visually-hidden">{{ 'common.actions' | t }}</span></th>
           <td mat-cell *matCellDef="let c">
-            <a mat-button [routerLink]="c.id">View</a>
+            <a mat-button [routerLink]="c.id">{{ 'customers.list.view' | t }}</a>
           </td>
         </ng-container>
 
@@ -75,6 +77,6 @@
       [pageSize]="pageSize()"
       [pageSizeOptions]="pageSizeOptions"
       (page)="onPage($event)"
-      aria-label="Customer pages" />
+      [attr.aria-label]="'customers.list.pages' | t" />
   }
 }

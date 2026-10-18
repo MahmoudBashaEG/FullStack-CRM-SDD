@@ -1,0 +1,77 @@
+.settings-form {
+  display: grid;
+  gap: var(--crm-space-4);
+  max-inline-size: 760px;
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--crm-space-3);
+}
+
+.section {
+  display: grid;
+  gap: var(--crm-space-3);
+
+  h3 {
+    margin: 0;
+    font: var(--mat-sys-title-small);
+  }
+}
+
+.accents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--crm-space-2) var(--crm-space-4);
+}
+
+.swatch {
+  display: inline-block;
+  inline-size: 24px;
+  block-size: 24px;
+  border-radius: 50%;
+  vertical-align: middle;
+  margin-inline-end: var(--crm-space-2);
+  background: var(--mat-sys-primary);
+  border: 2px solid var(--mat-sys-outline-variant);
+}
+
+.preview-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--crm-space-3);
+  padding: var(--crm-space-3);
+  border: 1px dashed var(--mat-sys-outline-variant);
+  border-radius: var(--crm-radius-md);
+  background: transparent;
+  color: inherit;
+}
+
+.logo-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--crm-space-3);
+}
+
+.logo-img {
+  max-inline-size: 160px;
+  max-block-size: 64px;
+  object-fit: contain;
+}
+
+.hidden-input {
+  display: none;
+}
+
+@media (min-width: 600px) {
+  .fields {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .span-2 {
+    grid-column: 1 / -1;
+  }
+}

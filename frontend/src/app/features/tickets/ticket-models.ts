@@ -1,3 +1,4 @@
+import { Translate, englishT } from '../../core/i18n/translate-fn';
 import { StatusTone } from '../../shared/ui/status-badge/status-badge';
 import type { TicketSla } from '../sla/sla-models';
 
@@ -129,8 +130,8 @@ export interface EscalateTicketRequest {
   reason: string;
 }
 
-export function statusLabel(status: TicketStatus): string {
-  return status === 'InProgress' ? 'In Progress' : status;
+export function statusLabel(status: TicketStatus, t: Translate = englishT): string {
+  return t(`enums.ticketStatus.${status}`);
 }
 
 export function statusTone(status: TicketStatus): StatusTone {

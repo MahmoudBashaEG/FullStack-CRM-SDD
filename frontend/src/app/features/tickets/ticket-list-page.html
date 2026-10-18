@@ -1,140 +1,143 @@
-<crm-page-header title="Tickets" [subtitle]="isSuperAdmin() ? 'All support tickets.' : 'Tickets assigned to you.'" />
+<crm-page-header
+  icon="confirmation_number"
+  [title]="'tickets.list.title' | t"
+  [subtitle]="(isSuperAdmin() ? 'tickets.list.subtitleAdmin' : 'tickets.list.subtitleAgent') | t">
+  <a mat-flat-button actions routerLink="new"><mat-icon>add</mat-icon> {{ 'tickets.list.newTicket' | t }}</a>
+</crm-page-header>
 
-<div class="toolbar" [formGroup]="filters">
-  <mat-form-field appearance="outline" class="search">
-    <mat-label>Search</mat-label>
-    <input matInput type="search" formControlName="search" placeholder="Subject or ticket ID" />
-    <mat-icon matSuffix>search</mat-icon>
-  </mat-form-field>
+<mat-card appearance="outlined" class="filters-card">
+  <mat-card-content>
+    <div class="toolbar" [formGroup]="filters" role="search" [attr.aria-label]="'tickets.list.filters' | t">
+      <mat-form-field appearance="outline" class="search">
+        <mat-label>{{ 'tickets.list.search' | t }}</mat-label>
+        <input matInput type="search" formControlName="search" [placeholder]="'tickets.list.searchPlaceholder' | t" />
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
 
-  <crm-customer-picker class="customer-filter" label="Customer" (selected)="onCustomer($event)" />
+      <crm-customer-picker class="customer-filter" [label]="'tickets.list.customer' | t" (selected)="onCustomer($event)" />
 
-  <mat-form-field appearance="outline" class="filter">
-    <mat-label>Status</mat-label>
-    <mat-select formControlName="status">
-      <mat-option [value]="null">Any</mat-option>
-      @for (v of statuses; track v) {
-        <mat-option [value]="v">{{ statusLabel(v) }}</mat-option>
-      }
-    </mat-select>
-  </mat-form-field>
+      <mat-form-field appearance="outline" class="filter">
+        <mat-label>{{ 'tickets.list.status' | t }}</mat-label>
+        <mat-select formControlName="status">
+          <mat-option [value]="null">{{ 'tickets.list.any' | t }}</mat-option>
+          @for (v of statuses; track v) {
+            <mat-option [value]="v">{{ statusLabel(v, i18n.t) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
 
-  <mat-form-field appearance="outline" class="filter">
-    <mat-label>Category</mat-label>
-    <mat-select formControlName="category">
-      <mat-option [value]="null">Any</mat-option>
-      @for (v of categories; track v) {
-        <mat-option [value]="v">{{ v }}</mat-option>
-      }
-    </mat-select>
-  </mat-form-field>
+      <mat-form-field appearance="outline" class="filter">
+        <mat-label>{{ 'tickets.list.category' | t }}</mat-label>
+        <mat-select formControlName="category">
+          <mat-option [value]="null">{{ 'tickets.list.any' | t }}</mat-option>
+          @for (v of categories; track v) {
+            <mat-option [value]="v">{{ 'enums.ticketCategory.' + v | t }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
 
-  <mat-form-field appearance="outline" class="filter">
-    <mat-label>Priority</mat-label>
-    <mat-select formControlName="priority">
-      <mat-option [value]="null">Any</mat-option>
-      @for (v of priorities; track v) {
-        <mat-option [value]="v">{{ v }}</mat-option>
-      }
-    </mat-select>
-  </mat-form-field>
+      <mat-form-field appearance="outline" class="filter">
+        <mat-label>{{ 'tickets.list.priority' | t }}</mat-label>
+        <mat-select formControlName="priority">
+          <mat-option [value]="null">{{ 'tickets.list.any' | t }}</mat-option>
+          @for (v of priorities; track v) {
+            <mat-option [value]="v">{{ 'enums.ticketPriority.' + v | t }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
 
-  <mat-form-field appearance="outline" class="filter">
-    <mat-label>Escalation</mat-label>
-    <mat-select formControlName="escalated">
-      <mat-option [value]="null">Any</mat-option>
-      <mat-option [value]="true">Escalated</mat-option>
-      <mat-option [value]="false">Not escalated</mat-option>
-    </mat-select>
-  </mat-form-field>
+      <mat-form-field appearance="outline" class="filter">
+        <mat-label>{{ 'tickets.list.escalation' | t }}</mat-label>
+        <mat-select formControlName="escalated">
+          <mat-option [value]="null">{{ 'tickets.list.any' | t }}</mat-option>
+          <mat-option [value]="true">{{ 'tickets.list.escalated' | t }}</mat-option>
+          <mat-option [value]="false">{{ 'tickets.list.notEscalated' | t }}</mat-option>
+        </mat-select>
+      </mat-form-field>
 
-  <mat-form-field appearance="outline" class="filter">
-    <mat-label>SLA</mat-label>
-    <mat-select formControlName="slaBreached">
-      <mat-option [value]="null">Any</mat-option>
-      <mat-option [value]="true">Breached</mat-option>
-      <mat-option [value]="false">Not breached</mat-option>
-    </mat-select>
-  </mat-form-field>
-
-  <a mat-flat-button routerLink="new">
-    <mat-icon>add</mat-icon> New ticket
-  </a>
-</div>
+      <mat-form-field appearance="outline" class="filter">
+        <mat-label>{{ 'tickets.list.sla' | t }}</mat-label>
+        <mat-select formControlName="slaBreached">
+          <mat-option [value]="null">{{ 'tickets.list.any' | t }}</mat-option>
+          <mat-option [value]="true">{{ 'tickets.list.breached' | t }}</mat-option>
+          <mat-option [value]="false">{{ 'tickets.list.notBreached' | t }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </mat-card-content>
+</mat-card>
 
 @if (loading()) {
   <mat-progress-bar mode="indeterminate" />
 }
 
 @if (error(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
+  <crm-error-state [message]="message" (retry)="reload()" />
 }
 
 @if (!loading() && !error()) {
   @if (tickets().length === 0) {
-    <p>
-      {{
-        hasFilters()
-          ? 'No tickets match your filters.'
-          : isSuperAdmin()
-            ? 'No tickets yet. Create the first ticket.'
-            : 'No tickets are assigned to you yet.'
-      }}
-    </p>
+    <crm-empty-state
+      icon="confirmation_number"
+      [title]="(hasFilters() ? 'tickets.list.emptyFiltered' : isSuperAdmin() ? 'tickets.list.emptyAdmin' : 'tickets.list.emptyAgent') | t" />
   } @else {
-    <div class="table-container">
+    <div class="table-scroll">
       <table mat-table [dataSource]="tickets()">
         <ng-container matColumnDef="subject">
-          <th mat-header-cell *matHeaderCellDef>Subject</th>
+          <th mat-header-cell *matHeaderCellDef>{{ 'tickets.list.subject' | t }}</th>
           <td mat-cell *matCellDef="let t"><a [routerLink]="t.id">{{ t.subject }}</a></td>
         </ng-container>
 
         <ng-container matColumnDef="customer">
-          <th mat-header-cell *matHeaderCellDef>Customer</th>
+          <th mat-header-cell *matHeaderCellDef>{{ 'tickets.list.customer' | t }}</th>
           <td mat-cell *matCellDef="let t">{{ t.customerName }}</td>
         </ng-container>
 
         <ng-container matColumnDef="category">
-          <th mat-header-cell *matHeaderCellDef>Category</th>
-          <td mat-cell *matCellDef="let t">{{ t.category }}</td>
+          <th mat-header-cell *matHeaderCellDef>{{ 'tickets.list.category' | t }}</th>
+          <td mat-cell *matCellDef="let t">{{ 'enums.ticketCategory.' + t.category | t }}</td>
         </ng-container>
 
         <ng-container matColumnDef="priority">
-          <th mat-header-cell *matHeaderCellDef>Priority</th>
-          <td mat-cell *matCellDef="let t"><crm-status-badge [label]="t.priority" [tone]="priorityTone(t.priority)" /></td>
+          <th mat-header-cell *matHeaderCellDef>{{ 'tickets.list.priority' | t }}</th>
+          <td mat-cell *matCellDef="let t">
+            <crm-status-badge [label]="'enums.ticketPriority.' + t.priority | t" [tone]="priorityTone(t.priority)" />
+          </td>
         </ng-container>
 
         <ng-container matColumnDef="status">
-          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <th mat-header-cell *matHeaderCellDef>{{ 'tickets.list.status' | t }}</th>
           <td mat-cell *matCellDef="let t">
-            <crm-status-badge [label]="statusLabel(t.status)" [tone]="statusTone(t.status)" />
+            <crm-status-badge [label]="statusLabel(t.status, i18n.t)" [tone]="statusTone(t.status)" />
             @if (t.isEscalated) {
-              <crm-status-badge label="Escalated" tone="error" />
+              <crm-status-badge [label]="'tickets.list.escalated' | t" tone="error" />
             }
           </td>
         </ng-container>
 
         <ng-container matColumnDef="sla">
-          <th mat-header-cell *matHeaderCellDef>SLA</th>
+          <th mat-header-cell *matHeaderCellDef>{{ 'tickets.list.sla' | t }}</th>
           <td mat-cell *matCellDef="let t">
-            <crm-status-badge [label]="slaIndicatorLabel(t.sla?.indicator ?? 'NotTracked')" [tone]="slaIndicatorTone(t.sla?.indicator ?? 'NotTracked')" />
+            <crm-status-badge
+              [label]="'tickets.sla.indicator.' + (t.sla?.indicator ?? 'NotTracked') | t"
+              [tone]="slaIndicatorTone(t.sla?.indicator ?? 'NotTracked')" />
           </td>
         </ng-container>
 
         <ng-container matColumnDef="assignee">
-          <th mat-header-cell *matHeaderCellDef>Assigned agent</th>
-          <td mat-cell *matCellDef="let t">{{ t.assignedAgentName ?? 'Unassigned' }}</td>
+          <th mat-header-cell *matHeaderCellDef>{{ 'tickets.list.assignedAgent' | t }}</th>
+          <td mat-cell *matCellDef="let t">{{ t.assignedAgentName ?? ('tickets.list.unassigned' | t) }}</td>
         </ng-container>
 
         <ng-container matColumnDef="created">
-          <th mat-header-cell *matHeaderCellDef>Created</th>
-          <td mat-cell *matCellDef="let t">{{ t.createdAtUtc | date: 'medium' }}</td>
+          <th mat-header-cell *matHeaderCellDef>{{ 'tickets.list.created' | t }}</th>
+          <td mat-cell *matCellDef="let t">{{ t.createdAtUtc | crmDate: 'medium' }}</td>
         </ng-container>
 
         <ng-container matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let t">
-            <a mat-button [routerLink]="t.id">View</a>
+            <a mat-button [routerLink]="t.id">{{ 'tickets.list.view' | t }}</a>
           </td>
         </ng-container>
 
@@ -149,6 +152,6 @@
       [pageSize]="pageSize()"
       [pageSizeOptions]="pageSizeOptions"
       (page)="onPage($event)"
-      aria-label="Ticket pages" />
+      [attr.aria-label]="'tickets.list.paginator' | t" />
   }
 }

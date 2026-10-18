@@ -1,19 +1,16 @@
-<crm-page-header
-  title="SLA & Automation"
-  subtitle="Targets, business hours, automation rules and SLA status. Changes apply to tickets created afterwards; existing deadlines never change."
-/>
+<crm-page-header icon="timer" [title]="'sla.page.title' | t" [subtitle]="'sla.page.subtitle' | t" />
 
-<mat-tab-group animationDuration="0ms">
-  <mat-tab label="Policy">
+<mat-tab-group animationDuration="0ms" [selectedIndex]="tabs.index()" (selectedIndexChange)="tabs.select($event)">
+  <mat-tab [label]="'sla.tabs.policy' | t">
     <ng-template matTabContent><crm-sla-policy-form /></ng-template>
   </mat-tab>
-  <mat-tab label="Calendar">
+  <mat-tab [label]="'sla.tabs.calendar' | t">
     <ng-template matTabContent><crm-business-calendar-form /></ng-template>
   </mat-tab>
-  <mat-tab label="Rules">
+  <mat-tab [label]="'sla.tabs.rules' | t">
     <ng-template matTabContent><crm-automation-rules /></ng-template>
   </mat-tab>
-  <mat-tab label="Overview">
+  <mat-tab [label]="'sla.tabs.overview' | t">
     <ng-template matTabContent><crm-sla-overview /></ng-template>
   </mat-tab>
 </mat-tab-group>

@@ -1,66 +1,66 @@
-<crm-page-header title="Your profile" subtitle="Update your contact details or change your password." />
+<crm-page-header icon="account_circle" [title]="'profile.title' | t" [subtitle]="'profile.subtitle' | t" />
 
 @if (loadError(); as message) {
-  <p class="form-error" role="alert">{{ message }}</p>
+  <crm-error-state [message]="message" [retryable]="false" />
 }
 
 <div class="profile-stack">
   <mat-card appearance="outlined">
     <mat-card-header>
-      <mat-card-title>Account details</mat-card-title>
+      <mat-card-title>{{ 'profile.account.title' | t }}</mat-card-title>
     </mat-card-header>
     <mat-card-content>
       @if (user(); as account) {
         <dl class="readonly-list">
-          <dt>Email</dt>
-          <dd>{{ account.email }}</dd>
-          <dt>Role</dt>
-          <dd><crm-status-badge [label]="account.role" tone="neutral" /></dd>
+          <dt>{{ 'common.email' | t }}</dt>
+          <dd><span class="ltr-value">{{ account.email }}</span></dd>
+          <dt>{{ 'profile.account.role' | t }}</dt>
+          <dd><crm-status-badge [label]="('enums.role.' + account.role) | t" tone="neutral" /></dd>
           @if (customerProfile(); as p) {
-            <dt>Customer ID</dt>
-            <dd>{{ p.id }}</dd>
+            <dt>{{ 'profile.account.customerId' | t }}</dt>
+            <dd><span class="ltr-value">{{ p.id }}</span></dd>
           }
         </dl>
       }
 
       @if (customerProfileError(); as message) {
         <div class="form-error customer-profile-error" role="alert">
-          <span>{{ message }} Company and Customer ID are unavailable until your customer details load.</span>
-          <button mat-button type="button" (click)="loadCustomerProfile()" [disabled]="customerProfileLoading()">Retry</button>
+          <span>{{ message }} {{ 'profile.account.customerUnavailable' | t }}</span>
+          <button mat-button type="button" (click)="loadCustomerProfile()" [disabled]="customerProfileLoading()">{{ 'common.retry' | t }}</button>
         </div>
       }
 
       <form [formGroup]="profileForm" (ngSubmit)="saveProfile()" class="form-grid">
         <mat-form-field appearance="outline">
-          <mat-label>First name</mat-label>
+          <mat-label>{{ 'profile.account.firstName' | t }}</mat-label>
           <input matInput formControlName="firstName" autocomplete="given-name" />
           @if (profileForm.controls.firstName.invalid) {
-            <mat-error>First name is required (max 100 characters)</mat-error>
+            <mat-error>{{ 'profile.account.firstNameError' | t: { max: 100 } }}</mat-error>
           }
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Last name</mat-label>
+          <mat-label>{{ 'profile.account.lastName' | t }}</mat-label>
           <input matInput formControlName="lastName" autocomplete="family-name" />
           @if (profileForm.controls.lastName.invalid) {
-            <mat-error>Last name is required (max 100 characters)</mat-error>
+            <mat-error>{{ 'profile.account.lastNameError' | t: { max: 100 } }}</mat-error>
           }
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Phone (optional)</mat-label>
-          <input matInput type="tel" formControlName="phoneNumber" autocomplete="tel" />
+          <mat-label>{{ 'profile.account.phone' | t }}</mat-label>
+          <input matInput type="tel" formControlName="phoneNumber" autocomplete="tel" dir="ltr" />
           @if (profileForm.controls.phoneNumber.invalid) {
-            <mat-error>Phone number is too long</mat-error>
+            <mat-error>{{ 'profile.account.phoneError' | t }}</mat-error>
           }
         </mat-form-field>
 
         @if (customerProfile()) {
           <mat-form-field appearance="outline">
-            <mat-label>Company (optional)</mat-label>
+            <mat-label>{{ 'profile.account.company' | t }}</mat-label>
             <input matInput formControlName="company" autocomplete="organization" />
             @if (profileForm.controls.company.invalid) {
-              <mat-error>Company is too long (max 200 characters)</mat-error>
+              <mat-error>{{ 'profile.account.companyError' | t: { max: 200 } }}</mat-error>
             }
           </mat-form-field>
         }
@@ -70,7 +70,7 @@
         }
 
         <div>
-          <button mat-flat-button type="submit" [disabled]="profileSaving()">Save</button>
+          <button mat-flat-button type="submit" [disabled]="profileSaving()">{{ 'common.save' | t }}</button>
         </div>
       </form>
     </mat-card-content>
@@ -78,32 +78,32 @@
 
   <mat-card appearance="outlined">
     <mat-card-header>
-      <mat-card-title>Change password</mat-card-title>
+      <mat-card-title>{{ 'profile.password.title' | t }}</mat-card-title>
     </mat-card-header>
     <mat-card-content>
       <form [formGroup]="passwordForm" (ngSubmit)="changePassword()" class="form-grid">
         <mat-form-field appearance="outline">
-          <mat-label>Current password</mat-label>
+          <mat-label>{{ 'profile.password.current' | t }}</mat-label>
           <input matInput type="password" formControlName="currentPassword" autocomplete="current-password" />
           @if (passwordForm.controls.currentPassword.invalid) {
-            <mat-error>Current password is required</mat-error>
+            <mat-error>{{ 'profile.password.currentError' | t }}</mat-error>
           }
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>New password</mat-label>
+          <mat-label>{{ 'profile.password.new' | t }}</mat-label>
           <input matInput type="password" formControlName="newPassword" autocomplete="new-password" />
-          <mat-hint>At least 8 characters</mat-hint>
+          <mat-hint>{{ 'profile.password.hint' | t }}</mat-hint>
           @if (passwordForm.controls.newPassword.invalid) {
-            <mat-error>Password must be 8 to 128 characters</mat-error>
+            <mat-error>{{ 'profile.password.newError' | t }}</mat-error>
           }
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Confirm new password</mat-label>
+          <mat-label>{{ 'profile.password.confirm' | t }}</mat-label>
           <input matInput type="password" formControlName="confirmPassword" autocomplete="new-password" />
           @if (passwordForm.controls.confirmPassword.touched && passwordForm.hasError('mismatch')) {
-            <mat-error>Passwords do not match</mat-error>
+            <mat-error>{{ 'profile.password.mismatch' | t }}</mat-error>
           }
         </mat-form-field>
 
@@ -112,7 +112,7 @@
         }
 
         <div>
-          <button mat-flat-button type="submit" [disabled]="passwordSaving()">Change password</button>
+          <button mat-flat-button type="submit" [disabled]="passwordSaving()">{{ 'profile.password.submit' | t }}</button>
         </div>
       </form>
     </mat-card-content>

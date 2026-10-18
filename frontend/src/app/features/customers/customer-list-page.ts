@@ -12,6 +12,10 @@ import { MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
 import { EMPTY, Subject, catchError, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 import { describeHttpError } from '../../core/api/describe-http-error';
+import { I18n } from '../../core/i18n/i18n';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { EmptyState } from '../../shared/ui/empty-state/empty-state';
+import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
 import { Customer, CustomerListParams } from './customer-models';
@@ -24,6 +28,9 @@ import { CustomersApi } from './customers-api';
     ReactiveFormsModule,
     RouterLink,
     PageHeader,
+    EmptyState,
+    ErrorState,
+    TranslatePipe,
     StatusBadge,
     MatTableModule,
     MatPaginatorModule,
@@ -37,6 +44,7 @@ import { CustomersApi } from './customers-api';
   styleUrl: './customer-list-page.scss',
 })
 export class CustomerListPage {
+  private readonly i18n = inject(I18n);
   private readonly api = inject(CustomersApi);
   private readonly destroyRef = inject(DestroyRef);
   private readonly requests = new Subject<CustomerListParams>();
@@ -59,7 +67,7 @@ export class CustomerListPage {
         switchMap(params =>
           this.api.list(params).pipe(
             catchError((error: HttpErrorResponse) => {
-              this.error.set(describeHttpError(error, 'Could not load customers.'));
+              this.error.set(describeHttpError(error, this.i18n.t('customers.list.loadFailed'), this.i18n.t));
               this.loading.set(false);
               return EMPTY;
             }),
@@ -80,6 +88,10 @@ export class CustomerListPage {
       .subscribe(() => this.load(1));
 
     this.load(1);
+  }
+
+  protected reload(): void {
+    this.load(this.page());
   }
 
   protected onPage(event: PageEvent): void {

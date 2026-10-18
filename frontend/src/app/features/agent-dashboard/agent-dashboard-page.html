@@ -1,166 +1,141 @@
-<crm-page-header title="My Dashboard" subtitle="Live overview of the tickets currently assigned to you." />
-
-<div class="toolbar">
-  @if (dashboard(); as d) {
-    <span class="hint">Updated {{ d.generatedAtUtc | date: 'medium' }}</span>
-  }
-  <button mat-stroked-button type="button" (click)="refresh()" [disabled]="loading()">
-    <mat-icon>refresh</mat-icon> Refresh
+<crm-page-header icon="dashboard" [title]="'dashboard.title' | t" [subtitle]="'dashboard.subtitle' | t">
+  <button mat-stroked-button actions type="button" (click)="refresh()" [disabled]="loading()">
+    <mat-icon>refresh</mat-icon> {{ 'common.refresh' | t }}
   </button>
-  <a mat-stroked-button routerLink="/tickets">View all my tickets</a>
-  <a mat-flat-button routerLink="/tickets/new"><mat-icon>add</mat-icon> Create ticket</a>
-  <a mat-stroked-button routerLink="/tasks">My Tasks</a>
-  <a mat-stroked-button routerLink="/notifications">Notifications</a>
-  <a mat-stroked-button routerLink="/quick-replies">Quick Replies</a>
-  <a mat-stroked-button routerLink="/collaboration">My Collaborations</a>
+</crm-page-header>
+
+<div class="action-row">
+  <a mat-flat-button routerLink="/tickets/new"><mat-icon>add</mat-icon> {{ 'dashboard.actions.createTicket' | t }}</a>
+  <mat-chip-set [attr.aria-label]="'dashboard.actions.aria' | t">
+    <a mat-chip routerLink="/tickets">{{ 'dashboard.actions.viewAll' | t }}</a>
+    <a mat-chip routerLink="/tasks">{{ 'dashboard.actions.tasks' | t }}</a>
+    <a mat-chip routerLink="/notifications">{{ 'dashboard.actions.notifications' | t }}</a>
+    <a mat-chip routerLink="/quick-replies">{{ 'dashboard.actions.quickReplies' | t }}</a>
+    <a mat-chip routerLink="/collaboration">{{ 'dashboard.actions.collaborations' | t }}</a>
+  </mat-chip-set>
+  @if (dashboard(); as d) {
+    <span class="hint">{{ 'dashboard.updated' | t: { date: (d.generatedAtUtc | crmDate: 'medium') } }}</span>
+  }
 </div>
 
-@if (loading()) {
-  <mat-progress-bar mode="indeterminate" />
-}
+<mat-tab-group
+  [selectedIndex]="tabs.index()"
+  (selectedIndexChange)="tabs.select($event)"
+  [preserveContent]="true"
+  animationDuration="0ms">
+  <mat-tab [label]="'dashboard.tabs.overview' | t">
+    <div class="tab-body">
+      @if (loading()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
 
-@if (error(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
-  <button mat-stroked-button type="button" (click)="refresh()">Retry</button>
-}
+      @if (error(); as message) {
+        <crm-error-state [message]="message" (retry)="refresh()" />
+      }
 
-@if (dashboard(); as d) {
-  <section aria-labelledby="workload-heading">
-    <h2 id="workload-heading">Workload</h2>
-    <p class="hint">
-      {{ d.summary.active }} active tickets (Open + In Progress). Counts overlap — one ticket can appear in several
-      cards.
-    </p>
-    <div class="summary-grid">
-      <mat-card appearance="outlined" class="summary-card">
-        <mat-card-content>
-          <span>Open</span>
-          <span class="count">{{ d.summary.open }}</span>
-        </mat-card-content>
-      </mat-card>
-      <mat-card appearance="outlined" class="summary-card">
-        <mat-card-content>
-          <span>In Progress</span>
-          <span class="count">{{ d.summary.inProgress }}</span>
-        </mat-card-content>
-      </mat-card>
-      <mat-card appearance="outlined" class="summary-card">
-        <mat-card-content>
-          <span>Escalated</span>
-          <span class="count">{{ d.summary.escalated }}</span>
-        </mat-card-content>
-      </mat-card>
-      <mat-card appearance="outlined" class="summary-card">
-        <mat-card-content>
-          <span>High / Urgent</span>
-          <span class="count">{{ d.summary.highOrUrgent }}</span>
-        </mat-card-content>
-      </mat-card>
-    </div>
-  </section>
+      @if (dashboard(); as d) {
+        <section aria-labelledby="workload-heading">
+          <h2 id="workload-heading">{{ 'dashboard.workload.title' | t }}</h2>
+          <p class="hint">{{ 'dashboard.workload.hint' | t: { active: d.summary.active } }}</p>
+          <div class="summary-grid">
+            <crm-kpi-card icon="folder_open" [label]="'enums.ticketStatus.Open' | t" [value]="'' + d.summary.open" />
+            <crm-kpi-card icon="pending_actions" [label]="'enums.ticketStatus.InProgress' | t" [value]="'' + d.summary.inProgress" />
+            <crm-kpi-card icon="priority_high" [label]="'dashboard.workload.escalated' | t" [value]="'' + d.summary.escalated" />
+            <crm-kpi-card icon="local_fire_department" [label]="'dashboard.workload.highOrUrgent' | t" [value]="'' + d.summary.highOrUrgent" />
+          </div>
+        </section>
 
-  <section aria-labelledby="queue-heading">
-    <h2 id="queue-heading">Needs attention</h2>
-    <p class="hint">
-      Top {{ d.attentionQueueLimit }} of your Open and In Progress tickets: escalated first, then Urgent, High, Medium,
-      Low, then longest without an update. This is a display order, not an SLA.
-    </p>
+        <section aria-labelledby="queue-heading">
+          <h2 id="queue-heading">{{ 'dashboard.queue.title' | t }}</h2>
+          <p class="hint">{{ 'dashboard.queue.hint' | t: { limit: d.attentionQueueLimit } }}</p>
 
-    @if (d.attentionQueue.length === 0) {
-      <p>No Open or In Progress tickets are assigned to you right now.</p>
-    } @else {
-      <ol class="queue">
-        @for (t of d.attentionQueue; track t.id) {
-          <li class="queue-item">
-            <a class="subject" [routerLink]="['/tickets', t.id]">{{ t.subject }}</a>
-            @if (t.isEscalated) {
-              <crm-status-badge label="Escalated" tone="error" />
-            }
-            <crm-status-badge [label]="t.priority" [tone]="priorityTone(t.priority)" />
-            <crm-status-badge [label]="statusLabel(t.status)" [tone]="statusTone(t.status)" />
-            @if (t.slaIndicator !== 'NotTracked') {
-              <crm-status-badge [label]="slaIndicatorLabel(t.slaIndicator)" [tone]="slaIndicatorTone(t.slaIndicator)" />
-            }
-            <div class="meta">
-              {{ t.category }} ·
-              <a [routerLink]="['/customers', t.customerId]">{{ t.customerName }}</a> ·
-              <span class="email">{{ t.customerEmail }}</span> · Updated {{ t.updatedAtUtc | date: 'medium' }}
-            </div>
-          </li>
-        }
-      </ol>
-    }
-
-    @if (d.summary.active > d.attentionQueue.length) {
-      <p class="hint">
-        Showing {{ d.attentionQueue.length }} of {{ d.summary.active }} active tickets.
-        <a routerLink="/tickets">View all my tickets</a>
-      </p>
-    }
-  </section>
-}
-
-<section aria-labelledby="tasks-heading">
-  <h2 id="tasks-heading">My tasks</h2>
-
-  @if (tasksLoading()) {
-    <mat-progress-bar mode="indeterminate" />
-  }
-
-  @if (tasksError(); as message) {
-    <p class="error" role="alert">{{ message }}</p>
-    <button mat-stroked-button type="button" (click)="refreshTasks()">Retry tasks</button>
-  }
-
-  @if (taskSummary(); as s) {
-    <p class="hint">Overdue and Due soon are part of Pending. Due soon = within 7 days.</p>
-    <div class="summary-grid">
-      <mat-card appearance="outlined" class="summary-card">
-        <mat-card-content>
-          <span>Pending</span>
-          <span class="count">{{ s.pending }}</span>
-        </mat-card-content>
-      </mat-card>
-      <mat-card appearance="outlined" class="summary-card">
-        <mat-card-content>
-          <span>Overdue</span>
-          <span class="count">{{ s.overdue }}</span>
-        </mat-card-content>
-      </mat-card>
-      <mat-card appearance="outlined" class="summary-card">
-        <mat-card-content>
-          <span>Due soon</span>
-          <span class="count">{{ s.dueSoon }}</span>
-        </mat-card-content>
-      </mat-card>
-    </div>
-
-    @if (s.nextTasks.length === 0) {
-      <p>No pending tasks.</p>
-    } @else {
-      <ol class="queue">
-        @for (t of s.nextTasks; track t.id) {
-          <li class="queue-item">
-            <a class="subject" [routerLink]="['/tasks', t.id]">{{ t.title }}</a>
-            @if (t.isOverdue) {
-              <crm-status-badge label="Overdue" tone="error" />
-            } @else if (t.isDueSoon) {
-              <crm-status-badge label="Due soon" tone="pending" />
-            }
-            <div class="meta">
-              @if (t.dueAtUtc) {
-                Due {{ t.dueAtUtc | date: 'medium' }}
-              } @else {
-                No due date
+          @if (d.attentionQueue.length === 0) {
+            <crm-empty-state icon="task_alt" [message]="'dashboard.queue.empty' | t" />
+          } @else {
+            <ol class="queue">
+              @for (t of d.attentionQueue; track t.id) {
+                <li class="queue-item">
+                  <a class="subject" [routerLink]="['/tickets', t.id]">{{ t.subject }}</a>
+                  @if (t.isEscalated) {
+                    <crm-status-badge [label]="'dashboard.workload.escalated' | t" tone="error" />
+                  }
+                  <crm-status-badge [label]="('enums.ticketPriority.' + t.priority) | t" [tone]="priorityTone(t.priority)" />
+                  <crm-status-badge [label]="('enums.ticketStatus.' + t.status) | t" [tone]="statusTone(t.status)" />
+                  @if (t.slaIndicator !== 'NotTracked') {
+                    <crm-status-badge [label]="('dashboard.sla.' + t.slaIndicator) | t" [tone]="slaIndicatorTone(t.slaIndicator)" />
+                  }
+                  <div class="meta">
+                    {{ ('enums.ticketCategory.' + t.category) | t }} ·
+                    <a [routerLink]="['/customers', t.customerId]">{{ t.customerName }}</a> ·
+                    <span class="email ltr-value">{{ t.customerEmail }}</span> ·
+                    {{ 'dashboard.queue.updated' | t: { date: (t.updatedAtUtc | crmDate: 'medium') } }}
+                  </div>
+                </li>
               }
-              @if (t.remindAtUtc) {
-                · Reminder {{ t.remindAtUtc | date: 'short' }}
-              }
-            </div>
-          </li>
+            </ol>
+          }
+
+          @if (d.summary.active > d.attentionQueue.length) {
+            <p class="hint">
+              {{ 'dashboard.queue.showing' | t: { shown: d.attentionQueue.length, total: d.summary.active } }}
+              <a routerLink="/tickets">{{ 'dashboard.actions.viewAll' | t }}</a>
+            </p>
+          }
+        </section>
+      }
+    </div>
+  </mat-tab>
+
+  <mat-tab [label]="'dashboard.tabs.tasks' | t">
+    <div class="tab-body">
+      <section aria-labelledby="tasks-heading">
+        <h2 id="tasks-heading">{{ 'dashboard.tasks.title' | t }}</h2>
+
+        @if (tasksLoading()) {
+          <mat-progress-bar mode="indeterminate" />
         }
-      </ol>
-    }
-    <p class="hint"><a routerLink="/tasks">View all my tasks</a></p>
-  }
-</section>
+
+        @if (tasksError(); as message) {
+          <crm-error-state [message]="message" (retry)="refreshTasks()" />
+        }
+
+        @if (taskSummary(); as s) {
+          <p class="hint">{{ 'dashboard.tasks.hint' | t }}</p>
+          <div class="summary-grid">
+            <crm-kpi-card icon="hourglass_empty" [label]="'dashboard.tasks.pending' | t" [value]="'' + s.pending" />
+            <crm-kpi-card icon="alarm" [label]="'dashboard.tasks.overdue' | t" [value]="'' + s.overdue" />
+            <crm-kpi-card icon="event" [label]="'dashboard.tasks.dueSoon' | t" [value]="'' + s.dueSoon" />
+          </div>
+
+          @if (s.nextTasks.length === 0) {
+            <crm-empty-state icon="task_alt" [message]="'dashboard.tasks.empty' | t" />
+          } @else {
+            <ol class="queue">
+              @for (t of s.nextTasks; track t.id) {
+                <li class="queue-item">
+                  <a class="subject" [routerLink]="['/tasks', t.id]">{{ t.title }}</a>
+                  @if (t.isOverdue) {
+                    <crm-status-badge [label]="'dashboard.tasks.overdue' | t" tone="error" />
+                  } @else if (t.isDueSoon) {
+                    <crm-status-badge [label]="'dashboard.tasks.dueSoon' | t" tone="pending" />
+                  }
+                  <div class="meta">
+                    @if (t.dueAtUtc) {
+                      {{ 'dashboard.tasks.due' | t: { date: (t.dueAtUtc | crmDate: 'medium') } }}
+                    } @else {
+                      {{ 'dashboard.tasks.noDue' | t }}
+                    }
+                    @if (t.remindAtUtc) {
+                      · {{ 'dashboard.tasks.reminder' | t: { date: (t.remindAtUtc | crmDate: 'short') } }}
+                    }
+                  </div>
+                </li>
+              }
+            </ol>
+          }
+          <p class="hint"><a routerLink="/tasks">{{ 'dashboard.tasks.viewAll' | t }}</a></p>
+        }
+      </section>
+    </div>
+  </mat-tab>
+</mat-tab-group>

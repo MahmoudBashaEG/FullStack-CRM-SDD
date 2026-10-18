@@ -1,122 +1,157 @@
 <crm-page-header
-  [title]="isSuperAdmin() ? 'Tasks' : 'My Tasks'"
-  subtitle="Personal work items and optional in-app reminders." />
+  icon="task_alt"
+  [title]="(isSuperAdmin() ? 'tasks.list.titleAll' : 'tasks.list.titleMine') | t"
+  [subtitle]="'tasks.list.subtitle' | t">
+  <a mat-flat-button actions routerLink="/tasks/new"><mat-icon>add</mat-icon> {{ 'tasks.list.new' | t }}</a>
+</crm-page-header>
 
-<div class="toolbar" [formGroup]="filters">
-  <mat-form-field appearance="outline" class="search">
-    <mat-label>Search</mat-label>
-    <input matInput type="search" formControlName="search" placeholder="Task title" />
-    <mat-icon matSuffix>search</mat-icon>
-  </mat-form-field>
+<mat-card appearance="outlined" class="filters-card">
+  <mat-card-content>
+    <div class="toolbar" [formGroup]="filters">
+      <mat-form-field appearance="outline" class="search">
+        <mat-label>{{ 'common.search' | t }}</mat-label>
+        <input matInput type="search" formControlName="search" [placeholder]="'tasks.list.searchPlaceholder' | t" />
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
 
-  <mat-form-field appearance="outline" class="filter">
-    <mat-label>Status</mat-label>
-    <mat-select formControlName="status">
-      <mat-option value="Pending">Pending</mat-option>
-      <mat-option value="Completed">Completed</mat-option>
-      <mat-option value="Any">Any</mat-option>
-    </mat-select>
-  </mat-form-field>
+      <mat-form-field appearance="outline" class="filter">
+        <mat-label>{{ 'common.status' | t }}</mat-label>
+        <mat-select formControlName="status">
+          <mat-option value="Pending">{{ 'tasks.enums.status.Pending' | t }}</mat-option>
+          <mat-option value="Completed">{{ 'tasks.enums.status.Completed' | t }}</mat-option>
+          <mat-option value="Any">{{ 'tasks.list.any' | t }}</mat-option>
+        </mat-select>
+      </mat-form-field>
 
-  <mat-form-field appearance="outline" class="filter">
-    <mat-label>Due</mat-label>
-    <mat-select formControlName="dueState">
-      <mat-option [value]="null">Any</mat-option>
-      <mat-option value="Overdue">Overdue</mat-option>
-      <mat-option value="DueSoon">Due soon</mat-option>
-      <mat-option value="NoDueDate">No due date</mat-option>
-    </mat-select>
-  </mat-form-field>
+      <mat-form-field appearance="outline" class="filter">
+        <mat-label>{{ 'tasks.list.due' | t }}</mat-label>
+        <mat-select formControlName="dueState">
+          <mat-option [value]="null">{{ 'tasks.list.any' | t }}</mat-option>
+          <mat-option value="Overdue">{{ 'tasks.list.overdue' | t }}</mat-option>
+          <mat-option value="DueSoon">{{ 'tasks.list.dueSoon' | t }}</mat-option>
+          <mat-option value="NoDueDate">{{ 'tasks.list.noDueDate' | t }}</mat-option>
+        </mat-select>
+      </mat-form-field>
 
-  <mat-form-field appearance="outline" class="filter">
-    <mat-label>Reminder</mat-label>
-    <mat-select formControlName="hasReminder">
-      <mat-option [value]="null">Any</mat-option>
-      <mat-option [value]="true">With reminder</mat-option>
-      <mat-option [value]="false">Without reminder</mat-option>
-    </mat-select>
-  </mat-form-field>
+      <mat-form-field appearance="outline" class="filter">
+        <mat-label>{{ 'tasks.list.reminder' | t }}</mat-label>
+        <mat-select formControlName="hasReminder">
+          <mat-option [value]="null">{{ 'tasks.list.any' | t }}</mat-option>
+          <mat-option [value]="true">{{ 'tasks.list.withReminder' | t }}</mat-option>
+          <mat-option [value]="false">{{ 'tasks.list.withoutReminder' | t }}</mat-option>
+        </mat-select>
+      </mat-form-field>
 
-  @if (isSuperAdmin()) {
-    <mat-form-field appearance="outline" class="filter">
-      <mat-label>Agent</mat-label>
-      <mat-select formControlName="assignedAgentUserId">
-        <mat-option [value]="null">Any</mat-option>
-        @for (a of agents(); track a.id) {
-          <mat-option [value]="a.id">{{ a.firstName }} {{ a.lastName }}{{ a.isActive ? '' : ' (inactive)' }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
-  }
+      @if (isSuperAdmin()) {
+        <mat-form-field appearance="outline" class="filter">
+          <mat-label>{{ 'tasks.list.agent' | t }}</mat-label>
+          <mat-select formControlName="assignedAgentUserId">
+            <mat-option [value]="null">{{ 'tasks.list.any' | t }}</mat-option>
+            @for (a of agents(); track a.id) {
+              <mat-option [value]="a.id">{{ a.firstName }} {{ a.lastName }}{{ a.isActive ? '' : ' ' + ('tasks.list.inactive' | t) }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      }
 
-  <mat-slide-toggle formControlName="archived">Show archived</mat-slide-toggle>
-
-  <a mat-flat-button routerLink="/tasks/new"><mat-icon>add</mat-icon> New task</a>
-</div>
+      <mat-slide-toggle formControlName="archived">{{ 'tasks.list.showArchived' | t }}</mat-slide-toggle>
+    </div>
+  </mat-card-content>
+</mat-card>
 
 @if (loading()) {
   <mat-progress-bar mode="indeterminate" />
 }
 
 @if (error(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
-  <button mat-stroked-button type="button" (click)="reload()">Retry</button>
+  <crm-error-state [message]="message" (retry)="reload()" />
 }
 
 @if (!loading() && !error()) {
   @if (tasks().length === 0) {
-    <p>{{ hasFilters() ? 'No tasks match these filters.' : 'No tasks yet. Create the first task.' }}</p>
+    <crm-empty-state
+      icon="task_alt"
+      [title]="(hasFilters() ? 'tasks.list.noMatch' : 'tasks.list.empty') | t" />
   } @else {
-    <ul class="rows">
-      @for (t of tasks(); track t.id) {
-        <li class="row">
-          <a class="row-title" [routerLink]="['/tasks', t.id]">{{ t.title }}</a>
-          @if (t.isOverdue) {
-            <crm-status-badge label="Overdue" tone="error" />
-          } @else if (t.isDueSoon) {
-            <crm-status-badge label="Due soon" tone="pending" />
-          }
-          @if (t.status === 'Completed') {
-            <crm-status-badge label="Completed" tone="success" />
-          }
-          @if (t.isArchived) {
-            <crm-status-badge label="Archived" tone="neutral" />
-          }
-          <div class="meta">
-            @if (t.dueAtUtc) {
-              Due {{ t.dueAtUtc | date: 'medium' }}
-            } @else {
-              No due date
-            }
-            @if (t.remindAtUtc) {
-              · Reminder {{ t.remindAtUtc | date: 'short' }}
-            } @else if (t.reminderSentAtUtc) {
-              · Reminder sent
-            }
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">{{ 'tasks.list.task' | t }}</th>
+            <th scope="col">{{ 'common.status' | t }}</th>
+            <th scope="col">{{ 'tasks.list.due' | t }}</th>
+            <th scope="col">{{ 'tasks.list.reminder' | t }}</th>
             @if (isSuperAdmin()) {
-              · Owner: {{ t.assignedAgentName }}
+              <th scope="col">{{ 'tasks.list.owner' | t }}</th>
             }
-            @switch (t.linkedTicketState) {
-              @case ('Accessible') {
-                · Ticket: <a [routerLink]="['/tickets', t.linkedTicketId]">{{ t.linkedTicketSubject }}</a>
-              }
-              @case ('Inaccessible') {
-                · Linked ticket no longer accessible
-                @if (t.linkedTicketSubject) {
-                  ({{ t.linkedTicketSubject }})
+            <th scope="col">{{ 'tasks.list.ticket' | t }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (t of tasks(); track t.id) {
+            <tr>
+              <td class="wrap"><a [routerLink]="['/tasks', t.id]">{{ t.title }}</a></td>
+              <td>
+                <div class="actions">
+                  @if (t.isOverdue) {
+                    <crm-status-badge [label]="'tasks.list.overdue' | t" tone="error" />
+                  } @else if (t.isDueSoon) {
+                    <crm-status-badge [label]="'tasks.list.dueSoon' | t" tone="pending" />
+                  }
+                  @if (t.status === 'Completed') {
+                    <crm-status-badge [label]="'tasks.enums.status.Completed' | t" tone="success" />
+                  }
+                  @if (t.isArchived) {
+                    <crm-status-badge [label]="'tasks.list.archived' | t" tone="neutral" />
+                  }
+                </div>
+              </td>
+              <td>
+                @if (t.dueAtUtc) {
+                  {{ t.dueAtUtc | crmDate: 'medium' }}
+                } @else {
+                  {{ 'tasks.list.noDueDate' | t }}
                 }
+              </td>
+              <td>
+                @if (t.remindAtUtc) {
+                  {{ t.remindAtUtc | crmDate: 'short' }}
+                } @else if (t.reminderSentAtUtc) {
+                  {{ 'tasks.list.reminderSent' | t }}
+                } @else {
+                  —
+                }
+              </td>
+              @if (isSuperAdmin()) {
+                <td class="wrap">{{ t.assignedAgentName }}</td>
               }
-            }
-          </div>
-        </li>
-      }
-    </ul>
+              <td class="wrap">
+                @switch (t.linkedTicketState) {
+                  @case ('Accessible') {
+                    <a [routerLink]="['/tickets', t.linkedTicketId]">{{ t.linkedTicketSubject }}</a>
+                  }
+                  @case ('Inaccessible') {
+                    {{ 'tasks.list.ticketInaccessible' | t }}
+                    @if (t.linkedTicketSubject) {
+                      ({{ t.linkedTicketSubject }})
+                    }
+                  }
+                  @default {
+                    —
+                  }
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
     <mat-paginator
       [length]="totalCount()"
       [pageIndex]="page() - 1"
       [pageSize]="pageSize()"
       [pageSizeOptions]="pageSizeOptions"
       (page)="onPage($event)"
-      aria-label="Select page of tasks" />
+      [attr.aria-label]="'tasks.list.paginator' | t" />
   }
 }

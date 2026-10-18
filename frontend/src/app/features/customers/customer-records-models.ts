@@ -1,12 +1,13 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { describeHttpError } from '../../core/api/describe-http-error';
 import { ProblemDetails } from '../../core/api/problem-details';
+import { Translate, englishT } from '../../core/i18n/translate-fn';
 
 export const CUSTOMER_INTERACTION_TYPES = ['PhoneCall', 'Meeting', 'Other'] as const;
 export type CustomerInteractionType = (typeof CUSTOMER_INTERACTION_TYPES)[number];
 
-export function interactionTypeLabel(type: CustomerInteractionType): string {
-  return type === 'PhoneCall' ? 'Phone Call' : type;
+export function interactionTypeLabel(type: CustomerInteractionType, t: Translate = englishT): string {
+  return t(`customers.interactions.types.${type}`);
 }
 
 /** Matches Crm.Api CustomerNoteResponse. */
@@ -58,7 +59,7 @@ export function formatFileSize(bytes: number): string {
 }
 
 /** Prefers the first server validation message for `field` (400 ValidationProblemDetails), else describeHttpError. */
-export function describeFieldError(error: HttpErrorResponse, field: string, fallback: string): string {
+export function describeFieldError(error: HttpErrorResponse, field: string, fallback: string, t: Translate = englishT): string {
   const problem = error.error as ProblemDetails | null;
-  return problem?.errors?.[field]?.[0] ?? describeHttpError(error, fallback);
+  return problem?.errors?.[field]?.[0] ?? describeHttpError(error, fallback, t);
 }

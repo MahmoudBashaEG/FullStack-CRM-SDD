@@ -1,12 +1,6 @@
-.detail-stack {
-  display: grid;
-  gap: var(--crm-space-6);
-  max-inline-size: 640px;
-}
-
 .readonly-list {
   display: grid;
-  grid-template-columns: max-content 1fr;
+  grid-template-columns: max-content minmax(0, 1fr);
   gap: var(--crm-space-2) var(--crm-space-4);
   margin-block: var(--crm-space-4);
   margin-inline: 0;
@@ -17,6 +11,7 @@
 
   dd {
     margin: 0;
+    overflow-wrap: anywhere;
   }
 }
 

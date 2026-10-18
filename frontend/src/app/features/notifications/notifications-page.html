@@ -1,70 +1,79 @@
-<crm-page-header
-  title="Notifications"
-  subtitle="SLA alerts and task reminders appear here while you use the CRM. Reading one changes nothing on the ticket or task."
-/>
+<crm-page-header icon="notifications" [title]="'notifications.title' | t" [subtitle]="'notifications.subtitle' | t" />
 
-<section aria-labelledby="sla-alerts-heading">
-  <h2 id="sla-alerts-heading">SLA alerts</h2>
-  <crm-sla-alert-list />
-</section>
+<div class="crm-stack">
+  <mat-card appearance="outlined">
+    <mat-card-header>
+      <mat-card-title><h2 id="sla-alerts-heading">{{ 'notifications.slaAlerts' | t }}</h2></mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <section aria-labelledby="sla-alerts-heading">
+        <crm-sla-alert-list />
+      </section>
+    </mat-card-content>
+  </mat-card>
 
-@if (isAgent()) {
-  <section aria-labelledby="reminders-heading">
-    <h2 id="reminders-heading">Task reminders</h2>
-
-    <div class="toolbar">
-      <mat-slide-toggle [checked]="unreadOnly()" (change)="toggleUnread($event.checked)">Unread only</mat-slide-toggle>
-      <button mat-stroked-button type="button" (click)="load(1)" [disabled]="loading()">
-        <mat-icon>refresh</mat-icon> Refresh
-      </button>
-    </div>
-
-    @if (loading()) {
-      <mat-progress-bar mode="indeterminate" />
-    }
-
-    @if (error(); as message) {
-      <p class="error" role="alert">{{ message }}</p>
-      <button mat-stroked-button type="button" (click)="load(1)">Retry</button>
-    }
-
-    @if (!error() && !loading() && items().length === 0) {
-      <p>No reminders yet.</p>
-    }
-
-    <ul class="rows">
-      @for (n of items(); track n.id) {
-        <li class="row" [class.unread]="!n.isRead">
-          <a class="row-title" [routerLink]="['/tasks', n.taskId]">{{ n.taskTitle }}</a>
-          @if (n.wasMissed) {
-            <crm-status-badge label="Missed reminder" tone="pending" />
-          } @else {
-            <crm-status-badge label="Reminder" tone="neutral" />
-          }
-          @if (n.taskStatus === 'Completed') {
-            <crm-status-badge label="Completed" tone="success" />
-          }
-          @if (n.taskIsArchived) {
-            <crm-status-badge label="Archived" tone="neutral" />
-          }
-          <div class="meta">
-            Scheduled {{ n.scheduledForUtc | date: 'medium' }} · Delivered {{ n.issuedAtUtc | date: 'medium' }}
-            @if (n.wasMissed) {
-              <br />Delivered more than 5 minutes after its scheduled time.
-            }
-            @if (n.transferredAtUtc) {
-              <br />Transferred to you with the task on {{ n.transferredAtUtc | date: 'medium' }}.
-            }
+  @if (isAgent()) {
+    <mat-card appearance="outlined">
+      <mat-card-header>
+        <mat-card-title><h2 id="reminders-heading">{{ 'notifications.reminders' | t }}</h2></mat-card-title>
+      </mat-card-header>
+      <mat-card-content class="crm-stack">
+        <section aria-labelledby="reminders-heading" class="crm-stack">
+          <div class="toolbar">
+            <mat-slide-toggle [checked]="unreadOnly()" (change)="toggleUnread($event.checked)">{{ 'notifications.unreadOnly' | t }}</mat-slide-toggle>
+            <button mat-stroked-button type="button" (click)="load(1)" [disabled]="loading()">
+              <mat-icon>refresh</mat-icon> {{ 'common.refresh' | t }}
+            </button>
           </div>
-          @if (!n.isRead) {
-            <button mat-stroked-button type="button" (click)="markRead(n)">Mark as read</button>
-          }
-        </li>
-      }
-    </ul>
 
-    @if (hasMore() && !loading()) {
-      <button mat-button type="button" (click)="loadMore()">Load more</button>
-    }
-  </section>
-}
+          @if (loading()) {
+            <mat-progress-bar mode="indeterminate" />
+          }
+
+          @if (error(); as message) {
+            <crm-error-state [message]="message" (retry)="load(1)" />
+          }
+
+          @if (!error() && !loading() && items().length === 0) {
+            <crm-empty-state icon="notifications_none" [message]="'notifications.noReminders' | t" />
+          }
+
+          <ul class="rows">
+            @for (n of items(); track n.id) {
+              <li class="row" [class.unread]="!n.isRead">
+                <a class="row-title" [routerLink]="['/tasks', n.taskId]">{{ n.taskTitle }}</a>
+                @if (n.wasMissed) {
+                  <crm-status-badge [label]="'notifications.missedReminder' | t" tone="pending" />
+                } @else {
+                  <crm-status-badge [label]="'notifications.reminder' | t" tone="neutral" />
+                }
+                @if (n.taskStatus === 'Completed') {
+                  <crm-status-badge [label]="'notifications.completed' | t" tone="success" />
+                }
+                @if (n.taskIsArchived) {
+                  <crm-status-badge [label]="'notifications.archived' | t" tone="neutral" />
+                }
+                <div class="meta">
+                  {{ 'notifications.scheduledDelivered' | t: { scheduled: (n.scheduledForUtc | crmDate: 'medium'), delivered: (n.issuedAtUtc | crmDate: 'medium') } }}
+                  @if (n.wasMissed) {
+                    <br />{{ 'notifications.missedNote' | t }}
+                  }
+                  @if (n.transferredAtUtc) {
+                    <br />{{ 'notifications.transferredNote' | t: { date: (n.transferredAtUtc | crmDate: 'medium') } }}
+                  }
+                </div>
+                @if (!n.isRead) {
+                  <button mat-stroked-button type="button" (click)="markRead(n)">{{ 'notifications.markRead' | t }}</button>
+                }
+              </li>
+            }
+          </ul>
+
+          @if (hasMore() && !loading()) {
+            <div><button mat-button type="button" (click)="loadMore()">{{ 'notifications.loadMore' | t }}</button></div>
+          }
+        </section>
+      </mat-card-content>
+    </mat-card>
+  }
+</div>

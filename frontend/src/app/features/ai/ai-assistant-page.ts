@@ -5,17 +5,20 @@ import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
+import { I18n } from '../../core/i18n/i18n';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { TicketsApi } from '../tickets/tickets-api';
 import { AiApi } from './ai-api';
 import { chatRequestMessages } from './ai-chat';
 import { AiChatStore } from './ai-chat-store';
 import { describeAiError } from './ai-errors';
-import { AI_CHAT_MESSAGE_MAX_LENGTH, AI_REVIEW_LABEL } from './ai-models';
+import { AI_CHAT_MESSAGE_MAX_LENGTH } from './ai-models';
 
 /** AI-001 staff assistant. History lives in AiChatStore (browser memory only); ticket access is re-checked by the server every turn. */
 @Component({
@@ -25,6 +28,8 @@ import { AI_CHAT_MESSAGE_MAX_LENGTH, AI_REVIEW_LABEL } from './ai-models';
     ReactiveFormsModule,
     RouterLink,
     PageHeader,
+    TranslatePipe,
+    MatIconModule,
     MatCardModule,
     MatButtonModule,
     MatFormFieldModule,
@@ -35,6 +40,7 @@ import { AI_CHAT_MESSAGE_MAX_LENGTH, AI_REVIEW_LABEL } from './ai-models';
   styleUrls: ['../../shared/ui/productivity-page.scss', './ai-assistant-page.scss'],
 })
 export class AiAssistantPage {
+  private readonly i18n = inject(I18n);
   private readonly route = inject(ActivatedRoute);
   private readonly ticketsApi = inject(TicketsApi);
   private readonly ai = inject(AiApi);
@@ -42,7 +48,6 @@ export class AiAssistantPage {
   private readonly ticketChanged = new Subject<void>();
 
   protected readonly store = inject(AiChatStore);
-  protected readonly reviewLabel = AI_REVIEW_LABEL;
   protected readonly maxLength = AI_CHAT_MESSAGE_MAX_LENGTH;
   protected readonly message = new FormControl('', {
     nonNullable: true,
@@ -79,7 +84,7 @@ export class AiAssistantPage {
             this.loseTicket();
             return;
           }
-          this.error.set(describeAiError(e, 'The assistant could not answer.')); // the typed text stays for Retry
+          this.error.set(describeAiError(e, this.i18n.t('ai.page.answerFailed'), this.i18n.t)); // the typed text stays for Retry
         },
       });
   }
@@ -108,7 +113,7 @@ export class AiAssistantPage {
           if (e.status === 404) {
             this.loseTicket();
           } else {
-            this.error.set(describeAiError(e, 'Could not load the ticket.'));
+            this.error.set(describeAiError(e, this.i18n.t('ai.page.ticketFailed'), this.i18n.t));
           }
         },
       });

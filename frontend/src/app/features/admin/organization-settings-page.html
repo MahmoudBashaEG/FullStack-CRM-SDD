@@ -1,63 +1,134 @@
-<crm-page-header title="Organization Settings" subtitle="Informational organization and support details." />
-<crm-admin-section-nav />
+<crm-page-header [title]="'admin.settings.title' | t" [subtitle]="'admin.settings.subtitle' | t" icon="business" />
 
-@if (loading()) {
-  <mat-progress-bar mode="indeterminate" />
-}
+<crm-admin-section-nav>
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
 
-@if (loadError(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
-  <button mat-stroked-button type="button" (click)="load()">Retry</button>
-}
+  @if (loadError(); as message) {
+    <crm-error-state [message]="message" (retry)="load()" />
+  }
 
-@if (settings(); as s) {
-  <p class="hint">
-    @if (!s.isConfigured) {
-      Not configured yet.
-    } @else if (s.updatedAtUtc) {
-      Last updated {{ formatUtcTimestamp(s.updatedAtUtc) }}@if (s.updatedByName) { by <span class="user-text">{{ s.updatedByName }}</span> }
-    }
-  </p>
-
-  <form class="form stack" [formGroup]="form" (ngSubmit)="save()">
-    <mat-form-field appearance="outline">
-      <mat-label>Display name</mat-label>
-      <input matInput formControlName="displayName" maxlength="150" required />
-      @if (form.controls.displayName.hasError('required')) {
-        <mat-error>Enter the organization name.</mat-error>
+  @if (settings(); as s) {
+    <p class="hint">
+      @if (!s.isConfigured) {
+        {{ 'admin.settings.notConfigured' | t }}
+      } @else if (s.updatedAtUtc) {
+        @if (s.updatedByName) {
+          {{ 'admin.settings.lastUpdatedBy' | t: { when: (s.updatedAtUtc | crmDate: 'medium' : 'UTC'), name: s.updatedByName } }}
+        } @else {
+          {{ 'admin.settings.lastUpdated' | t: { when: (s.updatedAtUtc | crmDate: 'medium' : 'UTC') } }}
+        }
       }
-    </mat-form-field>
+    </p>
 
-    <mat-form-field appearance="outline">
-      <mat-label>Support email</mat-label>
-      <input matInput type="email" formControlName="supportEmail" maxlength="256" />
-      @if (form.controls.supportEmail.hasError('email')) {
-        <mat-error>Enter a valid email address.</mat-error>
+    <form class="settings-form" [formGroup]="form" (ngSubmit)="save()">
+      <mat-card appearance="outlined">
+        <mat-card-header>
+          <mat-card-title>{{ 'admin.settings.detailsTitle' | t }}</mat-card-title>
+        </mat-card-header>
+        <mat-card-content class="card-body">
+          <div class="fields">
+            <mat-form-field appearance="outline" class="span-2">
+              <mat-label>{{ 'admin.settings.displayName' | t }}</mat-label>
+              <input matInput formControlName="displayName" maxlength="150" required />
+              @if (form.controls.displayName.hasError('required')) {
+                <mat-error>{{ 'admin.settings.displayNameRequired' | t }}</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'admin.settings.supportEmail' | t }}</mat-label>
+              <input matInput type="email" dir="ltr" formControlName="supportEmail" maxlength="256" />
+              @if (form.controls.supportEmail.hasError('email')) {
+                <mat-error>{{ 'admin.settings.emailInvalid' | t }}</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'admin.settings.supportPhone' | t }}</mat-label>
+              <input matInput dir="ltr" formControlName="supportPhone" maxlength="40" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="span-2">
+              <mat-label>{{ 'admin.settings.supportInformation' | t }}</mat-label>
+              <textarea matInput rows="5" formControlName="supportInformation" maxlength="1000"></textarea>
+              <mat-hint align="end">{{ form.controls.supportInformation.value.length }} / 1000</mat-hint>
+            </mat-form-field>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card appearance="outlined">
+        <mat-card-header>
+          <mat-card-title>{{ 'branding.title' | t }}</mat-card-title>
+          <mat-card-subtitle>{{ 'branding.description' | t }}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content class="card-body">
+          <div class="section">
+            <h3 id="accent-label">{{ 'branding.accent' | t }}</h3>
+            <mat-radio-group class="accents" formControlName="accentColor" role="radiogroup" aria-labelledby="accent-label">
+              @for (p of presets; track p) {
+                <mat-radio-button [value]="p">
+                  <span class="swatch accent-preview" [attr.data-accent]="p" aria-hidden="true"></span>{{ 'branding.accentName.' + p | t }}
+                </mat-radio-button>
+              }
+            </mat-radio-group>
+            <div class="accent-preview preview-box" [attr.data-accent]="form.controls.accentColor.value">
+              <span class="hint">{{ 'branding.preview' | t }}</span>
+              <button mat-flat-button type="button" tabindex="-1">{{ 'branding.previewButton' | t }}</button>
+              <mat-chip-set [attr.aria-label]="'branding.preview' | t">
+                <mat-chip highlighted>{{ 'branding.previewChip' | t }}</mat-chip>
+              </mat-chip-set>
+            </div>
+          </div>
+
+          <div class="section">
+            <h3>{{ 'branding.logo' | t }}</h3>
+            <div class="logo-row">
+              @if (branding.logoUrl(); as url) {
+                <img class="logo-img" [src]="url" [alt]="'branding.logoAlt' | t" (error)="branding.logoFailed.set(true)" />
+              } @else {
+                <span class="hint">{{ 'branding.noLogo' | t }}</span>
+              }
+            </div>
+            <div class="actions">
+              <input #picker class="hidden-input" type="file" accept="image/png,image/jpeg,image/webp" (change)="onFileChosen($event)" />
+              <button mat-stroked-button type="button" [disabled]="saving()" (click)="picker.click()">
+                <mat-icon>image</mat-icon> {{ 'branding.chooseImage' | t }}
+              </button>
+              <button mat-flat-button type="button" [disabled]="!selectedFile() || saving()" (click)="uploadLogo()">
+                <mat-icon>upload</mat-icon> {{ 'branding.uploadLogo' | t }}
+              </button>
+              @if (s.hasLogo) {
+                <button mat-stroked-button type="button" [disabled]="saving()" (click)="removeLogo()">
+                  <mat-icon>delete</mat-icon> {{ 'branding.removeLogo' | t }}
+                </button>
+              }
+            </div>
+            @if (selectedFile(); as file) {
+              <p class="hint" role="status">{{ 'branding.logoSelected' | t: { name: file.name } }}</p>
+            }
+            @if (fileError(); as message) {
+              <p class="error" role="alert">{{ message }}</p>
+            }
+            <p class="hint">{{ 'branding.logoHint' | t }}</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      @if (saveError(); as message) {
+        <p class="form-error" role="alert">{{ message }}</p>
       }
-    </mat-form-field>
 
-    <mat-form-field appearance="outline">
-      <mat-label>Support phone</mat-label>
-      <input matInput formControlName="supportPhone" maxlength="40" />
-    </mat-form-field>
+      <div class="actions">
+        <button mat-flat-button type="submit" [disabled]="form.pristine || form.invalid || saving()">{{ 'admin.settings.save' | t }}</button>
+        @if (conflict()) {
+          <button mat-stroked-button type="button" (click)="reload()">{{ 'admin.settings.reload' | t }}</button>
+        }
+      </div>
 
-    <mat-form-field appearance="outline">
-      <mat-label>Support information</mat-label>
-      <textarea matInput rows="5" formControlName="supportInformation" maxlength="1000"></textarea>
-      <mat-hint align="end">{{ form.controls.supportInformation.value.length }} / 1000</mat-hint>
-    </mat-form-field>
-
-    @if (saveError(); as message) {
-      <p class="form-error" role="alert">{{ message }}</p>
-    }
-
-    <div class="actions">
-      <button mat-flat-button type="submit" [disabled]="form.pristine || form.invalid || saving()">Save</button>
-      @if (conflict()) {
-        <button mat-stroked-button type="button" (click)="reload()">Reload</button>
-      }
-    </div>
-
-    <p class="hint">Informational only. These values are not used for tickets, SLA or messages yet.</p>
-  </form>
-}
+      <p class="hint">{{ 'admin.settings.brandingHint' | t }}</p>
+    </form>
+  }
+</crm-admin-section-nav>

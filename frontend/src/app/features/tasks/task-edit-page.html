@@ -1,29 +1,53 @@
-<crm-page-header [title]="isNew ? 'New task' : 'Task'" subtitle="Personal work items and optional in-app reminders." />
-
-<p><a routerLink="/tasks">← Back to tasks</a></p>
+<crm-page-header
+  icon="task_alt"
+  [title]="(isNew ? 'tasks.edit.titleNew' : 'tasks.edit.titleTask') | t"
+  [subtitle]="'tasks.list.subtitle' | t">
+  <a mat-stroked-button actions routerLink="/tasks"><mat-icon class="dir-icon">arrow_back</mat-icon> {{ 'tasks.edit.back' | t }}</a>
+</crm-page-header>
 
 @if (loadError(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
+  <crm-error-state [message]="message" />
 } @else if (isNew) {
   <mat-card appearance="outlined" class="stack">
     <mat-card-content>
       <form class="form" [formGroup]="form" (ngSubmit)="create()">
         <mat-form-field appearance="outline">
-          <mat-label>Title</mat-label>
+          <mat-label>{{ 'tasks.edit.fieldTitle' | t }}</mat-label>
           <input matInput formControlName="title" maxlength="200" required />
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Description</mat-label>
+          <mat-label>{{ 'tasks.edit.description' | t }}</mat-label>
           <textarea matInput rows="4" formControlName="description" maxlength="2000"></textarea>
         </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Due</mat-label>
-          <input matInput type="datetime-local" formControlName="due" />
-          <mat-hint>Uses your local time zone.</mat-hint>
-        </mat-form-field>
+        <div class="pair">
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'tasks.edit.dueDate' | t }}</mat-label>
+            <input matInput [matDatepicker]="dueDayPicker" formControlName="dueDay" />
+            <mat-datepicker-toggle matIconSuffix [for]="dueDayPicker" />
+            <mat-datepicker #dueDayPicker />
+            <mat-hint>{{ 'dates.inputFormatHint' | t }}</mat-hint>
+            @if (form.controls.dueDay.hasError('matDatepickerParse')) {
+              <mat-error>{{ 'validation.invalidDate' | t }}</mat-error>
+            } @else if (form.controls.dueDay.hasError('dateRequired')) {
+              <mat-error>{{ 'validation.dateRequired' | t }}</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'tasks.edit.dueTime' | t }}</mat-label>
+            <input matInput [matTimepicker]="dueTimePicker" formControlName="dueTime" />
+            <mat-timepicker-toggle matIconSuffix [for]="dueTimePicker" />
+            <mat-timepicker #dueTimePicker interval="15min" />
+            <mat-hint>{{ 'tasks.edit.localZone' | t }}</mat-hint>
+            @if (form.controls.dueTime.hasError('timeRequired')) {
+              <mat-error>{{ 'validation.timeRequired' | t }}</mat-error>
+            } @else if (form.controls.dueTime.hasError('matTimepickerParse')) {
+              <mat-error>{{ 'tasks.edit.invalidTime' | t }}</mat-error>
+            }
+          </mat-form-field>
+        </div>
         @if (isSuperAdmin()) {
           <mat-form-field appearance="outline">
-            <mat-label>Task owner</mat-label>
+            <mat-label>{{ 'tasks.edit.owner' | t }}</mat-label>
             <mat-select formControlName="ownerId" required>
               @for (a of activeAgents(); track a.id) {
                 <mat-option [value]="a.id">{{ a.firstName }} {{ a.lastName }}</mat-option>
@@ -32,19 +56,40 @@
           </mat-form-field>
         }
         <crm-ticket-picker [ownerUserId]="pickerOwner()" [requireOwner]="isSuperAdmin()" (selected)="selectedTicket.set($event)" />
-        <mat-slide-toggle formControlName="remind">Remind me</mat-slide-toggle>
+        <mat-slide-toggle formControlName="remind">{{ 'tasks.edit.remindMe' | t }}</mat-slide-toggle>
         @if (form.controls.remind.value) {
-          <mat-form-field appearance="outline">
-            <mat-label>Reminder time</mat-label>
-            <input matInput type="datetime-local" formControlName="remindAt" />
-            <mat-hint>Delivered in this app to {{ ownerName() }} only — no email, SMS or push. Times use your local time zone.</mat-hint>
-          </mat-form-field>
+          <div class="pair">
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'tasks.edit.reminderDate' | t }}</mat-label>
+              <input matInput [matDatepicker]="remindDayPicker" formControlName="remindDay" />
+              <mat-datepicker-toggle matIconSuffix [for]="remindDayPicker" />
+              <mat-datepicker #remindDayPicker />
+              <mat-hint>{{ 'dates.inputFormatHint' | t }}</mat-hint>
+              @if (form.controls.remindDay.hasError('matDatepickerParse')) {
+                <mat-error>{{ 'validation.invalidDate' | t }}</mat-error>
+              } @else if (form.controls.remindDay.hasError('dateRequired')) {
+                <mat-error>{{ 'validation.dateRequired' | t }}</mat-error>
+              }
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'tasks.edit.reminderTimeOnly' | t }}</mat-label>
+              <input matInput [matTimepicker]="remindTimePicker" formControlName="remindTime" />
+              <mat-timepicker-toggle matIconSuffix [for]="remindTimePicker" />
+              <mat-timepicker #remindTimePicker interval="15min" />
+              <mat-hint>{{ 'tasks.edit.reminderHint' | t: { name: ownerName() } }}</mat-hint>
+              @if (form.controls.remindTime.hasError('timeRequired')) {
+                <mat-error>{{ 'validation.timeRequired' | t }}</mat-error>
+              } @else if (form.controls.remindTime.hasError('matTimepickerParse')) {
+                <mat-error>{{ 'tasks.edit.invalidTime' | t }}</mat-error>
+              }
+            </mat-form-field>
+          </div>
         }
         @if (errors().create; as message) {
           <p class="form-error" role="alert">{{ message }}</p>
         }
         <div class="actions">
-          <button mat-flat-button type="submit" [disabled]="busy()">Create task</button>
+          <button mat-flat-button type="submit" [disabled]="busy()">{{ 'tasks.edit.createTask' | t }}</button>
         </div>
       </form>
     </mat-card-content>
@@ -53,41 +98,64 @@
   <div class="stack">
     <div class="actions">
       @if (t.isOverdue) {
-        <crm-status-badge label="Overdue" tone="error" />
+        <crm-status-badge [label]="'tasks.list.overdue' | t" tone="error" />
       } @else if (t.isDueSoon) {
-        <crm-status-badge label="Due soon" tone="pending" />
+        <crm-status-badge [label]="'tasks.list.dueSoon' | t" tone="pending" />
       }
-      <crm-status-badge [label]="t.status" [tone]="t.status === 'Completed' ? 'success' : 'pending'" />
+      <crm-status-badge [label]="'tasks.enums.status.' + t.status | t" [tone]="t.status === 'Completed' ? 'success' : 'pending'" />
       @if (t.isArchived) {
-        <crm-status-badge label="Archived" tone="neutral" />
+        <crm-status-badge [label]="'tasks.list.archived' | t" tone="neutral" />
       }
-      <span class="hint">Task owner: {{ t.assignedAgentName }} · Created by {{ t.createdByName }} · Updated {{ t.updatedAtUtc | date: 'medium' }}</span>
+      <span class="hint">{{
+        'tasks.edit.meta' | t: { owner: t.assignedAgentName, creator: t.createdByName, when: (t.updatedAtUtc | crmDate: 'medium') }
+      }}</span>
     </div>
 
     <mat-card appearance="outlined">
-      <mat-card-header><mat-card-title>Details</mat-card-title></mat-card-header>
+      <mat-card-header><mat-card-title>{{ 'common.details' | t }}</mat-card-title></mat-card-header>
       <mat-card-content>
         <form class="form" [formGroup]="form" (ngSubmit)="saveDetails()">
           <mat-form-field appearance="outline">
-            <mat-label>Title</mat-label>
+            <mat-label>{{ 'tasks.edit.fieldTitle' | t }}</mat-label>
             <input matInput formControlName="title" maxlength="200" required />
           </mat-form-field>
           <mat-form-field appearance="outline">
-            <mat-label>Description</mat-label>
+            <mat-label>{{ 'tasks.edit.description' | t }}</mat-label>
             <textarea matInput rows="4" formControlName="description" maxlength="2000"></textarea>
           </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>Due</mat-label>
-            <input matInput type="datetime-local" formControlName="due" />
-            <mat-hint>Uses your local time zone.</mat-hint>
-          </mat-form-field>
+          <div class="pair">
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'tasks.edit.dueDate' | t }}</mat-label>
+              <input matInput [matDatepicker]="editDueDayPicker" formControlName="dueDay" />
+              <mat-datepicker-toggle matIconSuffix [for]="editDueDayPicker" />
+              <mat-datepicker #editDueDayPicker />
+              <mat-hint>{{ 'dates.inputFormatHint' | t }}</mat-hint>
+              @if (form.controls.dueDay.hasError('matDatepickerParse')) {
+                <mat-error>{{ 'validation.invalidDate' | t }}</mat-error>
+              } @else if (form.controls.dueDay.hasError('dateRequired')) {
+                <mat-error>{{ 'validation.dateRequired' | t }}</mat-error>
+              }
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'tasks.edit.dueTime' | t }}</mat-label>
+              <input matInput [matTimepicker]="editDueTimePicker" formControlName="dueTime" />
+              <mat-timepicker-toggle matIconSuffix [for]="editDueTimePicker" />
+              <mat-timepicker #editDueTimePicker interval="15min" />
+              <mat-hint>{{ 'tasks.edit.localZone' | t }}</mat-hint>
+              @if (form.controls.dueTime.hasError('timeRequired')) {
+                <mat-error>{{ 'validation.timeRequired' | t }}</mat-error>
+              } @else if (form.controls.dueTime.hasError('matTimepickerParse')) {
+                <mat-error>{{ 'tasks.edit.invalidTime' | t }}</mat-error>
+              }
+            </mat-form-field>
+          </div>
           @if (errors().details; as message) {
             <p class="form-error" role="alert">{{ message }}</p>
           }
           <div class="actions">
-            <button mat-flat-button type="submit" [disabled]="busy() || t.isArchived">Save</button>
+            <button mat-flat-button type="submit" [disabled]="busy() || t.isArchived">{{ 'common.save' | t }}</button>
             @if (t.isArchived) {
-              <span class="hint">Restore the task before editing it.</span>
+              <span class="hint">{{ 'tasks.edit.restoreFirst' | t }}</span>
             }
           </div>
         </form>
@@ -95,28 +163,49 @@
     </mat-card>
 
     <mat-card appearance="outlined">
-      <mat-card-header><mat-card-title>Reminder</mat-card-title></mat-card-header>
+      <mat-card-header><mat-card-title>{{ 'tasks.list.reminder' | t }}</mat-card-title></mat-card-header>
       <mat-card-content>
         @if (t.remindAtUtc) {
-          <p>Scheduled for {{ t.remindAtUtc | date: 'medium' }}.</p>
+          <p>{{ 'tasks.edit.scheduledFor' | t: { when: (t.remindAtUtc | crmDate: 'medium') } }}</p>
         } @else if (t.reminderSentAtUtc) {
-          <p>Sent {{ t.reminderSentAtUtc | date: 'medium' }}.</p>
+          <p>{{ 'tasks.edit.sentAt' | t: { when: (t.reminderSentAtUtc | crmDate: 'medium') } }}</p>
         } @else {
-          <p>No reminder.</p>
+          <p>{{ 'tasks.edit.noReminder' | t }}</p>
         }
         <form class="form" [formGroup]="reminderForm" (ngSubmit)="saveReminder()">
-          <mat-form-field appearance="outline">
-            <mat-label>Reminder time</mat-label>
-            <input matInput type="datetime-local" formControlName="remindAt" />
-            <mat-hint>Delivered in this app to {{ t.assignedAgentName }} only — no email, SMS or push. Times use your local time zone.</mat-hint>
-          </mat-form-field>
+          <div class="pair">
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'tasks.edit.reminderDate' | t }}</mat-label>
+              <input matInput [matDatepicker]="reminderDayPicker" formControlName="remindDay" />
+              <mat-datepicker-toggle matIconSuffix [for]="reminderDayPicker" />
+              <mat-datepicker #reminderDayPicker />
+              <mat-hint>{{ 'dates.inputFormatHint' | t }}</mat-hint>
+              @if (reminderForm.controls.remindDay.hasError('matDatepickerParse')) {
+                <mat-error>{{ 'validation.invalidDate' | t }}</mat-error>
+              } @else if (reminderForm.controls.remindDay.hasError('required')) {
+                <mat-error>{{ 'validation.dateRequired' | t }}</mat-error>
+              }
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'tasks.edit.reminderTimeOnly' | t }}</mat-label>
+              <input matInput [matTimepicker]="reminderTimePicker" formControlName="remindTime" />
+              <mat-timepicker-toggle matIconSuffix [for]="reminderTimePicker" />
+              <mat-timepicker #reminderTimePicker interval="15min" />
+              <mat-hint>{{ 'tasks.edit.reminderHint' | t: { name: t.assignedAgentName } }}</mat-hint>
+              @if (reminderForm.controls.remindTime.hasError('matTimepickerParse')) {
+                <mat-error>{{ 'tasks.edit.invalidTime' | t }}</mat-error>
+              } @else if (reminderForm.controls.remindTime.hasError('required')) {
+                <mat-error>{{ 'validation.timeRequired' | t }}</mat-error>
+              }
+            </mat-form-field>
+          </div>
           @if (errors().reminder; as message) {
             <p class="form-error" role="alert">{{ message }}</p>
           }
           <div class="actions">
-            <button mat-flat-button type="submit" [disabled]="busy() || t.isArchived || t.status === 'Completed'">Save reminder</button>
+            <button mat-flat-button type="submit" [disabled]="busy() || t.isArchived || t.status === 'Completed'">{{ 'tasks.edit.saveReminder' | t }}</button>
             @if (t.remindAtUtc) {
-              <button mat-stroked-button type="button" [disabled]="busy()" (click)="cancelReminder()">Cancel reminder</button>
+              <button mat-stroked-button type="button" [disabled]="busy()" (click)="cancelReminder()">{{ 'tasks.edit.cancelReminder' | t }}</button>
             }
           </div>
         </form>
@@ -124,7 +213,7 @@
     </mat-card>
 
     <mat-card appearance="outlined">
-      <mat-card-header><mat-card-title>Status</mat-card-title></mat-card-header>
+      <mat-card-header><mat-card-title>{{ 'common.status' | t }}</mat-card-title></mat-card-header>
       <mat-card-content>
         @if (errors().status; as message) {
           <p class="form-error" role="alert">{{ message }}</p>
@@ -132,53 +221,53 @@
         <div class="actions">
           @if (!t.isArchived) {
             @if (t.status === 'Pending') {
-              <button mat-flat-button type="button" [disabled]="busy()" (click)="setCompleted(true)">Complete</button>
+              <button mat-flat-button type="button" [disabled]="busy()" (click)="setCompleted(true)">{{ 'tasks.edit.complete' | t }}</button>
             } @else {
-              <button mat-stroked-button type="button" [disabled]="busy()" (click)="setCompleted(false)">Reopen</button>
+              <button mat-stroked-button type="button" [disabled]="busy()" (click)="setCompleted(false)">{{ 'tasks.edit.reopen' | t }}</button>
             }
-            <button mat-stroked-button type="button" [disabled]="busy()" (click)="setArchived(true)">Archive</button>
+            <button mat-stroked-button type="button" [disabled]="busy()" (click)="setArchived(true)">{{ 'tasks.edit.archive' | t }}</button>
           } @else {
-            <button mat-flat-button type="button" [disabled]="busy()" (click)="setArchived(false)">Restore</button>
+            <button mat-flat-button type="button" [disabled]="busy()" (click)="setArchived(false)">{{ 'tasks.edit.restore' | t }}</button>
           }
         </div>
-        <p class="hint">Completing or archiving cancels a pending reminder; reopening or restoring does not recreate it.</p>
+        <p class="hint">{{ 'tasks.edit.statusHint' | t }}</p>
       </mat-card-content>
     </mat-card>
 
     <mat-card appearance="outlined">
-      <mat-card-header><mat-card-title>Linked ticket</mat-card-title></mat-card-header>
+      <mat-card-header><mat-card-title>{{ 'tasks.edit.linkedTicket' | t }}</mat-card-title></mat-card-header>
       <mat-card-content>
         @switch (t.linkedTicketState) {
           @case ('Accessible') {
-            <p>Ticket: <a [routerLink]="['/tickets', t.linkedTicketId]">{{ t.linkedTicketSubject }}</a></p>
+            <p>{{ 'tasks.list.ticket' | t }}: <a [routerLink]="['/tickets', t.linkedTicketId]">{{ t.linkedTicketSubject }}</a></p>
           }
           @case ('Inaccessible') {
             <p>
-              Linked ticket no longer accessible
+              {{ 'tasks.list.ticketInaccessible' | t }}
               @if (t.linkedTicketSubject) {
                 ({{ t.linkedTicketSubject }})
               }
-              — it is no longer assigned to the task owner.
+              — {{ 'tasks.edit.notAssignedToOwner' | t }}
             </p>
           }
           @default {
-            <p>No ticket linked.</p>
+            <p>{{ 'tasks.edit.noTicketLinked' | t }}</p>
           }
         }
         @if (errors().link; as message) {
           <p class="form-error" role="alert">{{ message }}</p>
         }
         @if (changingLink()) {
-          <crm-ticket-picker label="Ticket" [ownerUserId]="t.assignedAgentUserId" [requireOwner]="true" (selected)="changeTicket.set($event)" />
+          <crm-ticket-picker [label]="'tasks.list.ticket' | t" [ownerUserId]="t.assignedAgentUserId" [requireOwner]="true" (selected)="changeTicket.set($event)" />
           <div class="actions">
-            <button mat-flat-button type="button" [disabled]="busy() || !changeTicket()" (click)="saveLink()">Link ticket</button>
-            <button mat-button type="button" (click)="changingLink.set(false)">Cancel</button>
+            <button mat-flat-button type="button" [disabled]="busy() || !changeTicket()" (click)="saveLink()">{{ 'tasks.edit.linkTicket' | t }}</button>
+            <button mat-button type="button" (click)="changingLink.set(false)">{{ 'common.cancel' | t }}</button>
           </div>
         } @else if (!t.isArchived) {
           <div class="actions">
-            <button mat-stroked-button type="button" [disabled]="busy()" (click)="changingLink.set(true)">Change</button>
+            <button mat-stroked-button type="button" [disabled]="busy()" (click)="changingLink.set(true)">{{ 'tasks.edit.change' | t }}</button>
             @if (t.linkedTicketState !== 'None') {
-              <button mat-stroked-button type="button" [disabled]="busy()" (click)="removeLink()">Remove</button>
+              <button mat-stroked-button type="button" [disabled]="busy()" (click)="removeLink()">{{ 'common.remove' | t }}</button>
             }
           </div>
         }
@@ -187,24 +276,24 @@
 
     @if (isSuperAdmin()) {
       <mat-card appearance="outlined">
-        <mat-card-header><mat-card-title>Owner</mat-card-title></mat-card-header>
+        <mat-card-header><mat-card-title>{{ 'tasks.list.owner' | t }}</mat-card-title></mat-card-header>
         <mat-card-content>
           <form class="form" [formGroup]="ownerForm" (ngSubmit)="reassign()">
             <mat-form-field appearance="outline">
-              <mat-label>Task owner</mat-label>
+              <mat-label>{{ 'tasks.edit.owner' | t }}</mat-label>
               <mat-select formControlName="ownerId" required>
                 @for (a of activeAgents(); track a.id) {
                   <mat-option [value]="a.id">{{ a.firstName }} {{ a.lastName }}</mat-option>
                 }
               </mat-select>
             </mat-form-field>
-            <mat-checkbox formControlName="removeTicketLink">Remove the ticket link</mat-checkbox>
-            <p class="hint">Unread reminders for this task move to the new owner. The linked ticket must be assigned to the new owner, or remove the link.</p>
+            <mat-checkbox formControlName="removeTicketLink">{{ 'tasks.edit.removeTicketLink' | t }}</mat-checkbox>
+            <p class="hint">{{ 'tasks.edit.ownerHint' | t }}</p>
             @if (errors().owner; as message) {
               <p class="form-error" role="alert">{{ message }}</p>
             }
             <div class="actions">
-              <button mat-flat-button type="submit" [disabled]="busy() || t.isArchived">Reassign</button>
+              <button mat-flat-button type="submit" [disabled]="busy() || t.isArchived">{{ 'tasks.edit.reassign' | t }}</button>
             </div>
           </form>
         </mat-card-content>
@@ -212,5 +301,5 @@
     }
   </div>
 } @else if (loading()) {
-  <p>Loading…</p>
+  <p>{{ 'common.loading' | t }}</p>
 }

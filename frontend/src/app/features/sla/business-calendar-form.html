@@ -3,82 +3,125 @@
 }
 
 @if (loadError(); as message) {
-  <p class="form-error" role="alert">{{ message }}</p>
-  <button mat-stroked-button type="button" (click)="load()">Retry</button>
+  <crm-error-state [message]="message" (retry)="load()" />
 }
 
 @if (calendar(); as c) {
   <div class="stack">
     @if (!c.isConfigured) {
-      <p class="banner" role="status">
-        No business calendar saved yet. New tickets are not tracked until a calendar and an enabled policy exist. The values below are
-        suggestions only.
-      </p>
+      <p class="banner" role="status">{{ 'sla.calendar.notConfigured' | t }}</p>
     }
 
     <form [formGroup]="form" (ngSubmit)="save()" class="stack">
-      <mat-form-field appearance="outline">
-        <mat-label>Time zone</mat-label>
-        <input matInput formControlName="timeZoneId" list="crm-time-zones" autocomplete="off" />
-        <mat-hint>IANA id, e.g. Africa/Cairo</mat-hint>
-        @if (form.controls.timeZoneId.invalid) {
-          <mat-error>A time zone id is required</mat-error>
-        }
-      </mat-form-field>
-      <datalist id="crm-time-zones">
-        @for (zone of timeZones; track zone) {
-          <option [value]="zone"></option>
-        }
-      </datalist>
+      <mat-card appearance="outlined">
+        <mat-card-header>
+          <mat-card-title>{{ 'sla.calendar.hoursTitle' | t }}</mat-card-title>
+        </mat-card-header>
+        <mat-card-content class="card-body">
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'sla.calendar.timeZone' | t }}</mat-label>
+            <input matInput formControlName="timeZoneId" list="crm-time-zones" autocomplete="off" dir="ltr" />
+            <mat-hint>{{ 'sla.calendar.timeZoneHint' | t }}</mat-hint>
+            @if (form.controls.timeZoneId.invalid) {
+              <mat-error>{{ 'sla.calendar.timeZoneRequired' | t }}</mat-error>
+            }
+          </mat-form-field>
+          <datalist id="crm-time-zones">
+            @for (zone of timeZones; track zone) {
+              <option [value]="zone"></option>
+            }
+          </datalist>
 
-      <fieldset class="days">
-        <legend class="hint">Working days</legend>
-        @for (day of weekDays; track day) {
-          <mat-checkbox [checked]="isWorkingDay(day)" (change)="toggleDay(day, $event.checked)">{{ day }}</mat-checkbox>
-        }
-      </fieldset>
+          <fieldset class="days">
+            <legend class="hint">{{ 'sla.calendar.workingDays' | t }}</legend>
+            @for (day of weekDays; track day) {
+              <mat-checkbox [checked]="isWorkingDay(day)" (change)="toggleDay(day, $event.checked)">{{ 'sla.weekDays.' + day | t }}</mat-checkbox>
+            }
+          </fieldset>
 
-      <div class="grid">
-        <mat-form-field appearance="outline">
-          <mat-label>Opens at</mat-label>
-          <input matInput type="time" formControlName="opensAt" />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Closes at</mat-label>
-          <input matInput type="time" formControlName="closesAt" />
-        </mat-form-field>
-      </div>
+          <div class="grid">
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'sla.calendar.opensAt' | t }}</mat-label>
+              <input matInput [matTimepicker]="opensPicker" formControlName="opensAt" />
+              <mat-timepicker-toggle matIconSuffix [for]="opensPicker" />
+              <mat-timepicker #opensPicker interval="15min" />
+              <mat-hint>{{ 'dates.timeFormatHint' | t }}</mat-hint>
+              @if (form.controls.opensAt.hasError('matTimepickerParse')) {
+                <mat-error>{{ 'sla.calendar.invalidTime' | t }}</mat-error>
+              }
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'sla.calendar.closesAt' | t }}</mat-label>
+              <input matInput [matTimepicker]="closesPicker" formControlName="closesAt" />
+              <mat-timepicker-toggle matIconSuffix [for]="closesPicker" />
+              <mat-timepicker #closesPicker interval="15min" />
+              <mat-hint>{{ 'dates.timeFormatHint' | t }}</mat-hint>
+              @if (form.controls.closesAt.hasError('matTimepickerParse')) {
+                <mat-error>{{ 'sla.calendar.invalidTime' | t }}</mat-error>
+              }
+            </mat-form-field>
+          </div>
+        </mat-card-content>
+      </mat-card>
 
-      <h2>Holidays</h2>
-      <div class="inline">
-        <mat-form-field appearance="outline">
-          <mat-label>Date</mat-label>
-          <input matInput type="date" [formControl]="holidayDate" />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Name</mat-label>
-          <input matInput [formControl]="holidayName" maxlength="100" />
-        </mat-form-field>
-        <button mat-stroked-button type="button" (click)="addHoliday()">Add</button>
-      </div>
-      @if (sortedHolidays().length === 0) {
-        <p class="hint">No holidays. Closed weekdays and holidays never count as business time.</p>
-      }
-      <ul class="list">
-        @for (h of sortedHolidays(); track h.date) {
-          <li class="list-item">
-            <span class="grow">{{ h.date }} · {{ h.name }}</span>
-            <button mat-icon-button type="button" [attr.aria-label]="'Remove holiday ' + h.name" (click)="removeHoliday(h.date)">
-              <mat-icon>close</mat-icon>
-            </button>
-          </li>
-        }
-      </ul>
+      <mat-card appearance="outlined">
+        <mat-card-header>
+          <mat-card-title>{{ 'sla.calendar.holidays' | t }}</mat-card-title>
+        </mat-card-header>
+        <mat-card-content class="card-body">
+          <div class="inline">
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'sla.calendar.holidayDate' | t }}</mat-label>
+              <input matInput [matDatepicker]="holidayPicker" [formControl]="holidayDate" />
+              <mat-datepicker-toggle matIconSuffix [for]="holidayPicker" />
+              <mat-datepicker #holidayPicker />
+              <mat-hint>{{ 'dates.inputFormatHint' | t }}</mat-hint>
+              @if (holidayDate.hasError('matDatepickerParse')) {
+                <mat-error>{{ 'validation.invalidDate' | t }}</mat-error>
+              }
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'common.name' | t }}</mat-label>
+              <input matInput [formControl]="holidayName" maxlength="100" />
+            </mat-form-field>
+            <button mat-stroked-button type="button" (click)="addHoliday()">{{ 'common.add' | t }}</button>
+          </div>
+          @if (sortedHolidays().length === 0) {
+            <p class="hint">{{ 'sla.calendar.noHolidays' | t }}</p>
+          } @else {
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">{{ 'sla.calendar.holidayDate' | t }}</th>
+                    <th scope="col">{{ 'common.name' | t }}</th>
+                    <th scope="col"><span class="visually-hidden">{{ 'common.actions' | t }}</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (h of sortedHolidays(); track h.date) {
+                    <tr>
+                      <td>{{ formatDay(h.date) }}</td>
+                      <td class="wrap">{{ h.name }}</td>
+                      <td>
+                        <button
+                          mat-icon-button
+                          type="button"
+                          [attr.aria-label]="'sla.calendar.removeHoliday' | t: { name: h.name }"
+                          (click)="removeHoliday(h.date)">
+                          <mat-icon>close</mat-icon>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
 
-      <p class="hint">
-        Changes apply to tickets created afterwards. Existing due times never change; remaining business time shown on existing tickets
-        uses the current calendar.
-      </p>
+      <p class="hint">{{ 'sla.calendar.applyHint' | t }}</p>
       @if (clientError(); as message) {
         <p class="form-error" role="alert">{{ message }}</p>
       }
@@ -86,31 +129,55 @@
         <p class="form-error" role="alert">{{ message }}</p>
       }
       <div class="inline">
-        <button mat-flat-button type="submit" [disabled]="saving() || !!clientError()">Save calendar</button>
+        <button mat-flat-button type="submit" [disabled]="saving() || !!clientError()">{{ 'sla.calendar.save' | t }}</button>
         @if (c.isConfigured && c.updatedAtUtc) {
-          <span class="hint">Last saved {{ c.updatedAtUtc | date: 'medium' }} by {{ c.updatedByName }}</span>
+          <span class="hint">{{ 'sla.calendar.lastSaved' | t: { when: (c.updatedAtUtc | crmDate: 'medium'), name: c.updatedByName ?? '' } }}</span>
         }
       </div>
     </form>
 
-    <h2>Due-date preview</h2>
-    <p class="hint">Uses the saved calendar. Leave the start empty to start now.</p>
-    <div class="inline">
-      <mat-form-field appearance="outline">
-        <mat-label>Start (your time)</mat-label>
-        <input matInput type="datetime-local" [formControl]="previewStart" />
-      </mat-form-field>
-      <mat-form-field appearance="outline">
-        <mat-label>Business minutes</mat-label>
-        <input matInput type="number" min="1" step="1" [formControl]="previewMinutes" />
-      </mat-form-field>
-      <button mat-stroked-button type="button" [disabled]="previewing() || previewMinutes.invalid" (click)="runPreview()">Preview</button>
-    </div>
-    @if (previewError(); as message) {
-      <p class="form-error" role="alert">{{ message }}</p>
-    }
-    @if (preview(); as p) {
-      <p>Due {{ p.dueAtUtc | date: 'full' }} (your time) — calendar zone {{ p.timeZoneId }}</p>
-    }
+    <mat-card appearance="outlined">
+      <mat-card-header>
+        <mat-card-title>{{ 'sla.calendar.previewTitle' | t }}</mat-card-title>
+      </mat-card-header>
+      <mat-card-content class="card-body">
+        <p class="hint">{{ 'sla.calendar.previewHint' | t }}</p>
+        <div class="inline">
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'sla.calendar.previewDay' | t }}</mat-label>
+            <input matInput [matDatepicker]="previewDayPicker" [formControl]="previewDay" />
+            <mat-datepicker-toggle matIconSuffix [for]="previewDayPicker" />
+            <mat-datepicker #previewDayPicker />
+            <mat-hint>{{ 'dates.inputFormatHint' | t }}</mat-hint>
+            @if (previewDay.hasError('matDatepickerParse')) {
+              <mat-error>{{ 'validation.invalidDate' | t }}</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'sla.calendar.previewTime' | t }}</mat-label>
+            <input matInput [matTimepicker]="previewTimePicker" [formControl]="previewTime" />
+            <mat-timepicker-toggle matIconSuffix [for]="previewTimePicker" />
+            <mat-timepicker #previewTimePicker interval="15min" />
+            <mat-hint>{{ 'dates.timeFormatHint' | t }}</mat-hint>
+            @if (previewTime.hasError('matTimepickerParse')) {
+              <mat-error>{{ 'sla.calendar.invalidTime' | t }}</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'sla.calendar.businessMinutes' | t }}</mat-label>
+            <input matInput type="number" min="1" step="1" [formControl]="previewMinutes" />
+          </mat-form-field>
+          <button mat-stroked-button type="button" [disabled]="previewing() || previewMinutes.invalid" (click)="runPreview()">
+            {{ 'sla.calendar.preview' | t }}
+          </button>
+        </div>
+        @if (previewError(); as message) {
+          <p class="form-error" role="alert">{{ message }}</p>
+        }
+        @if (preview(); as p) {
+          <p>{{ 'sla.calendar.previewResult' | t: { due: (p.dueAtUtc | crmDate: 'full'), zone: p.timeZoneId } }}</p>
+        }
+      </mat-card-content>
+    </mat-card>
   </div>
 }

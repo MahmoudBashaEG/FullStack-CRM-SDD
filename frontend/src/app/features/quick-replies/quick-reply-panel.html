@@ -1,6 +1,6 @@
-<p class="hint">{{ hint }}</p>
+<p class="hint">{{ 'quickReplies.copyHint' | t }}</p>
 <mat-form-field appearance="outline" class="search">
-  <mat-label>Search quick replies</mat-label>
+  <mat-label>{{ 'quickReplies.panel.search' | t }}</mat-label>
   <input matInput type="search" [formControl]="search" />
   <mat-icon matSuffix>search</mat-icon>
 </mat-form-field>
@@ -13,10 +13,10 @@
   @for (q of items(); track q.id) {
     <li class="row">
       <span class="row-title">{{ q.title }}</span>
-      <button mat-stroked-button type="button" (click)="copy(q)"><mat-icon>content_copy</mat-icon> Copy</button>
+      <button mat-stroked-button type="button" (click)="copy(q)"><mat-icon>content_copy</mat-icon> {{ 'common.copy' | t }}</button>
     </li>
   } @empty {
-    <li class="hint">No quick replies match.</li>
+    <li class="hint">{{ 'quickReplies.panel.empty' | t }}</li>
   }
 </ul>
-<p><a routerLink="/quick-replies">Manage quick replies</a></p>
+<p><a routerLink="/quick-replies">{{ 'quickReplies.panel.manage' | t }}</a></p>

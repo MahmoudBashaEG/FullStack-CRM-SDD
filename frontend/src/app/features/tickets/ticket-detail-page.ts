@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, WritableSignal, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -7,13 +6,19 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
+import { MatTabsModule } from '@angular/material/tabs';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
 import { describeHttpError } from '../../core/api/describe-http-error';
 import { AuthService } from '../../core/auth/auth-service';
+import { I18n } from '../../core/i18n/i18n';
+import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
+import { tabQuery } from '../../shared/ui/tab-query';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
 import { Agent } from '../agents/agent-models';
 import { AgentsApi } from '../agents/agents-api';
@@ -39,13 +44,16 @@ import {
 import { ticketActions } from './ticket-workflow';
 import { TicketsApi } from './tickets-api';
 
+const TICKET_TABS = ['overview', 'details', 'activity', 'collaboration', 'knowledge', 'ai'] as const;
+
 @Component({
   selector: 'crm-ticket-detail-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ReactiveFormsModule,
     RouterLink,
-    DatePipe,
+    LocalizedDatePipe,
+    TranslatePipe,
     PageHeader,
     StatusBadge,
     TicketActivityList,
@@ -60,6 +68,8 @@ import { TicketsApi } from './tickets-api';
     MatInputModule,
     MatSelectModule,
     MatButtonModule,
+    MatIconModule,
+    MatTabsModule,
   ],
   templateUrl: './ticket-detail-page.html',
   styleUrl: './ticket-detail-page.scss',
@@ -71,12 +81,13 @@ export class TicketDetailPage {
   private readonly snackBar = inject(MatSnackBar);
   private readonly destroyRef = inject(DestroyRef);
   private readonly fb = inject(NonNullableFormBuilder);
+  protected readonly i18n = inject(I18n);
+  protected readonly tabs = tabQuery(TICKET_TABS);
   private readonly id = inject(ActivatedRoute).snapshot.paramMap.get('id') ?? '';
 
   protected readonly categories = TICKET_CATEGORIES;
   protected readonly priorities = TICKET_PRIORITIES;
   protected readonly priorityTone = priorityTone;
-  protected readonly statusLabel = statusLabel;
   protected readonly statusTone = statusTone;
   protected readonly ticket = signal<Ticket | null>(null);
   protected readonly loadError = signal<string | null>(null);
@@ -84,7 +95,7 @@ export class TicketDetailPage {
   protected readonly isSuperAdmin = computed(() => this.auth.role() === 'SuperAdmin');
   protected readonly actions = computed(() => {
     const t = this.ticket();
-    return t ? ticketActions(t, this.auth.currentUser()) : null;
+    return t ? ticketActions(t, this.auth.currentUser(), this.i18n.t) : null;
   });
   protected readonly canMarkResponded = computed(() => {
     const t = this.ticket();
@@ -117,7 +128,7 @@ export class TicketDetailPage {
       .subscribe({
         next: ticket => this.show(ticket),
         error: (error: HttpErrorResponse) =>
-          this.loadError.set(describeHttpError(error, 'Could not load the ticket.')),
+          this.loadError.set(describeHttpError(error, this.i18n.t('tickets.detail.loadError'), this.i18n.t)),
       });
 
     // Agents never call /api/v1/agents (SuperAdmin-only endpoint); the server re-validates the assignee anyway.
@@ -128,7 +139,7 @@ export class TicketDetailPage {
         .subscribe({
           next: agents => this.activeAgents.set(agents.filter(a => a.isActive)),
           error: (error: HttpErrorResponse) =>
-            this.agentsError.set(describeHttpError(error, 'Could not load agents.')),
+            this.agentsError.set(describeHttpError(error, this.i18n.t('tickets.detail.agentsError'), this.i18n.t)),
         });
     }
   }
@@ -173,7 +184,7 @@ export class TicketDetailPage {
           this.show(updated);
           this.activityRefresh.update(v => v + 1);
           this.saving.set(false);
-          this.snackBar.open('Ticket updated.', undefined, { duration: 3000 });
+          this.snackBar.open(this.i18n.t('tickets.detail.messages.updated'), undefined, { duration: 3000 });
         },
         error: (error: HttpErrorResponse) => {
           this.saving.set(false);
@@ -183,7 +194,7 @@ export class TicketDetailPage {
   }
 
   protected transition(current: Ticket, to: TicketStatus): void {
-    this.run(this.api.transition(this.id, { fromStatus: current.status, toStatus: to }), `Status changed to ${statusLabel(to)}.`);
+    this.run(this.api.transition(this.id, { fromStatus: current.status, toStatus: to }), this.i18n.t('tickets.detail.messages.statusChanged', { status: statusLabel(to, this.i18n.t) }));
   }
 
   /** True while the agent list has not loaded (or failed), so the "inactive" hint is never shown on a guess. */
@@ -192,11 +203,11 @@ export class TicketDetailPage {
   }
 
   protected saveAssignee(): void {
-    this.run(this.api.changeAssignee(this.id, { assignedAgentUserId: this.selectedAssignee() }), 'Assignment updated.');
+    this.run(this.api.changeAssignee(this.id, { assignedAgentUserId: this.selectedAssignee() }), this.i18n.t('tickets.detail.messages.assignmentUpdated'));
   }
 
   protected markResponded(): void {
-    this.run(this.api.recordFirstResponse(this.id), 'First response recorded.');
+    this.run(this.api.recordFirstResponse(this.id), this.i18n.t('tickets.detail.messages.firstResponse'));
   }
 
   protected escalate(): void {
@@ -204,11 +215,11 @@ export class TicketDetailPage {
       this.escalationReason.markAsTouched();
       return;
     }
-    this.run(this.api.escalate(this.id, { reason: this.escalationReason.value.trim() }), 'Ticket escalated.');
+    this.run(this.api.escalate(this.id, { reason: this.escalationReason.value.trim() }), this.i18n.t('tickets.detail.messages.escalated'));
   }
 
   protected clearEscalation(): void {
-    this.run(this.api.clearEscalation(this.id), 'Escalation cleared.');
+    this.run(this.api.clearEscalation(this.id), this.i18n.t('tickets.detail.messages.escalationCleared'));
   }
 
   private run(request: Observable<Ticket>, success: string): void {
@@ -240,10 +251,10 @@ export class TicketDetailPage {
   private handleActionError(error: HttpErrorResponse, target: WritableSignal<string | null> = this.actionError): void {
     if (error.status === 404) {
       this.ticket.set(null);
-      this.loadError.set('This ticket is no longer available to you. It may have been reassigned.');
+      this.loadError.set(this.i18n.t('tickets.detail.gone'));
       return;
     }
-    target.set(describeHttpError(error, 'The action could not be completed.'));
+    target.set(describeHttpError(error, this.i18n.t('tickets.detail.actionError'), this.i18n.t));
     if (error.status === 409) {
       this.reload();
     }
@@ -258,7 +269,7 @@ export class TicketDetailPage {
   /** The internal discussion returned 404: the caller lost access, same handling as any other 404 on this page. */
   protected onAccessLost(): void {
     this.ticket.set(null);
-    this.loadError.set('This ticket is no longer available to you. It may have been reassigned.');
+    this.loadError.set(this.i18n.t('tickets.detail.gone'));
   }
 
   private reload(): void {

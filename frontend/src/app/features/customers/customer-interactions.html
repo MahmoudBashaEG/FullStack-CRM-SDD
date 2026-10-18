@@ -1,20 +1,42 @@
-<p class="hint">Manual log only — no email, WhatsApp or SMS is sent or received. Interactions cannot be edited or deleted.</p>
+<p class="hint">{{ 'customers.interactions.hint' | t }}</p>
 
 <form class="composer" [formGroup]="form" (submit)="$event.preventDefault(); save()">
   <mat-form-field appearance="outline">
-    <mat-label>Type</mat-label>
+    <mat-label>{{ 'customers.interactions.type' | t }}</mat-label>
     <mat-select formControlName="type">
       @for (t of types; track t) {
-        <mat-option [value]="t">{{ typeLabel(t) }}</mat-option>
+        <mat-option [value]="t">{{ typeLabel(t, i18n.t) }}</mat-option>
       }
     </mat-select>
   </mat-form-field>
+  <div class="when">
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'customers.interactions.occurredDay' | t }}</mat-label>
+      <input matInput [matDatepicker]="dayPicker" formControlName="occurredDay" required />
+      <mat-datepicker-toggle matIconSuffix [for]="dayPicker" />
+      <mat-datepicker #dayPicker />
+      <mat-hint>{{ 'dates.inputFormatHint' | t }}</mat-hint>
+      @if (form.controls.occurredDay.hasError('matDatepickerParse')) {
+        <mat-error>{{ 'validation.invalidDate' | t }}</mat-error>
+      } @else if (form.controls.occurredDay.hasError('required')) {
+        <mat-error>{{ 'validation.dateRequired' | t }}</mat-error>
+      }
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'customers.interactions.occurredTime' | t }}</mat-label>
+      <input matInput [matTimepicker]="timePicker" formControlName="occurredTime" required />
+      <mat-timepicker-toggle matIconSuffix [for]="timePicker" />
+      <mat-timepicker #timePicker interval="15min" />
+      <mat-hint>{{ 'dates.timeFormatHint' | t }}</mat-hint>
+      @if (form.controls.occurredTime.hasError('matTimepickerParse')) {
+        <mat-error>{{ 'customers.interactions.invalidTime' | t }}</mat-error>
+      } @else if (form.controls.occurredTime.hasError('timeRequired')) {
+        <mat-error>{{ 'validation.timeRequired' | t }}</mat-error>
+      }
+    </mat-form-field>
+  </div>
   <mat-form-field appearance="outline">
-    <mat-label>Occurred at</mat-label>
-    <input matInput type="datetime-local" formControlName="occurredAt" required />
-  </mat-form-field>
-  <mat-form-field appearance="outline">
-    <mat-label>Summary</mat-label>
+    <mat-label>{{ 'customers.interactions.summary' | t }}</mat-label>
     <textarea matInput rows="3" formControlName="summary" maxlength="500" required></textarea>
     <mat-hint align="end">{{ form.controls.summary.value.length }} / 500</mat-hint>
   </mat-form-field>
@@ -22,7 +44,7 @@
     <p class="form-error" role="alert">{{ message }}</p>
   }
   <div>
-    <button mat-flat-button type="submit" [disabled]="saving() || !form.controls.summary.value.trim()">Save interaction</button>
+    <button mat-flat-button type="submit" [disabled]="saving() || !form.controls.summary.value.trim()">{{ 'customers.interactions.save' | t }}</button>
   </div>
 </form>
 
@@ -32,20 +54,20 @@
 
 @if (error(); as message) {
   <p class="form-error" role="alert">{{ message }}</p>
-  <button mat-button type="button" (click)="retry()">Retry</button>
+  <button mat-button type="button" (click)="retry()">{{ 'common.retry' | t }}</button>
 }
 
 @if (loaded() && items().length === 0 && !error()) {
-  <p class="hint">No interactions logged yet.</p>
+  <crm-empty-state icon="forum" [message]="'customers.interactions.empty' | t" />
 }
 
 <div class="thread">
   @for (i of items(); track i.id) {
     <article>
       <header class="record-meta">
-        <crm-status-badge [label]="typeLabel(i.type)" tone="neutral" />
-        <span class="hint">{{ i.occurredAtUtc | date: 'medium' }}</span>
-        <span class="hint">Recorded by {{ i.recordedByName }}</span>
+        <crm-status-badge [label]="typeLabel(i.type, i18n.t)" tone="neutral" />
+        <span class="hint">{{ i.occurredAtUtc | crmDate: 'medium' }}</span>
+        <span class="hint">{{ 'customers.interactions.recordedBy' | t: { name: i.recordedByName } }}</span>
       </header>
       <p class="user-text">{{ i.summary }}</p>
     </article>
@@ -53,5 +75,5 @@
 </div>
 
 @if (hasMore() && !loading()) {
-  <button mat-button type="button" (click)="loadMore()">Load older interactions</button>
+  <button mat-button type="button" (click)="loadMore()">{{ 'customers.interactions.loadMore' | t }}</button>
 }

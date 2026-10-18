@@ -4,6 +4,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signa
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -16,11 +17,15 @@ import { RouterLink } from '@angular/router';
 import { EMPTY, Subject, catchError, debounceTime, switchMap } from 'rxjs';
 import { describeHttpError } from '../../core/api/describe-http-error';
 import { AuthService } from '../../core/auth/auth-service';
+import { I18n } from '../../core/i18n/i18n';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { EmptyState } from '../../shared/ui/empty-state/empty-state';
+import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
 import { TICKET_CATEGORIES, TicketCategory } from '../tickets/ticket-models';
 import { copyQuickReply } from './copy-quick-reply';
-import { QUICK_REPLY_COPY_HINT, QuickReply, QuickReplyListParams, QuickReplyScope } from './quick-reply-models';
+import { QuickReply, QuickReplyListParams, QuickReplyScope } from './quick-reply-models';
 import { QuickRepliesApi } from './quick-replies-api';
 
 @Component({
@@ -30,6 +35,10 @@ import { QuickRepliesApi } from './quick-replies-api';
     ReactiveFormsModule,
     RouterLink,
     PageHeader,
+    TranslatePipe,
+    MatCardModule,
+    EmptyState,
+    ErrorState,
     StatusBadge,
     MatPaginatorModule,
     MatFormFieldModule,
@@ -44,6 +53,7 @@ import { QuickRepliesApi } from './quick-replies-api';
   styleUrl: './quick-reply-list-page.scss',
 })
 export class QuickReplyListPage {
+  private readonly i18n = inject(I18n);
   private readonly api = inject(QuickRepliesApi);
   private readonly auth = inject(AuthService);
   private readonly clipboard = inject(Clipboard);
@@ -51,7 +61,6 @@ export class QuickReplyListPage {
   private readonly destroyRef = inject(DestroyRef);
   private readonly requests = new Subject<QuickReplyListParams>();
 
-  protected readonly hint = QUICK_REPLY_COPY_HINT;
   protected readonly isSuperAdmin = computed(() => this.auth.role() === 'SuperAdmin');
   protected readonly categories = TICKET_CATEGORIES;
   protected readonly pageSizeOptions = [10, 20, 50];
@@ -74,7 +83,7 @@ export class QuickReplyListPage {
         switchMap(params =>
           this.api.list(params).pipe(
             catchError((error: HttpErrorResponse) => {
-              this.error.set(describeHttpError(error, 'Could not load quick replies.'));
+              this.error.set(describeHttpError(error, this.i18n.t('quickReplies.list.loadFailed'), this.i18n.t));
               this.loading.set(false);
               return EMPTY;
             }),
@@ -95,13 +104,13 @@ export class QuickReplyListPage {
   }
 
   protected copy(item: QuickReply): void {
-    copyQuickReply(this.clipboard, this.snackBar, item.body);
+    copyQuickReply(this.clipboard, this.snackBar, item.body, this.i18n.t);
   }
 
   protected setArchived(item: QuickReply, archived: boolean): void {
     (archived ? this.api.archive(item.id) : this.api.restore(item.id)).subscribe({
       next: () => this.load(this.page()),
-      error: (error: HttpErrorResponse) => this.error.set(describeHttpError(error, 'Could not change the quick reply.')),
+      error: (error: HttpErrorResponse) => this.error.set(describeHttpError(error, this.i18n.t('quickReplies.list.changeFailed'), this.i18n.t)),
     });
   }
 

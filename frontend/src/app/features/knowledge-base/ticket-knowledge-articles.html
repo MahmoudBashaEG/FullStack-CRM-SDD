@@ -1,8 +1,7 @@
-<h3 class="hint">Linked articles</h3>
+<h3 class="hint">{{ 'kb.ticket.linked' | t }}</h3>
 
 @if (loadError(); as message) {
-  <p class="form-error" role="alert">{{ message }}</p>
-  <button mat-stroked-button type="button" (click)="reloadLinks()">Retry</button>
+  <crm-error-state [message]="message" (retry)="reloadLinks()" />
 }
 
 <ul class="rows">
@@ -12,21 +11,21 @@
         <a class="row-title" [routerLink]="['/knowledge-base', l.articleId]">{{ l.articleTitle }}</a>
       } @else {
         <span class="row-title">{{ l.articleTitle }}</span>
-        <crm-status-badge [label]="statusLabel(l.articleStatus)" [tone]="statusTone(l.articleStatus)" />
-        <span class="hint">No longer published — its content is hidden.</span>
+        <crm-status-badge [label]="statusLabel(l.articleStatus, i18n.t)" [tone]="statusTone(l.articleStatus)" />
+        <span class="hint">{{ 'kb.ticket.notPublished' | t }}</span>
       }
-      <span class="hint">{{ typeLabel(l.articleType) }} · {{ l.categoryName }}</span>
-      <p class="meta">Linked by {{ l.linkedByName }} · {{ l.linkedAtUtc | date: 'medium' }}</p>
-      <button mat-button type="button" [disabled]="busy()" (click)="unlink(l)">Unlink</button>
+      <span class="hint">{{ typeLabel(l.articleType, i18n.t) }} · {{ l.categoryName }}</span>
+      <p class="meta">{{ 'kb.ticket.linkedBy' | t: { name: l.linkedByName, date: (l.linkedAtUtc | crmDate: 'medium') } }}</p>
+      <button mat-button type="button" [disabled]="busy()" (click)="unlink(l)">{{ 'kb.ticket.unlink' | t }}</button>
     </li>
   } @empty {
-    <li class="hint">No articles linked to this ticket yet.</li>
+    <li class="hint">{{ 'kb.ticket.noLinks' | t }}</li>
   }
 </ul>
 
-<h3 class="hint">Find an article</h3>
+<h3 class="hint">{{ 'kb.ticket.find' | t }}</h3>
 <mat-form-field appearance="outline" class="search">
-  <mat-label>Search published articles</mat-label>
+  <mat-label>{{ 'kb.ticket.searchLabel' | t }}</mat-label>
   <input matInput type="search" [formControl]="search" />
   <mat-icon matSuffix>search</mat-icon>
 </mat-form-field>
@@ -39,11 +38,11 @@
   @for (a of results(); track a.id) {
     <li class="row">
       <span class="row-title">{{ a.title }}</span>
-      <span class="hint">{{ typeLabel(a.type) }} · {{ a.categoryName }}</span>
+      <span class="hint">{{ typeLabel(a.type, i18n.t) }} · {{ a.categoryName }}</span>
       <div class="actions">
-        <button mat-stroked-button type="button" (click)="read(a)">{{ selected()?.id === a.id ? 'Close' : 'Read' }}</button>
+        <button mat-stroked-button type="button" (click)="read(a)">{{ (selected()?.id === a.id ? 'kb.ticket.close' : 'kb.ticket.read') | t }}</button>
         <button mat-stroked-button type="button" [disabled]="busy() || isLinked(a.id)" (click)="link(a)">
-          {{ isLinked(a.id) ? 'Linked' : 'Link' }}
+          {{ (isLinked(a.id) ? 'kb.ticket.linkedState' : 'kb.ticket.link') | t }}
         </button>
       </div>
       @if (rowError(); as row) {
@@ -55,14 +54,14 @@
         @if (s.id === a.id) {
           <div class="meta">
             <crm-markdown-view [source]="s.body" />
-            <button mat-stroked-button type="button" (click)="copy(s)"><mat-icon>content_copy</mat-icon> Copy</button>
-            <p class="hint">{{ copyHint }}</p>
+            <button mat-stroked-button type="button" (click)="copy(s)"><mat-icon>content_copy</mat-icon> {{ 'common.copy' | t }}</button>
+            <p class="hint">{{ 'kb.copyHint' | t }}</p>
           </div>
         }
       }
     </li>
   } @empty {
-    <li class="hint">No published articles match.</li>
+    <li class="hint">{{ 'kb.ticket.noResults' | t }}</li>
   }
 </ul>
-<p><a routerLink="/knowledge-base">Open the Knowledge Base</a></p>
+<p><a routerLink="/knowledge-base">{{ 'kb.ticket.open' | t }}</a></p>

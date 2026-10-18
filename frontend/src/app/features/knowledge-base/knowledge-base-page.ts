@@ -1,9 +1,9 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -14,8 +14,14 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { EMPTY, Subject, catchError, debounceTime, switchMap } from 'rxjs';
 import { describeHttpError } from '../../core/api/describe-http-error';
 import { AuthService } from '../../core/auth/auth-service';
+import { I18n } from '../../core/i18n/i18n';
+import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { EmptyState } from '../../shared/ui/empty-state/empty-state';
+import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
+import { KbSectionNav } from './kb-section-nav';
 import { KnowledgeBaseApi } from './knowledge-base-api';
 import {
   ARTICLE_TYPES,
@@ -41,7 +47,12 @@ const VIEW_STATUS: Record<ArticleView, KnowledgeArticleStatus | null> = {
   imports: [
     ReactiveFormsModule,
     RouterLink,
-    DatePipe,
+    TranslatePipe,
+    LocalizedDatePipe,
+    MatCardModule,
+    KbSectionNav,
+    EmptyState,
+    ErrorState,
     PageHeader,
     StatusBadge,
     MatPaginatorModule,
@@ -56,6 +67,7 @@ const VIEW_STATUS: Record<ArticleView, KnowledgeArticleStatus | null> = {
   styleUrl: './knowledge-base-page.scss',
 })
 export class KnowledgeBasePage {
+  protected readonly i18n = inject(I18n);
   private readonly api = inject(KnowledgeBaseApi);
   private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
@@ -67,18 +79,9 @@ export class KnowledgeBasePage {
   protected readonly statusLabel = articleStatusLabel;
   protected readonly statusTone = articleStatusTone;
   protected readonly pageSizeOptions = [10, 20, 50];
-  protected readonly views: readonly { value: ArticleView; label: string }[] = this.isSuperAdmin()
-    ? [
-        { value: 'published', label: 'Published' },
-        { value: 'review', label: 'Ready for Publication' },
-        { value: 'all', label: 'All statuses' },
-        { value: 'archived', label: 'Archived' },
-        { value: 'mine', label: 'My articles' },
-      ]
-    : [
-        { value: 'published', label: 'Published' },
-        { value: 'mine', label: 'My articles' },
-      ];
+  protected readonly views: readonly { value: ArticleView }[] = this.isSuperAdmin()
+    ? [{ value: 'published' }, { value: 'review' }, { value: 'all' }, { value: 'archived' }, { value: 'mine' }]
+    : [{ value: 'published' }, { value: 'mine' }];
   protected readonly filters = inject(NonNullableFormBuilder).group({
     search: [''],
     type: [null as KnowledgeArticleType | null],
@@ -100,7 +103,7 @@ export class KnowledgeBasePage {
         switchMap(params =>
           this.api.listArticles(params).pipe(
             catchError((error: HttpErrorResponse) => {
-              this.error.set(describeHttpError(error, 'Could not load articles.'));
+              this.error.set(describeHttpError(error, this.i18n.t('kb.list.loadFailed'), this.i18n.t));
               this.loading.set(false);
               return EMPTY;
             }),

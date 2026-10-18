@@ -21,7 +21,8 @@ internal static class OrganizationSettingsMapper
 
     public static async Task<OrganizationSettingsDetails> ToDetailsAsync(
         OrganizationSettings s, IOrganizationSettingsRepository repository, CancellationToken ct) =>
-        new(s.IsConfigured, s.DisplayName, s.SupportEmail, s.SupportPhone, s.SupportInformation, s.UpdatedAtUtc,
+        new(s.IsConfigured, s.DisplayName, s.SupportEmail, s.SupportPhone, s.SupportInformation,
+            s.AccentColor, s.HasLogo, s.LogoContentType, s.LogoSizeBytes, s.LogoUpdatedAtUtc, s.LogoVersion, s.UpdatedAtUtc,
             s.UpdatedByUserId is { } by ? await repository.FindUserNameAsync(by, ct) : null,
             repository.GetVersion(s));
 }

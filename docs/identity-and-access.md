@@ -97,6 +97,8 @@ Roles are assigned by the server only. Angular guards and navigation filtering a
 | PUT | `/api/v1/admin/users/{id}/status` | SuperAdmin | 200 |
 | GET | `/api/v1/admin/audit-logs` | SuperAdmin | 200 |
 | GET / PUT | `/api/v1/admin/organization-settings` | SuperAdmin | 200 |
+| GET | `/api/v1/branding`, `/api/v1/branding/logo` | anonymous (public branding only: `displayName`, `accentColor`, `logoVersion`; the logo bytes) | 200 (logo: 404 when none) |
+| PUT / DELETE | `/api/v1/admin/organization-settings/logo` | SuperAdmin (If-Match) | 200 |
 | GET | `/api/health` | anonymous | 200 |
 
 `/api/v1/agents/{id}` only reaches Agent accounts; SuperAdmin and Customer ids return 404.

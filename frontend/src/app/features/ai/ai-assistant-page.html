@@ -1,38 +1,38 @@
-<crm-page-header title="AI Assistant" subtitle="Advisory help for support work. Nothing is saved or sent to customers." />
+<crm-page-header [title]="'ai.page.title' | t" [subtitle]="'ai.page.subtitle' | t" icon="smart_toy" />
 
 <mat-card appearance="outlined">
   <mat-card-content class="chat">
     @if (ticketLost()) {
-      <p class="error" role="alert">This ticket is no longer available to you. Start a general conversation instead.</p>
+      <p class="error" role="alert">{{ 'ai.page.ticketLost' | t }}</p>
       <div class="actions">
-        <a mat-stroked-button routerLink="/ai-assistant">General chat</a>
+        <a mat-stroked-button routerLink="/ai-assistant">{{ 'ai.page.generalChat' | t }}</a>
       </div>
     } @else if (store.ticketId()) {
       <p class="hint">
-        About ticket: <a [routerLink]="['/tickets', store.ticketId()]">{{ ticketSubject() ?? 'Loading…' }}</a>
-        · <a routerLink="/ai-assistant">General chat</a>
+        {{ 'ai.page.aboutTicket' | t }} <a [routerLink]="['/tickets', store.ticketId()]">{{ ticketSubject() ?? ('common.loading' | t) }}</a>
+        · <a routerLink="/ai-assistant">{{ 'ai.page.generalChat' | t }}</a>
       </p>
     }
 
     @if (store.turns().length === 0) {
-      <p class="hint">Ask a question about support work or this ticket. Conversations are kept only in this browser tab and are never saved.</p>
+      <p class="hint">{{ 'ai.page.empty' | t }}</p>
     }
 
     <ol class="turns">
       @for (turn of store.turns(); track $index) {
         <li class="turn" [class.assistant]="turn.role === 'Assistant'">
-          <strong>{{ turn.role === 'User' ? 'You' : 'AI assistant' }}</strong>
+          <strong>{{ (turn.role === 'User' ? 'ai.page.you' : 'ai.page.assistant') | t }}</strong>
           <p class="ai-text">{{ turn.text }}</p>
           @if (turn.role === 'Assistant') {
             @if (turn.sources.length > 0) {
               <p class="hint">
-                Sources:
+                {{ 'ai.page.sources' | t }}
                 @for (source of turn.sources; track source.articleId) {
                   <a [routerLink]="['/knowledge-base', source.articleId]">{{ source.title }}</a>{{ $last ? '' : ', ' }}
                 }
               </p>
             }
-            <p class="hint">{{ reviewLabel }}</p>
+            <p class="hint">{{ 'ai.review' | t }}</p>
           }
         </li>
       }
@@ -46,14 +46,16 @@
     }
 
     <form class="composer" (submit)="$event.preventDefault(); send()">
-      <mat-form-field>
-        <mat-label>Your message</mat-label>
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'ai.page.yourMessage' | t }}</mat-label>
         <textarea matInput rows="3" [maxlength]="maxLength" [formControl]="message" (keydown.control.enter)="send()"></textarea>
         <mat-hint align="end">{{ message.value.length }} / {{ maxLength }}</mat-hint>
       </mat-form-field>
       <div class="actions">
-        <button mat-flat-button type="submit" [disabled]="busy() || ticketLost() || message.invalid">{{ error() ? 'Retry' : 'Send' }}</button>
-        <button mat-button type="button" [disabled]="busy() || store.turns().length === 0" (click)="newConversation()">New conversation</button>
+        <button mat-flat-button type="submit" [disabled]="busy() || ticketLost() || message.invalid">
+          <mat-icon class="dir-icon">send</mat-icon> {{ (error() ? 'ai.page.retry' : 'ai.page.send') | t }}
+        </button>
+        <button mat-button type="button" [disabled]="busy() || store.turns().length === 0" (click)="newConversation()">{{ 'ai.page.newConversation' | t }}</button>
       </div>
     </form>
   </mat-card-content>

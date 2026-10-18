@@ -1,0 +1,32 @@
+import type { Translations } from '../translations';
+
+export const branding: Translations['branding'] = {
+  title: 'الهوية البصرية',
+  description: 'اختر لون التمييز والشعار المعروضين في التطبيق.',
+  accent: 'لون التمييز',
+  logo: 'الشعار',
+  logoAlt: 'شعار المؤسسة',
+  noLogo: 'لم يتم رفع شعار. تُعرض الأيقونة الافتراضية.',
+  chooseImage: 'اختيار صورة',
+  uploadLogo: 'رفع الشعار',
+  removeLogo: 'إزالة الشعار',
+  logoHint: 'PNG أو JPEG أو WebP، حتى 512 كيلوبايت.',
+  logoSelected: 'المحدد: {name}',
+  logoBadType: 'ارفع صورة بصيغة PNG أو JPEG أو WebP.',
+  logoTooLarge: 'حجم الشعار أكبر من 512 كيلوبايت.',
+  logoUploaded: 'تم تحديث الشعار.',
+  logoRemoved: 'تمت إزالة الشعار.',
+  removeLogoTitle: 'إزالة الشعار؟',
+  removeLogoMessage: 'ستُعرض الأيقونة الافتراضية بدلًا منه.',
+  preview: 'معاينة',
+  previewButton: 'زر تجريبي',
+  previewChip: 'شارة تجريبية',
+  accentName: {
+    violet: 'بنفسجي',
+    blue: 'أزرق',
+    azure: 'أزرق سماوي',
+    green: 'أخضر',
+    orange: 'برتقالي',
+    rose: 'وردي',
+  },
+};

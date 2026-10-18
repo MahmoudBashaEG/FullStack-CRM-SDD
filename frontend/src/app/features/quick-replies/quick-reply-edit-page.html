@@ -1,6 +1,11 @@
-<crm-page-header [title]="isNew ? 'New quick reply' : 'Quick reply'" [subtitle]="hint" />
+<crm-page-header
+  [title]="(isNew ? 'quickReplies.edit.newTitle' : 'quickReplies.edit.title') | t"
+  [subtitle]="'quickReplies.copyHint' | t"
+  icon="quickreply" />
 
-<p><a routerLink="/quick-replies">← Back to quick replies</a></p>
+<p>
+  <a mat-button routerLink="/quick-replies"><mat-icon class="dir-icon">arrow_back</mat-icon> {{ 'quickReplies.edit.back' | t }}</a>
+</p>
 
 @if (loadError(); as message) {
   <p class="error" role="alert">{{ message }}</p>
@@ -9,23 +14,23 @@
     <mat-card-content>
       <p class="hint">{{ scopeLine() }}</p>
       @if (item() && !item()!.canEdit) {
-        <p class="hint">Shared quick replies are managed by SuperAdmin. You can read and copy this one.</p>
+        <p class="hint">{{ 'quickReplies.edit.sharedReadOnly' | t }}</p>
       }
       <form class="form" [formGroup]="form" (ngSubmit)="save()">
         <mat-form-field appearance="outline">
-          <mat-label>Title</mat-label>
+          <mat-label>{{ 'quickReplies.edit.titleLabel' | t }}</mat-label>
           <input matInput formControlName="title" maxlength="120" required />
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Category</mat-label>
+          <mat-label>{{ 'quickReplies.edit.category' | t }}</mat-label>
           <mat-select formControlName="category">
             @for (c of categories; track c) {
-              <mat-option [value]="c">{{ c }}</mat-option>
+              <mat-option [value]="c">{{ 'enums.ticketCategory.' + c | t }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Text</mat-label>
+          <mat-label>{{ 'quickReplies.edit.text' | t }}</mat-label>
           <textarea matInput rows="8" formControlName="body" maxlength="2000" required></textarea>
           <mat-hint align="end">{{ form.controls.body.value.length }} / 2000</mat-hint>
         </mat-form-field>
@@ -34,15 +39,15 @@
         }
         <div class="actions">
           @if (!item() || (item()!.canEdit && !item()!.isArchived)) {
-            <button mat-flat-button type="submit" [disabled]="busy()">Save</button>
+            <button mat-flat-button type="submit" [disabled]="busy()">{{ 'common.save' | t }}</button>
           }
           @if (item()) {
-            <button mat-stroked-button type="button" (click)="copy()"><mat-icon>content_copy</mat-icon> Copy</button>
+            <button mat-stroked-button type="button" (click)="copy()"><mat-icon>content_copy</mat-icon> {{ 'common.copy' | t }}</button>
             @if (item()!.canEdit) {
               @if (item()!.isArchived) {
-                <button mat-button type="button" [disabled]="busy()" (click)="setArchived(false)">Restore</button>
+                <button mat-button type="button" [disabled]="busy()" (click)="setArchived(false)">{{ 'quickReplies.list.restore' | t }}</button>
               } @else {
-                <button mat-button type="button" [disabled]="busy()" (click)="setArchived(true)">Archive</button>
+                <button mat-button type="button" [disabled]="busy()" (click)="setArchived(true)">{{ 'quickReplies.list.archive' | t }}</button>
               }
             }
           }

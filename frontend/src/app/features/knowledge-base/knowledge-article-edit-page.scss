@@ -1,0 +1,27 @@
+@use '../../shared/ui/productivity-page';
+
+.stack {
+  max-inline-size: 840px;
+}
+
+.grid-two {
+  display: grid;
+  gap: 0 var(--crm-space-4);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 600px) {
+  .grid-two {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.body-field {
+  inline-size: 100%;
+  margin-block-start: var(--crm-space-4);
+}
+
+.md-help code {
+  direction: ltr;
+  unicode-bidi: isolate;
+}

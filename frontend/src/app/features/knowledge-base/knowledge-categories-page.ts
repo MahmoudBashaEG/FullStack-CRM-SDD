@@ -2,24 +2,30 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormControl, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { RouterLink } from '@angular/router';
 import { describeHttpError } from '../../core/api/describe-http-error';
+import { I18n } from '../../core/i18n/i18n';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { EmptyState } from '../../shared/ui/empty-state/empty-state';
+import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
 import { describeSaveError } from '../sla/sla-errors';
+import { KbSectionNav } from './kb-section-nav';
 import { KnowledgeBaseApi } from './knowledge-base-api';
 import { KB_LIMITS, KnowledgeCategory } from './knowledge-base-models';
 
 @Component({
   selector: 'crm-knowledge-categories-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink, PageHeader, StatusBadge, MatFormFieldModule, MatInputModule, MatButtonModule],
+  imports: [ReactiveFormsModule, TranslatePipe, PageHeader, StatusBadge, KbSectionNav, EmptyState, ErrorState, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule],
   templateUrl: './knowledge-categories-page.html',
-  styleUrl: '../../shared/ui/productivity-page.scss',
+  styleUrl: './knowledge-categories-page.scss',
 })
 export class KnowledgeCategoriesPage {
+  private readonly i18n = inject(I18n);
   private readonly api = inject(KnowledgeBaseApi);
 
   protected readonly maxLength = KB_LIMITS.categoryName;
@@ -69,7 +75,7 @@ export class KnowledgeCategoriesPage {
         }
         this.categories.set(categories);
       },
-      error: (error: HttpErrorResponse) => this.loadError.set(describeHttpError(error, 'Could not load categories.')),
+      error: (error: HttpErrorResponse) => this.loadError.set(describeHttpError(error, this.i18n.t('kb.categories.loadFailed'), this.i18n.t)),
     });
   }
 
@@ -84,7 +90,7 @@ export class KnowledgeCategoriesPage {
       },
       error: (error: HttpErrorResponse) => {
         this.busy.set(false);
-        this.error.set(describeSaveError(error, 'Could not save the category.'));
+        this.error.set(describeSaveError(error, this.i18n.t('kb.categories.saveFailed'), this.i18n.t));
       },
     });
   }

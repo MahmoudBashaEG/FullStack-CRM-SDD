@@ -1,3 +1,4 @@
+import { Translate, englishT } from '../../core/i18n/translate-fn';
 import { PortalTimelineEntry } from './portal-models';
 
 export interface TimelineText { title: string; text: string; }
@@ -6,26 +7,25 @@ export interface TimelineText { title: string; text: string; }
  * Customer wording for one timeline entry. Facts only: no actor, no reason, no internal detail (CP3).
  * Creation wording is neutral: staff may have created the ticket on the customer's behalf.
  */
-export function describeTimelineEntry(entry: PortalTimelineEntry): TimelineText {
+export function describeTimelineEntry(entry: PortalTimelineEntry, t: Translate = englishT): TimelineText {
+  const words = (key: string): TimelineText => ({ title: t(`portal.timeline.${key}.title`), text: t(`portal.timeline.${key}.text`) });
   if (entry.kind === 'Created') {
-    return entry.isRecorded
-      ? { title: 'Request created', text: 'A support request was created for you.' }
-      : { title: 'Request created', text: 'Earlier status history is not available for this request.' };
+    return words(entry.isRecorded ? 'created' : 'createdLegacy');
   }
   if (entry.fromStatus === 'Closed' && entry.status === 'Open') {
-    return { title: 'Reopened', text: 'Your request was reopened.' };
+    return words('reopened');
   }
   if (entry.fromStatus === 'Resolved' && entry.status === 'InProgress') {
-    return { title: 'Back in progress', text: 'We are continuing to work on your request.' };
+    return words('backInProgress');
   }
   switch (entry.status) {
     case 'InProgress':
-      return { title: 'In progress', text: 'Our team is working on your request.' };
+      return words('inProgress');
     case 'Resolved':
-      return { title: 'Resolved', text: 'Your request has been resolved.' };
+      return words('resolved');
     case 'Closed':
-      return { title: 'Closed', text: 'Your request is closed.' };
+      return words('closed');
     default:
-      return { title: 'Open', text: 'Your request is open.' };
+      return words('open');
   }
 }

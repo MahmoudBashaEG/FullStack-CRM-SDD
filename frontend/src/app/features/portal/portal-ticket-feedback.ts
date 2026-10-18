@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -11,6 +10,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { describeHttpError } from '../../core/api/describe-http-error';
+import { I18n } from '../../core/i18n/i18n';
+import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { PortalApi } from './portal-api';
 import { PORTAL_LIMITS, PortalFeedback, PortalTicket } from './portal-models';
 
@@ -20,7 +22,8 @@ import { PORTAL_LIMITS, PortalFeedback, PortalTicket } from './portal-models';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ReactiveFormsModule,
-    DatePipe,
+    LocalizedDatePipe,
+    TranslatePipe,
     MatCardModule,
     MatButtonToggleModule,
     MatFormFieldModule,
@@ -34,6 +37,7 @@ import { PORTAL_LIMITS, PortalFeedback, PortalTicket } from './portal-models';
 export class PortalTicketFeedback {
   private readonly api = inject(PortalApi);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly i18n = inject(I18n);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly ticketId = input.required<string>();
@@ -90,14 +94,14 @@ export class PortalTicketFeedback {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: updated => {
-          this.snackBar.open('Thank you for your feedback.', undefined, { duration: 3000 });
+          this.snackBar.open(this.i18n.t('portal.feedback.thanks'), undefined, { duration: 3000 });
           this.saving.set(false);
           this.editing.set(false);
           this.saved.emit(updated);
         },
         error: (error: HttpErrorResponse) => {
           // 409 (race / overlapping edit / ticket reopened): show the server's message; reloading the page shows the stored state.
-          this.error.set(describeHttpError(error, 'Could not save your feedback.'));
+          this.error.set(describeHttpError(error, this.i18n.t('portal.feedback.saveError'), this.i18n.t));
           this.saving.set(false);
         },
       });

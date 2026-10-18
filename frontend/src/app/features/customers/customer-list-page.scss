@@ -2,7 +2,6 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
   gap: var(--crm-space-4);
 }
 
@@ -11,14 +10,11 @@
   max-inline-size: 420px;
 }
 
-.table-container {
-  overflow-x: auto;
-}
-
-table {
-  inline-size: 100%;
-}
-
-.error {
-  color: var(--mat-sys-error);
+.visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

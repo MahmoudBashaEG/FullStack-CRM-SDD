@@ -1,9 +1,9 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -13,11 +13,16 @@ import { MatSelectModule } from '@angular/material/select';
 import { RouterLink } from '@angular/router';
 import { EMPTY, Subject, catchError, debounceTime, switchMap } from 'rxjs';
 import { describeHttpError } from '../../core/api/describe-http-error';
+import { I18n } from '../../core/i18n/i18n';
+import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { EmptyState } from '../../shared/ui/empty-state/empty-state';
+import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
-import { TICKET_STATUSES, TicketStatus, statusLabel, statusTone } from '../tickets/ticket-models';
+import { TICKET_STATUSES, TicketStatus, statusTone } from '../tickets/ticket-models';
 import { PortalApi } from './portal-api';
-import { NOT_LINKED, PortalTicketListParams, PortalTicketSummary } from './portal-models';
+import { PortalTicketListParams, PortalTicketSummary } from './portal-models';
 
 @Component({
   selector: 'crm-portal-ticket-list-page',
@@ -25,9 +30,13 @@ import { NOT_LINKED, PortalTicketListParams, PortalTicketSummary } from './porta
   imports: [
     ReactiveFormsModule,
     RouterLink,
-    DatePipe,
+    LocalizedDatePipe,
+    TranslatePipe,
+    EmptyState,
+    ErrorState,
     PageHeader,
     StatusBadge,
+    MatCardModule,
     MatPaginatorModule,
     MatFormFieldModule,
     MatInputModule,
@@ -42,11 +51,11 @@ import { NOT_LINKED, PortalTicketListParams, PortalTicketSummary } from './porta
 export class PortalTicketListPage {
   private readonly api = inject(PortalApi);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly i18n = inject(I18n);
   private readonly requests = new Subject<PortalTicketListParams>();
 
   protected readonly pageSizeOptions = [10, 20, 50];
   protected readonly statuses = TICKET_STATUSES;
-  protected readonly statusLabel = statusLabel;
   protected readonly statusTone = statusTone;
   protected readonly filters = inject(NonNullableFormBuilder).group({
     search: [''],
@@ -66,7 +75,7 @@ export class PortalTicketListPage {
         switchMap(params =>
           this.api.listTickets(params).pipe(
             catchError((error: HttpErrorResponse) => {
-              this.error.set(error.status === 404 ? NOT_LINKED : describeHttpError(error, 'Could not load your requests.'));
+              this.error.set(error.status === 404 ? this.i18n.t('portal.notLinked') : describeHttpError(error, this.i18n.t('portal.home.loadError'), this.i18n.t));
               this.loading.set(false);
               return EMPTY;
             }),

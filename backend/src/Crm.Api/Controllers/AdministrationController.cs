@@ -7,9 +7,12 @@ using Crm.Application.Administration.GetAccount;
 using Crm.Application.Administration.GetOrganizationSettings;
 using Crm.Application.Administration.ListAccounts;
 using Crm.Application.Administration.ListAuditLogs;
+using Crm.Application.Administration.RemoveOrganizationLogo;
 using Crm.Application.Administration.SetAccountStatus;
+using Crm.Application.Administration.SetOrganizationLogo;
 using Crm.Application.Administration.UpdateOrganizationSettings;
 using Crm.Application.Common.Paging;
+using Crm.Application.Common.Validation;
 using Crm.Domain.Administration;
 using Mediator;
 using Microsoft.AspNetCore.Authorization;
@@ -56,18 +59,43 @@ public sealed class AdministrationController(ISender sender) : ControllerBase
             result.Items.Select(AdminAuditLogResponse.From).ToList(), result.Page, result.PageSize, result.TotalCount));
     }
 
-    [EndpointDescription("Requires role: SuperAdmin. Informational organization/support settings. isConfigured=false until first saved. Returns the ETag header.")]
+    [EndpointDescription("Requires role: SuperAdmin. Informational organization/support settings. isConfigured=false until first saved (includes accentColor and logo metadata). Returns the ETag header.")]
     [HttpGet("organization-settings")]
     public async Task<ActionResult<OrganizationSettingsResponse>> GetSettings(CancellationToken cancellationToken) =>
         SettingsResult(await sender.Send(new GetOrganizationSettingsQuery(), cancellationToken));
 
-    [EndpointDescription("Requires role: SuperAdmin. displayName required (≤ 150); supportEmail optional valid email (≤ 256); supportPhone optional (≤ 40); supportInformation optional (≤ 1000). Identical values ⇒ nothing saved, same version, no audit. Changes ⇒ one OrganizationSettingsUpdated audit entry." + Concurrency)]
+    [EndpointDescription("Requires role: SuperAdmin. displayName required (≤ 150); supportEmail optional valid email (≤ 256); supportPhone optional (≤ 40); supportInformation optional (≤ 1000); accentColor optional preset id (violet, blue, azure, green, orange, rose; omitted/null keeps the saved accent). Identical values ⇒ nothing saved, same version, no audit. Changes ⇒ one OrganizationSettingsUpdated audit entry." + Concurrency)]
     [HttpPut("organization-settings")]
     public async Task<ActionResult<OrganizationSettingsResponse>> UpdateSettings(UpdateOrganizationSettingsRequest request, CancellationToken cancellationToken) =>
         SettingsResult(await sender.Send(
             new UpdateOrganizationSettingsCommand(
-                User.GetUserId(), EntityTags.RequireIfMatch(Request), request.DisplayName, request.SupportEmail, request.SupportPhone, request.SupportInformation),
+                User.GetUserId(), EntityTags.RequireIfMatch(Request), request.DisplayName, request.SupportEmail, request.SupportPhone, request.SupportInformation, request.AccentColor),
             cancellationToken));
+
+    [EndpointDescription("Requires role: SuperAdmin. multipart/form-data, field 'file'. PNG, JPEG or WebP, ≤ 512 KB (extension and signature checked). Sets or replaces the organization logo (new logoVersion each time); audited as OrganizationSettingsUpdated (field 'logo')." + Concurrency)]
+    [HttpPut("organization-settings/logo")]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(BrandingRules.LogoRequestSizeLimitBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = BrandingRules.LogoRequestSizeLimitBytes)]
+    public async Task<ActionResult<OrganizationSettingsResponse>> SetLogo(IFormFile? file, CancellationToken cancellationToken)
+    {
+        var version = EntityTags.RequireIfMatch(Request);
+        byte[] content = [];
+        if (file is not null)
+        {
+            using var buffer = new MemoryStream();
+            await file.CopyToAsync(buffer, cancellationToken);
+            content = buffer.ToArray();
+        }
+
+        return SettingsResult(await sender.Send(
+            new SetOrganizationLogoCommand(User.GetUserId(), version, file?.FileName ?? string.Empty, content), cancellationToken));
+    }
+
+    [EndpointDescription("Requires role: SuperAdmin. Removes the organization logo. No logo ⇒ 200 unchanged (no audit)." + Concurrency)]
+    [HttpDelete("organization-settings/logo")]
+    public async Task<ActionResult<OrganizationSettingsResponse>> RemoveLogo(CancellationToken cancellationToken) =>
+        SettingsResult(await sender.Send(new RemoveOrganizationLogoCommand(User.GetUserId(), EntityTags.RequireIfMatch(Request)), cancellationToken));
 
     private ActionResult<OrganizationSettingsResponse> SettingsResult(OrganizationSettingsDetails details)
     {

@@ -1,62 +1,62 @@
-<crm-page-header title="New customer" subtitle="Add a customer contact for the support team." />
+<crm-page-header icon="person_add" [title]="'customers.create.title' | t" [subtitle]="'customers.create.subtitle' | t" />
 
 <mat-card appearance="outlined" class="form-card">
   <mat-card-content>
     <p class="no-login-note">
       <mat-icon aria-hidden="true">info</mat-icon>
-      No login account created. This contact cannot sign in; it is a CRM record only.
+      {{ 'customers.create.noLogin' | t }}
     </p>
 
     <form [formGroup]="form" (ngSubmit)="submit()" class="form-grid">
       <mat-form-field appearance="outline">
-        <mat-label>First name</mat-label>
+        <mat-label>{{ 'customers.fields.firstName' | t }}</mat-label>
         <input matInput formControlName="firstName" autocomplete="off" />
         @if (form.controls.firstName.invalid) {
-          <mat-error>First name is required (max 100 characters)</mat-error>
+          <mat-error>{{ 'customers.fields.firstNameInvalid' | t }}</mat-error>
         }
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>Last name</mat-label>
+        <mat-label>{{ 'customers.fields.lastName' | t }}</mat-label>
         <input matInput formControlName="lastName" autocomplete="off" />
         @if (form.controls.lastName.invalid) {
-          <mat-error>Last name is required (max 100 characters)</mat-error>
+          <mat-error>{{ 'customers.fields.lastNameInvalid' | t }}</mat-error>
         }
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>Contact email</mat-label>
+        <mat-label>{{ 'customers.fields.contactEmail' | t }}</mat-label>
         <input matInput type="email" formControlName="email" autocomplete="off" />
         @if (form.controls.email.hasError('required')) {
-          <mat-error>Email is required</mat-error>
+          <mat-error>{{ 'customers.fields.emailRequired' | t }}</mat-error>
         } @else if (form.controls.email.invalid) {
-          <mat-error>Enter a valid email address</mat-error>
+          <mat-error>{{ 'customers.fields.emailInvalid' | t }}</mat-error>
         }
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>Phone (optional)</mat-label>
+        <mat-label>{{ 'customers.fields.phone' | t }}</mat-label>
         <input matInput type="tel" formControlName="phoneNumber" autocomplete="off" />
         @if (form.controls.phoneNumber.invalid) {
-          <mat-error>Phone number is too long</mat-error>
+          <mat-error>{{ 'customers.fields.phoneInvalid' | t }}</mat-error>
         }
       </mat-form-field>
 
-      <mat-form-field appearance="outline">
-        <mat-label>Company (optional)</mat-label>
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>{{ 'customers.fields.company' | t }}</mat-label>
         <input matInput formControlName="company" autocomplete="off" />
         @if (form.controls.company.invalid) {
-          <mat-error>Company is too long (max 200 characters)</mat-error>
+          <mat-error>{{ 'customers.fields.companyInvalid' | t }}</mat-error>
         }
       </mat-form-field>
 
       @if (error(); as message) {
-        <p class="form-error" role="alert">{{ message }}</p>
+        <p class="form-error full" role="alert">{{ message }}</p>
       }
 
-      <div class="actions">
-        <a mat-button routerLink="/customers">Cancel</a>
-        <button mat-flat-button type="submit" [disabled]="submitting()">Create contact</button>
+      <div class="actions full">
+        <a mat-button routerLink="/customers">{{ 'common.cancel' | t }}</a>
+        <button mat-flat-button type="submit" [disabled]="submitting()">{{ 'customers.create.submit' | t }}</button>
       </div>
     </form>
   </mat-card-content>

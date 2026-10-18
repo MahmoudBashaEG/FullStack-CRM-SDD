@@ -1,4 +1,5 @@
 import { UserRole } from '../../core/auth/auth-models';
+import { AccentPreset } from '../../core/branding/branding-api';
 
 /** Matches Crm.Api AdminAccountResponse. */
 export interface AdminAccount {
@@ -49,6 +50,12 @@ export interface OrganizationSettings {
   supportInformation: string | null;
   updatedAtUtc: string | null;
   updatedByName: string | null;
+  accentColor: AccentPreset | null;
+  hasLogo: boolean;
+  logoContentType: string | null;
+  logoSizeBytes: number | null;
+  logoUpdatedAtUtc: string | null;
+  logoVersion: number;
   version: string;
 }
 
@@ -57,6 +64,8 @@ export interface UpdateOrganizationSettingsRequest {
   supportEmail: string | null;
   supportPhone: string | null;
   supportInformation: string | null;
+  /** Always the selected preset id; omitted/null would keep the saved accent on the server. */
+  accentColor: AccentPreset | null;
 }
 
 export interface AccountListParams {

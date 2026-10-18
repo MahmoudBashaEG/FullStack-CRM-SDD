@@ -77,12 +77,12 @@ export interface AgentTaskSummary {
   generatedAtUtc: string;
 }
 
-/** <input type="datetime-local"> value (viewer's local zone) ⇒ ISO UTC; '' ⇒ null. */
+/** @deprecated PLAT-001: use shared/date/date-only.ts. <input type="datetime-local"> value (viewer's local zone) ⇒ ISO UTC; '' ⇒ null. */
 export function fromLocalInput(value: string): string | null {
   return value ? new Date(value).toISOString() : null;
 }
 
-/** ISO UTC ⇒ 'yyyy-MM-ddTHH:mm' in the viewer's local zone for datetime-local inputs; null ⇒ ''. */
+/** @deprecated PLAT-001: use shared/date/date-only.ts. ISO UTC ⇒ 'yyyy-MM-ddTHH:mm' in the viewer's local zone for datetime-local inputs; null ⇒ ''. */
 export function toLocalInput(iso: string | null): string {
   if (!iso) return '';
   const d = new Date(iso);

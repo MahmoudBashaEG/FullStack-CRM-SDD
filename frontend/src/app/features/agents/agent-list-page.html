@@ -1,55 +1,53 @@
-<crm-page-header title="Agents" subtitle="Support agent accounts managed by the SuperAdmin." />
-
-<div class="toolbar">
-  <a mat-flat-button routerLink="new">
-    <mat-icon>person_add</mat-icon> New agent
+<crm-page-header icon="support_agent" [title]="'agents.list.title' | t" [subtitle]="'agents.list.subtitle' | t">
+  <a mat-flat-button actions routerLink="new">
+    <mat-icon>person_add</mat-icon> {{ 'agents.list.newAgent' | t }}
   </a>
-</div>
+</crm-page-header>
 
 @if (loading()) {
   <mat-progress-bar mode="indeterminate" />
 }
 
 @if (error(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
+  <crm-error-state [message]="message" (retry)="reload()" />
 }
 
 @if (!loading() && !error()) {
   @if (agents().length === 0) {
-    <p>No agents yet. Create the first agent account.</p>
+    <crm-empty-state icon="support_agent" [message]="'agents.list.empty' | t" />
   } @else {
-    <div class="table-container">
+    <div class="table-scroll">
       <table mat-table [dataSource]="agents()">
         <ng-container matColumnDef="name">
-          <th mat-header-cell *matHeaderCellDef>Name</th>
+          <th mat-header-cell *matHeaderCellDef>{{ 'agents.list.columns.name' | t }}</th>
           <td mat-cell *matCellDef="let agent">{{ agent.firstName }} {{ agent.lastName }}</td>
         </ng-container>
 
         <ng-container matColumnDef="email">
-          <th mat-header-cell *matHeaderCellDef>Email</th>
-          <td mat-cell *matCellDef="let agent">{{ agent.email }}</td>
+          <th mat-header-cell *matHeaderCellDef>{{ 'agents.list.columns.email' | t }}</th>
+          <td mat-cell *matCellDef="let agent"><span class="ltr-value">{{ agent.email }}</span></td>
         </ng-container>
 
         <ng-container matColumnDef="phone">
-          <th mat-header-cell *matHeaderCellDef>Phone</th>
-          <td mat-cell *matCellDef="let agent">{{ agent.phoneNumber ?? '—' }}</td>
+          <th mat-header-cell *matHeaderCellDef>{{ 'agents.list.columns.phone' | t }}</th>
+          <td mat-cell *matCellDef="let agent"><span class="ltr-value">{{ agent.phoneNumber ?? '—' }}</span></td>
         </ng-container>
 
         <ng-container matColumnDef="status">
-          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <th mat-header-cell *matHeaderCellDef>{{ 'agents.list.columns.status' | t }}</th>
           <td mat-cell *matCellDef="let agent">
             @if (agent.isActive) {
-              <crm-status-badge label="Active" tone="success" />
+              <crm-status-badge [label]="'agents.status.active' | t" tone="success" />
             } @else {
-              <crm-status-badge label="Disabled" tone="neutral" />
+              <crm-status-badge [label]="'agents.status.disabled' | t" tone="neutral" />
             }
           </td>
         </ng-container>
 
         <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef></th>
+          <th mat-header-cell *matHeaderCellDef><span class="visually-hidden">{{ 'common.actions' | t }}</span></th>
           <td mat-cell *matCellDef="let agent">
-            <a mat-button [routerLink]="agent.id">Manage</a>
+            <a mat-button [routerLink]="agent.id">{{ 'agents.list.manage' | t }}</a>
           </td>
         </ng-container>
 

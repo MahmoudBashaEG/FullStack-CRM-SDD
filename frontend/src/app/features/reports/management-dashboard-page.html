@@ -1,7 +1,6 @@
-<crm-page-header
-  title="Management Dashboard"
-  subtitle="Key figures across tickets, SLA, Agents and customer satisfaction."
-/>
+<crm-page-header icon="insights" [title]="'reports.dashboard.title' | t" [subtitle]="'reports.dashboard.subtitle' | t" />
+
+<crm-reports-nav />
 
 <crm-report-period-filter
   [value]="period()"
@@ -11,9 +10,9 @@
 />
 
 @if (resolvedPeriod(); as p) {
-  <p class="hint">
-    Period: {{ formatUtcDay(p.from) }} – {{ formatUtcDay(p.to) }} (UTC calendar days) · Updated
-    {{ generatedAtUtc() | date: 'medium' : 'UTC' }} UTC
+  <p class="hint note">
+    {{ 'reports.periodNote' | t: { from: formatDay(p.from), to: formatDay(p.to) } }} ·
+    {{ 'reports.updated' | t: { time: (generatedAtUtc() | crmDate: 'medium' : 'UTC') } }}
   </p>
 }
 
@@ -21,133 +20,70 @@
   <mat-progress-bar mode="indeterminate" />
 }
 
-<nav class="report-links" aria-label="Reports">
-  <a mat-stroked-button routerLink="/reports/tickets" queryParamsHandling="preserve">Ticket Reports</a>
-  <a mat-stroked-button routerLink="/reports/sla" queryParamsHandling="preserve">SLA Performance</a>
-  <a mat-stroked-button routerLink="/reports/agents" queryParamsHandling="preserve">Agent Performance</a>
-  <a mat-stroked-button routerLink="/reports/customer-satisfaction" queryParamsHandling="preserve">Customer Satisfaction</a>
-</nav>
-
 @if (overview(); as o) {
   <section aria-labelledby="period-heading">
-    <h2 id="period-heading">Period figures</h2>
+    <h2 id="period-heading">{{ 'reports.dashboard.periodFigures' | t }}</h2>
     <div class="summary-grid">
-      <mat-card appearance="outlined" class="summary-card">
-        <mat-card-content>
-          <span class="scope">Period · by creation date</span>
-          <span>Tickets created</span>
-          @if (o.tickets.data; as t) {
-            <span class="count">{{ t.createdTickets }}</span>
-          } @else {
-            <span class="error" role="alert">{{ o.tickets.error }}</span>
-            <button mat-stroked-button type="button" (click)="refresh()">Retry</button>
-          }
-        </mat-card-content>
-      </mat-card>
-      <mat-card appearance="outlined" class="summary-card">
-        <mat-card-content>
-          <span class="scope">Period · tickets created in the period</span>
-          <span>First-response compliance</span>
-          @if (o.sla.data; as s) {
-            <span class="count">{{ formatPercent(s.firstResponse.compliancePercent) }}</span>
-            <span class="hint">{{ s.firstResponse.met }}/{{ s.firstResponse.met + s.firstResponse.breached }} decided</span>
-          } @else {
-            <span class="error" role="alert">{{ o.sla.error }}</span>
-            <button mat-stroked-button type="button" (click)="refresh()">Retry</button>
-          }
-        </mat-card-content>
-      </mat-card>
-      <mat-card appearance="outlined" class="summary-card">
-        <mat-card-content>
-          <span class="scope">Period · tickets created in the period</span>
-          <span>Resolution compliance</span>
-          @if (o.sla.data; as s) {
-            <span class="count">{{ formatPercent(s.resolution.compliancePercent) }}</span>
-            <span class="hint">{{ s.resolution.met }}/{{ s.resolution.met + s.resolution.breached }} decided</span>
-          } @else {
-            <span class="error" role="alert">{{ o.sla.error }}</span>
-          }
-        </mat-card-content>
-      </mat-card>
-      <mat-card appearance="outlined" class="summary-card">
-        <mat-card-content>
-          <span class="scope">Period · by feedback submission</span>
-          <span>Average rating</span>
-          @if (o.csat.data; as c) {
-            <span class="count">{{ formatAverage(c.averageRating) }}</span>
-            <span class="hint">{{ c.feedbackCount }} feedback</span>
-          } @else {
-            <span class="error" role="alert">{{ o.csat.error }}</span>
-            <button mat-stroked-button type="button" (click)="refresh()">Retry</button>
-          }
-        </mat-card-content>
-      </mat-card>
-      <mat-card appearance="outlined" class="summary-card">
-        <mat-card-content>
-          <span class="scope">Period · by event date</span>
-          <span>Resolution actions by Agents</span>
-          @if (o.agents.data; as a) {
-            <span class="count">{{ a.totals.resolutionActionsByAgents }}</span>
-          } @else {
-            <span class="error" role="alert">{{ o.agents.error }}</span>
-            <button mat-stroked-button type="button" (click)="refresh()">Retry</button>
-          }
-        </mat-card-content>
-      </mat-card>
+      <crm-kpi-card [label]="'reports.dashboard.ticketsCreated' | t" [value]="o.tickets.data ? '' + o.tickets.data.createdTickets : ''" [scope]="'common.period' | t" icon="confirmation_number">
+        @if (o.tickets.data) {
+          <span class="hint">{{ 'reports.basis.created' | t }}</span>
+        } @else {
+          <span class="error" role="alert">{{ o.tickets.error }}</span>
+          <button mat-stroked-button type="button" (click)="refresh()">{{ 'common.retry' | t }}</button>
+        }
+      </crm-kpi-card>
+      <crm-kpi-card [label]="'reports.dashboard.firstResponseCompliance' | t" [value]="o.sla.data ? percent(o.sla.data.firstResponse.compliancePercent) : ''" [scope]="'common.period' | t" icon="timer">
+        @if (o.sla.data; as s) {
+          <span class="hint">{{ 'reports.basis.createdInPeriod' | t }}</span>
+          <span class="hint">{{ 'reports.dashboard.decided' | t: { met: s.firstResponse.met, total: s.firstResponse.met + s.firstResponse.breached } }}</span>
+        } @else {
+          <span class="error" role="alert">{{ o.sla.error }}</span>
+          <button mat-stroked-button type="button" (click)="refresh()">{{ 'common.retry' | t }}</button>
+        }
+      </crm-kpi-card>
+      <crm-kpi-card [label]="'reports.dashboard.resolutionCompliance' | t" [value]="o.sla.data ? percent(o.sla.data.resolution.compliancePercent) : ''" [scope]="'common.period' | t" icon="task_alt">
+        @if (o.sla.data; as s) {
+          <span class="hint">{{ 'reports.basis.createdInPeriod' | t }}</span>
+          <span class="hint">{{ 'reports.dashboard.decided' | t: { met: s.resolution.met, total: s.resolution.met + s.resolution.breached } }}</span>
+        } @else {
+          <span class="error" role="alert">{{ o.sla.error }}</span>
+        }
+      </crm-kpi-card>
+      <crm-kpi-card [label]="'reports.dashboard.averageRating' | t" [value]="o.csat.data ? average(o.csat.data.averageRating) : ''" [scope]="'common.period' | t" icon="star">
+        @if (o.csat.data; as c) {
+          <span class="hint">{{ 'reports.basis.feedback' | t }}</span>
+          <span class="hint">{{ 'reports.dashboard.feedbackCount' | t: { count: c.feedbackCount } }}</span>
+        } @else {
+          <span class="error" role="alert">{{ o.csat.error }}</span>
+          <button mat-stroked-button type="button" (click)="refresh()">{{ 'common.retry' | t }}</button>
+        }
+      </crm-kpi-card>
+      <crm-kpi-card [label]="'reports.dashboard.resolutionActions' | t" [value]="o.agents.data ? '' + o.agents.data.totals.resolutionActionsByAgents : ''" [scope]="'common.period' | t" icon="fact_check">
+        @if (o.agents.data) {
+          <span class="hint">{{ 'reports.basis.event' | t }}</span>
+        } @else {
+          <span class="error" role="alert">{{ o.agents.error }}</span>
+          <button mat-stroked-button type="button" (click)="refresh()">{{ 'common.retry' | t }}</button>
+        }
+      </crm-kpi-card>
     </div>
   </section>
 
   <section aria-labelledby="live-heading">
-    <h2 id="live-heading">Live snapshot</h2>
-    <p class="scope">Live snapshot · not affected by the date filter</p>
+    <h2 id="live-heading">{{ 'reports.dashboard.liveSnapshot' | t }}</h2>
+    <p class="hint">{{ 'reports.liveNote' | t }}</p>
     <div class="summary-grid">
       @if (o.agents.data; as a) {
-        <mat-card appearance="outlined" class="summary-card">
-          <mat-card-content>
-            <span class="scope">Live snapshot</span>
-            <span>Open</span>
-            <span class="count">{{ a.totals.openTickets }}</span>
-          </mat-card-content>
-        </mat-card>
-        <mat-card appearance="outlined" class="summary-card">
-          <mat-card-content>
-            <span class="scope">Live snapshot</span>
-            <span>In Progress</span>
-            <span class="count">{{ a.totals.inProgressTickets }}</span>
-          </mat-card-content>
-        </mat-card>
-        <mat-card appearance="outlined" class="summary-card">
-          <mat-card-content>
-            <span class="scope">Live snapshot</span>
-            <span>Active assigned to Agents</span>
-            <span class="count">{{ a.totals.activeAssignedToAgents }}</span>
-          </mat-card-content>
-        </mat-card>
-        <mat-card appearance="outlined" class="summary-card">
-          <mat-card-content>
-            <span class="scope">Live snapshot</span>
-            <span>Unassigned active</span>
-            <span class="count">{{ a.totals.unassignedActive }}</span>
-          </mat-card-content>
-        </mat-card>
+        <crm-kpi-card [label]="'reports.dashboard.open' | t" [value]="'' + a.totals.openTickets" [scope]="'common.live' | t" icon="inbox" />
+        <crm-kpi-card [label]="'reports.dashboard.inProgress' | t" [value]="'' + a.totals.inProgressTickets" [scope]="'common.live' | t" icon="pending_actions" />
+        <crm-kpi-card [label]="'reports.dashboard.activeAssigned' | t" [value]="'' + a.totals.activeAssignedToAgents" [scope]="'common.live' | t" icon="assignment_ind" />
+        <crm-kpi-card [label]="'reports.dashboard.unassigned' | t" [value]="'' + a.totals.unassignedActive" [scope]="'common.live' | t" icon="person_off" />
       } @else {
         <p class="error" role="alert">{{ o.agents.error }}</p>
       }
       @if (o.sla.data; as s) {
-        <mat-card appearance="outlined" class="summary-card">
-          <mat-card-content>
-            <span class="scope">Live snapshot</span>
-            <span>Active tickets with a breached SLA target</span>
-            <span class="count">{{ s.live.activeTicketsWithBreach }}</span>
-          </mat-card-content>
-        </mat-card>
-        <mat-card appearance="outlined" class="summary-card">
-          <mat-card-content>
-            <span class="scope">Live snapshot</span>
-            <span>SLA targets at risk</span>
-            <span class="count">{{ s.live.responseAtRisk + s.live.resolutionAtRisk }}</span>
-          </mat-card-content>
-        </mat-card>
+        <crm-kpi-card [label]="'reports.dashboard.breached' | t" [value]="'' + s.live.activeTicketsWithBreach" [scope]="'common.live' | t" icon="warning" />
+        <crm-kpi-card [label]="'reports.dashboard.atRisk' | t" [value]="'' + (s.live.responseAtRisk + s.live.resolutionAtRisk)" [scope]="'common.live' | t" icon="hourglass_top" />
       } @else {
         <p class="error" role="alert">{{ o.sla.error }}</p>
       }
@@ -155,41 +91,47 @@
   </section>
 
   <section aria-labelledby="charts-heading">
-    <h2 id="charts-heading">Charts</h2>
+    <h2 id="charts-heading">{{ 'reports.dashboard.charts' | t }}</h2>
     <div class="charts">
-      <mat-card appearance="outlined" class="chart-card">
-        <mat-card-content>
-          <h3>Tickets created</h3>
-          @if (o.tickets.data) {
-            <crm-report-bars label="Tickets created" [items]="trendBars()" />
-          } @else {
-            <p class="error" role="alert">{{ o.tickets.error }}</p>
-          }
-          <a mat-button routerLink="/reports/tickets" queryParamsHandling="preserve">View report</a>
-        </mat-card-content>
-      </mat-card>
-      <mat-card appearance="outlined" class="chart-card">
-        <mat-card-content>
-          <h3>Active tickets per Agent (live)</h3>
-          @if (o.agents.data) {
-            <crm-report-bars label="Active tickets per Agent" [items]="workloadBars()" emptyText="No active tickets are assigned to Agents." />
-          } @else {
-            <p class="error" role="alert">{{ o.agents.error }}</p>
-          }
-          <a mat-button routerLink="/reports/agents" queryParamsHandling="preserve">View report</a>
-        </mat-card-content>
-      </mat-card>
-      <mat-card appearance="outlined" class="chart-card">
-        <mat-card-content>
-          <h3>Rating distribution</h3>
-          @if (o.csat.data) {
-            <crm-report-bars label="Rating distribution" [items]="ratingBars()" emptyText="No feedback was submitted in this period." />
-          } @else {
-            <p class="error" role="alert">{{ o.csat.error }}</p>
-          }
-          <a mat-button routerLink="/reports/customer-satisfaction" queryParamsHandling="preserve">View report</a>
-        </mat-card-content>
-      </mat-card>
+      <div class="chart-col">
+        <crm-chart-card
+          [title]="'reports.dashboard.ticketsChart' | t"
+          [error]="o.tickets.data ? null : o.tickets.error"
+          [empty]="(o.tickets.data?.trend?.length ?? 0) === 0"
+          [emptyText]="'reports.ticket.trendEmpty' | t"
+          [rows]="trendRows()"
+          (retry)="refresh()"
+        >
+          <crm-chart type="bar" [labels]="trendLabels()" [series]="trendSeries()" [ariaLabel]="'reports.ticket.trendAria' | t" />
+        </crm-chart-card>
+        <a mat-button routerLink="/reports/tickets" queryParamsHandling="preserve">{{ 'reports.viewReport' | t }}</a>
+      </div>
+      <div class="chart-col">
+        <crm-chart-card
+          [title]="'reports.dashboard.workloadChart' | t"
+          [error]="o.agents.data ? null : o.agents.error"
+          [empty]="workloadEmpty()"
+          [emptyText]="'reports.agent.workloadEmpty' | t"
+          [rows]="workloadRows()"
+          (retry)="refresh()"
+        >
+          <crm-chart type="horizontalBar" [height]="workloadHeight()" [labels]="workloadLabels()" [series]="workloadSeries()" [ariaLabel]="'reports.dashboard.workloadAria' | t" />
+        </crm-chart-card>
+        <a mat-button routerLink="/reports/agents" queryParamsHandling="preserve">{{ 'reports.viewReport' | t }}</a>
+      </div>
+      <div class="chart-col">
+        <crm-chart-card
+          [title]="'reports.dashboard.ratingChart' | t"
+          [error]="o.csat.data ? null : o.csat.error"
+          [empty]="(o.csat.data?.feedbackCount ?? 0) === 0"
+          [emptyText]="'reports.csat.distributionEmpty' | t"
+          [rows]="ratingRows()"
+          (retry)="refresh()"
+        >
+          <crm-chart type="bar" [labels]="ratingLabels()" [series]="ratingSeries()" [ariaLabel]="'reports.csat.distributionAria' | t" />
+        </crm-chart-card>
+        <a mat-button routerLink="/reports/customer-satisfaction" queryParamsHandling="preserve">{{ 'reports.viewReport' | t }}</a>
+      </div>
     </div>
   </section>
 }

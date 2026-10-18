@@ -1,8 +1,8 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
@@ -10,10 +10,15 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { RouterLink } from '@angular/router';
 import { EMPTY, Subject, catchError, map, of, switchMap } from 'rxjs';
 import { describeHttpError } from '../../core/api/describe-http-error';
+import { I18n } from '../../core/i18n/i18n';
+import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { AuthService } from '../../core/auth/auth-service';
 import { TaskReminder } from '../../core/notifications/notification-models';
 import { NotificationsApi } from '../../core/notifications/notifications-api';
 import { ReminderBadgeRefresh } from '../../core/notifications/reminder-badge-refresh';
+import { EmptyState } from '../../shared/ui/empty-state/empty-state';
+import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
 import { SlaAlertList } from './sla-alert-list';
@@ -23,7 +28,7 @@ const PAGE_SIZE = 20;
 @Component({
   selector: 'crm-notifications-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, RouterLink, PageHeader, StatusBadge, SlaAlertList, MatButtonModule, MatIconModule, MatProgressBarModule, MatSlideToggleModule],
+  imports: [LocalizedDatePipe, TranslatePipe, RouterLink, EmptyState, ErrorState, PageHeader, StatusBadge, SlaAlertList, MatButtonModule, MatCardModule, MatIconModule, MatProgressBarModule, MatSlideToggleModule],
   templateUrl: './notifications-page.html',
   styleUrl: '../../shared/ui/productivity-page.scss',
 })
@@ -32,6 +37,7 @@ export class NotificationsPage {
   private readonly auth = inject(AuthService);
   private readonly badge = inject(ReminderBadgeRefresh);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly i18n = inject(I18n);
   private readonly destroyRef = inject(DestroyRef);
   private readonly requests = new Subject<{ page: number; unreadOnly: boolean }>();
   private nextPage = 1;
@@ -54,7 +60,7 @@ export class NotificationsPage {
             switchMap(() => this.api.list(r.page, PAGE_SIZE, r.unreadOnly)),
             map(result => ({ r, result })),
             catchError((error: HttpErrorResponse) => {
-              this.error.set(describeHttpError(error, 'Could not load reminders.'));
+              this.error.set(describeHttpError(error, this.i18n.t('notifications.loadError'), this.i18n.t));
               this.loading.set(false);
               return EMPTY;
             }),
@@ -105,10 +111,10 @@ export class NotificationsPage {
       error: (error: HttpErrorResponse) => {
         if (error.status === 404) {
           this.items.update(list => list.filter(i => i.id !== item.id));
-          this.snackBar.open('This reminder moved with its task to another Agent.', 'OK', { duration: 6000 });
+          this.snackBar.open(this.i18n.t('notifications.reminderMoved'), this.i18n.t('notifications.ok'), { duration: 6000 });
           this.badge.next();
         } else {
-          this.error.set(describeHttpError(error, 'Could not mark the reminder as read.'));
+          this.error.set(describeHttpError(error, this.i18n.t('notifications.markError'), this.i18n.t));
         }
       },
     });

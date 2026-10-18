@@ -26,7 +26,7 @@
 .stack {
   display: grid;
   gap: var(--crm-space-4);
-  max-inline-size: 720px;
+  max-inline-size: 960px;
 }
 
 .grid {
@@ -107,4 +107,29 @@ h2 {
   .row-line {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+.card-body {
+  display: grid;
+  gap: var(--crm-space-4);
+  padding-block-start: var(--crm-space-4);
+}
+
+.visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+td.wrap {
+  overflow-wrap: anywhere;
+  min-inline-size: 10rem;
+}
+
+td,
+th {
+  text-align: start;
 }

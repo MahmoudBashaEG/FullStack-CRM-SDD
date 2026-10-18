@@ -3,6 +3,8 @@ import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -10,10 +12,16 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { EMPTY, Subject, catchError, debounceTime, switchMap } from 'rxjs';
+import { I18n } from '../../core/i18n/i18n';
+import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { toDateOnly } from '../../shared/date/date-only';
+import { EmptyState } from '../../shared/ui/empty-state/empty-state';
+import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { describeSaveError } from '../sla/sla-errors';
 import { AdminApi } from './admin-api';
-import { auditActionLabel, describeAuditChange, formatUtcTimestamp } from './admin-format';
+import { auditActionLabel, describeAuditChange } from './admin-format';
 import { AUDIT_ACTIONS, AuditAction, AuditListParams, AuditLogEntry } from './admin-models';
 import { AdminSectionNav } from './admin-section-nav';
 
@@ -24,6 +32,12 @@ import { AdminSectionNav } from './admin-section-nav';
     ReactiveFormsModule,
     PageHeader,
     AdminSectionNav,
+    EmptyState,
+    ErrorState,
+    TranslatePipe,
+    LocalizedDatePipe,
+    MatCardModule,
+    MatDatepickerModule,
     MatPaginatorModule,
     MatFormFieldModule,
     MatInputModule,
@@ -36,6 +50,7 @@ import { AdminSectionNav } from './admin-section-nav';
   styleUrls: ['../../shared/ui/productivity-page.scss', './admin-page.scss'],
 })
 export class AuditLogsPage {
+  protected readonly i18n = inject(I18n);
   private readonly api = inject(AdminApi);
   private readonly destroyRef = inject(DestroyRef);
   private readonly requests = new Subject<AuditListParams>();
@@ -43,12 +58,11 @@ export class AuditLogsPage {
   protected readonly actions = AUDIT_ACTIONS;
   protected readonly auditActionLabel = auditActionLabel;
   protected readonly describeAuditChange = describeAuditChange;
-  protected readonly formatUtcTimestamp = formatUtcTimestamp;
   protected readonly pageSizeOptions = [20, 50, 100];
   protected readonly filters = inject(NonNullableFormBuilder).group({
     action: ['' as AuditAction | ''],
-    from: [''],
-    to: [''],
+    from: [null as Date | null],
+    to: [null as Date | null],
     search: [''],
   });
   protected readonly items = signal<AuditLogEntry[]>([]);
@@ -65,7 +79,7 @@ export class AuditLogsPage {
         switchMap(params =>
           this.api.listAuditLogs(params).pipe(
             catchError((error: HttpErrorResponse) => {
-              this.error.set(describeSaveError(error, 'Could not load the audit log.'));
+              this.error.set(describeSaveError(error, this.i18n.t('admin.auditPage.loadError'), this.i18n.t));
               this.loading.set(false);
               return EMPTY;
             }),
@@ -96,14 +110,16 @@ export class AuditLogsPage {
 
   private load(page: number): void {
     const f = this.filters.getRawValue();
-    if (f.from && f.to && f.to < f.from) {
-      this.rangeError.set("'To' must be on or after 'From'.");
+    const from = toDateOnly(f.from) ?? '';
+    const to = toDateOnly(f.to) ?? '';
+    if (from && to && to < from) {
+      this.rangeError.set(this.i18n.t('admin.auditPage.rangeError'));
       return; // no request; the server 400 stays authoritative
     }
 
     this.rangeError.set(null);
     this.loading.set(true);
     this.error.set(null);
-    this.requests.next({ page, pageSize: this.pageSize(), action: f.action, from: f.from, to: f.to, search: f.search });
+    this.requests.next({ page, pageSize: this.pageSize(), action: f.action, from, to, search: f.search });
   }
 }

@@ -1,9 +1,9 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -13,10 +13,15 @@ import { MatSelectModule } from '@angular/material/select';
 import { RouterLink } from '@angular/router';
 import { EMPTY, Subject, catchError, debounceTime, switchMap } from 'rxjs';
 import { describeHttpError } from '../../core/api/describe-http-error';
+import { I18n } from '../../core/i18n/i18n';
+import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { EmptyState } from '../../shared/ui/empty-state/empty-state';
+import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
-import { ARTICLE_TYPES, KnowledgeArticleType, articleTypeLabel } from '../knowledge-base/knowledge-base-models';
+import { ARTICLE_TYPES, KnowledgeArticleType } from '../knowledge-base/knowledge-base-models';
 import { PortalApi } from './portal-api';
-import { HelpCenterArticleSummary, HelpCenterCategory, HelpCenterListParams, NOT_LINKED } from './portal-models';
+import { HelpCenterArticleSummary, HelpCenterCategory, HelpCenterListParams } from './portal-models';
 
 @Component({
   selector: 'crm-help-center-page',
@@ -24,8 +29,12 @@ import { HelpCenterArticleSummary, HelpCenterCategory, HelpCenterListParams, NOT
   imports: [
     ReactiveFormsModule,
     RouterLink,
-    DatePipe,
+    LocalizedDatePipe,
+    TranslatePipe,
+    EmptyState,
+    ErrorState,
     PageHeader,
+    MatCardModule,
     MatPaginatorModule,
     MatFormFieldModule,
     MatInputModule,
@@ -40,11 +49,11 @@ import { HelpCenterArticleSummary, HelpCenterCategory, HelpCenterListParams, NOT
 export class HelpCenterPage {
   private readonly api = inject(PortalApi);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly i18n = inject(I18n);
   private readonly requests = new Subject<HelpCenterListParams>();
 
   protected readonly pageSizeOptions = [10, 20, 50];
   protected readonly types = ARTICLE_TYPES;
-  protected readonly typeLabel = articleTypeLabel;
   protected readonly filters = inject(NonNullableFormBuilder).group({
     search: [''],
     type: [null as KnowledgeArticleType | null],
@@ -69,7 +78,7 @@ export class HelpCenterPage {
         switchMap(params =>
           this.api.listArticles(params).pipe(
             catchError((error: HttpErrorResponse) => {
-              this.error.set(error.status === 404 ? NOT_LINKED : describeHttpError(error, 'Could not load help articles.'));
+              this.error.set(error.status === 404 ? this.i18n.t('portal.notLinked') : describeHttpError(error, this.i18n.t('portal.helpCenter.loadError'), this.i18n.t));
               this.loading.set(false);
               return EMPTY;
             }),

@@ -1,121 +1,144 @@
-<crm-page-header title="Customer" subtitle="Profile, contact details, notes, interactions, tickets and files." />
-
-<p><a mat-button routerLink="/customers">Back to customers</a></p>
+<crm-page-header
+  icon="person"
+  [title]="customer() ? customer()!.firstName + ' ' + customer()!.lastName : ('customers.detail.title' | t)"
+  [subtitle]="'customers.detail.subtitle' | t">
+  <a mat-stroked-button actions routerLink="/customers">
+    <mat-icon class="dir-icon">arrow_back</mat-icon> {{ 'customers.detail.back' | t }}
+  </a>
+</crm-page-header>
 
 @if (loadError(); as message) {
-  <p class="form-error" role="alert">{{ message }}</p>
+  <crm-error-state [message]="message" (retry)="reload()" />
 }
 
 @if (customer(); as current) {
-  <div class="detail-stack">
-    <mat-card appearance="outlined">
-      <mat-card-header>
-        <mat-card-title>Summary</mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        <dl class="readonly-list">
-          <dt>Customer ID</dt>
-          <dd>{{ current.id }}</dd>
-          <dt>Type</dt>
-          <dd>
+  <mat-tab-group
+    [selectedIndex]="tabs.index()"
+    (selectedIndexChange)="tabs.select($event)"
+    [preserveContent]="true"
+    animationDuration="0ms">
+    <mat-tab [label]="'customers.detail.tabs.profile' | t">
+      <div class="crm-grid--two tab-body">
+        <mat-card appearance="outlined">
+          <mat-card-header>
+            <mat-card-title>{{ 'customers.detail.summary' | t }}</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <dl class="readonly-list">
+              <dt>{{ 'customers.detail.customerId' | t }}</dt>
+              <dd><span class="ltr-value">{{ current.id }}</span></dd>
+              <dt>{{ 'customers.detail.type' | t }}</dt>
+              <dd>
+                @if (current.isRegistered) {
+                  <crm-status-badge [label]="'customers.type.registered' | t" tone="success" />
+                } @else {
+                  <crm-status-badge [label]="'customers.type.contactOnly' | t" tone="neutral" />
+                }
+              </dd>
+              <dt>{{ 'customers.detail.created' | t }}</dt>
+              <dd>{{ current.createdAtUtc | crmDate: 'medium' }}</dd>
+              <dt>{{ 'customers.detail.lastUpdated' | t }}</dt>
+              <dd>{{ current.updatedAtUtc | crmDate: 'medium' }}</dd>
+            </dl>
             @if (current.isRegistered) {
-              <crm-status-badge label="Registered" tone="success" />
+              <p class="hint">{{ 'customers.detail.registeredHint' | t }}</p>
             } @else {
-              <crm-status-badge label="Contact only" tone="neutral" />
+              <p class="hint">{{ 'customers.detail.contactHint' | t }}</p>
             }
-          </dd>
-          <dt>Created</dt>
-          <dd>{{ current.createdAtUtc | date: 'medium' }}</dd>
-          <dt>Last updated</dt>
-          <dd>{{ current.updatedAtUtc | date: 'medium' }}</dd>
-        </dl>
-        @if (current.isRegistered) {
-          <p class="hint">
-            Has a login account. Name and phone changes also update the customer's account; the login email cannot be changed.
-          </p>
-        } @else {
-          <p class="hint">No login account. Changing the contact email never creates or changes a login.</p>
-        }
-      </mat-card-content>
-    </mat-card>
+          </mat-card-content>
+        </mat-card>
 
-    <mat-card appearance="outlined">
-      <mat-card-header>
-        <mat-card-title>Edit details</mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        <form [formGroup]="form" (ngSubmit)="save()" class="form-grid">
-          <mat-form-field appearance="outline">
-            <mat-label>First name</mat-label>
-            <input matInput formControlName="firstName" />
-            @if (form.controls.firstName.invalid) {
-              <mat-error>First name is required (max 100 characters)</mat-error>
-            }
-          </mat-form-field>
+        <mat-card appearance="outlined">
+          <mat-card-header>
+            <mat-card-title>{{ 'customers.detail.editDetails' | t }}</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <form [formGroup]="form" (ngSubmit)="save()" class="form-grid">
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'customers.fields.firstName' | t }}</mat-label>
+                <input matInput formControlName="firstName" />
+                @if (form.controls.firstName.invalid) {
+                  <mat-error>{{ 'customers.fields.firstNameInvalid' | t }}</mat-error>
+                }
+              </mat-form-field>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Last name</mat-label>
-            <input matInput formControlName="lastName" />
-            @if (form.controls.lastName.invalid) {
-              <mat-error>Last name is required (max 100 characters)</mat-error>
-            }
-          </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'customers.fields.lastName' | t }}</mat-label>
+                <input matInput formControlName="lastName" />
+                @if (form.controls.lastName.invalid) {
+                  <mat-error>{{ 'customers.fields.lastNameInvalid' | t }}</mat-error>
+                }
+              </mat-form-field>
 
-          <mat-form-field appearance="outline">
-            <mat-label>{{ form.controls.email.disabled ? 'Login email (read-only)' : 'Contact email' }}</mat-label>
-            <input matInput type="email" formControlName="email" />
-            @if (form.controls.email.hasError('required')) {
-              <mat-error>Email is required</mat-error>
-            } @else if (form.controls.email.invalid) {
-              <mat-error>Enter a valid email address</mat-error>
-            }
-          </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ (form.controls.email.disabled ? 'customers.fields.loginEmailReadOnly' : 'customers.fields.contactEmail') | t }}</mat-label>
+                <input matInput type="email" formControlName="email" />
+                @if (form.controls.email.hasError('required')) {
+                  <mat-error>{{ 'customers.fields.emailRequired' | t }}</mat-error>
+                } @else if (form.controls.email.invalid) {
+                  <mat-error>{{ 'customers.fields.emailInvalid' | t }}</mat-error>
+                }
+              </mat-form-field>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Phone (optional)</mat-label>
-            <input matInput type="tel" formControlName="phoneNumber" />
-            @if (form.controls.phoneNumber.invalid) {
-              <mat-error>Phone number is too long</mat-error>
-            }
-          </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'customers.fields.phone' | t }}</mat-label>
+                <input matInput type="tel" formControlName="phoneNumber" />
+                @if (form.controls.phoneNumber.invalid) {
+                  <mat-error>{{ 'customers.fields.phoneInvalid' | t }}</mat-error>
+                }
+              </mat-form-field>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Company (optional)</mat-label>
-            <input matInput formControlName="company" />
-            @if (form.controls.company.invalid) {
-              <mat-error>Company is too long (max 200 characters)</mat-error>
-            }
-          </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'customers.fields.company' | t }}</mat-label>
+                <input matInput formControlName="company" />
+                @if (form.controls.company.invalid) {
+                  <mat-error>{{ 'customers.fields.companyInvalid' | t }}</mat-error>
+                }
+              </mat-form-field>
 
-          @if (saveError(); as message) {
-            <p class="form-error" role="alert">{{ message }}</p>
-          }
+              @if (saveError(); as message) {
+                <p class="form-error" role="alert">{{ message }}</p>
+              }
 
-          <div>
-            <button mat-flat-button type="submit" [disabled]="saving()">Save</button>
-          </div>
-        </form>
-      </mat-card-content>
-    </mat-card>
+              <div>
+                <button mat-flat-button type="submit" [disabled]="saving()">{{ 'common.save' | t }}</button>
+              </div>
+            </form>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </mat-tab>
 
-    <mat-card appearance="outlined">
-      <mat-card-header><mat-card-title>Notes</mat-card-title></mat-card-header>
-      <mat-card-content><crm-customer-notes [customerId]="current.id" /></mat-card-content>
-    </mat-card>
+    <mat-tab [label]="'customers.detail.tabs.tickets' | t">
+      <ng-template matTabContent>
+        <mat-card appearance="outlined" class="tab-body">
+          <mat-card-content><crm-customer-related-tickets [customerId]="current.id" /></mat-card-content>
+        </mat-card>
+      </ng-template>
+    </mat-tab>
 
-    <mat-card appearance="outlined">
-      <mat-card-header><mat-card-title>Interactions</mat-card-title></mat-card-header>
-      <mat-card-content><crm-customer-interactions [customerId]="current.id" /></mat-card-content>
-    </mat-card>
+    <mat-tab [label]="'customers.detail.tabs.notes' | t">
+      <ng-template matTabContent>
+        <mat-card appearance="outlined" class="tab-body">
+          <mat-card-content><crm-customer-notes [customerId]="current.id" /></mat-card-content>
+        </mat-card>
+      </ng-template>
+    </mat-tab>
 
-    <mat-card appearance="outlined">
-      <mat-card-header><mat-card-title>Related tickets</mat-card-title></mat-card-header>
-      <mat-card-content><crm-customer-related-tickets [customerId]="current.id" /></mat-card-content>
-    </mat-card>
+    <mat-tab [label]="'customers.detail.tabs.interactions' | t">
+      <ng-template matTabContent>
+        <mat-card appearance="outlined" class="tab-body">
+          <mat-card-content><crm-customer-interactions [customerId]="current.id" /></mat-card-content>
+        </mat-card>
+      </ng-template>
+    </mat-tab>
 
-    <mat-card appearance="outlined">
-      <mat-card-header><mat-card-title>Attachments</mat-card-title></mat-card-header>
-      <mat-card-content><crm-customer-attachments [customerId]="current.id" /></mat-card-content>
-    </mat-card>
-  </div>
+    <mat-tab [label]="'customers.detail.tabs.attachments' | t">
+      <ng-template matTabContent>
+        <mat-card appearance="outlined" class="tab-body">
+          <mat-card-content><crm-customer-attachments [customerId]="current.id" /></mat-card-content>
+        </mat-card>
+      </ng-template>
+    </mat-tab>
+  </mat-tab-group>
 }

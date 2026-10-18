@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -8,26 +7,31 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { RouterLink } from '@angular/router';
 import { EMPTY, Subject, catchError, switchMap } from 'rxjs';
 import { describeHttpError } from '../../core/api/describe-http-error';
+import { I18n } from '../../core/i18n/i18n';
+import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { EmptyState } from '../../shared/ui/empty-state/empty-state';
+import { ErrorState } from '../../shared/ui/error-state/error-state';
+import { KpiCard } from '../../shared/ui/kpi-card/kpi-card';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
-import { statusLabel } from '../tickets/ticket-models';
 import { SlaApi } from './sla-api';
-import { AutomationOutcome, SlaOverview, SlaTargetView, formatBusinessMinutes, slaKindLabel } from './sla-models';
+import { AutomationOutcome, SlaKind, SlaOverview, SlaTargetView, formatBusinessMinutes, slaKindLabel } from './sla-models';
 
 /** SLA-001 capability 9: warning / breached tickets and recent automation results. */
 @Component({
   selector: 'crm-sla-overview',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, RouterLink, StatusBadge, MatButtonModule, MatIconModule, MatProgressBarModule],
+  imports: [LocalizedDatePipe, TranslatePipe, ErrorState, EmptyState, KpiCard, RouterLink, StatusBadge, MatButtonModule, MatIconModule, MatProgressBarModule],
   templateUrl: './sla-overview.html',
   styleUrl: './sla-admin.scss',
 })
 export class SlaOverviewPanel {
+  protected readonly i18n = inject(I18n);
   private readonly api = inject(SlaApi);
   private readonly destroyRef = inject(DestroyRef);
   private readonly requests = new Subject<void>();
 
-  protected readonly statusLabel = statusLabel;
-  protected readonly kindLabel = slaKindLabel;
+  protected readonly kindLabel = (kind: SlaKind) => slaKindLabel(kind, this.i18n.t);
   protected readonly overview = signal<SlaOverview | null>(null);
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
@@ -38,7 +42,7 @@ export class SlaOverviewPanel {
         switchMap(() =>
           this.api.getOverview().pipe(
             catchError((error: HttpErrorResponse) => {
-              this.error.set(describeHttpError(error, 'Could not load the SLA overview.'));
+              this.error.set(describeHttpError(error, this.i18n.t('sla.overview.loadFailed'), this.i18n.t));
               this.loading.set(false);
               return EMPTY;
             }),
@@ -68,19 +72,13 @@ export class SlaOverviewPanel {
   protected timeText(target: SlaTargetView): string {
     const remaining = target.businessMinutesRemaining;
     if (remaining === null) return '';
+    const t = this.i18n.t;
     return remaining >= 0
-      ? `${formatBusinessMinutes(remaining)} remaining`
-      : `overdue by ${formatBusinessMinutes(-remaining)}`;
+      ? t('sla.overview.remaining', { time: formatBusinessMinutes(remaining, t) })
+      : t('sla.overview.overdueBy', { time: formatBusinessMinutes(-remaining, t) });
   }
 
   protected outcomeLabel(outcome: AutomationOutcome): string {
-    switch (outcome) {
-      case 'AlreadyEscalated':
-        return 'Already escalated';
-      case 'NotEscalatable':
-        return 'Not escalatable';
-      default:
-        return outcome;
-    }
+    return this.i18n.t(`sla.outcome.${outcome}`);
   }
 }

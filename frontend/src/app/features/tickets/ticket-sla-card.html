@@ -1,68 +1,66 @@
 @if (ticket().sla; as sla) {
   <p>
     <crm-status-badge [label]="indicatorLabel(sla.indicator)" [tone]="indicatorTone(sla.indicator)" />
-    <span class="hint">Business calendar: {{ sla.timeZoneId }}</span>
+    <span class="hint">{{ 'tickets.sla.businessCalendar' | t: { zone: sla.timeZoneId } }}</span>
   </p>
-  <p class="hint">
-    Due times were fixed when the ticket was created. Remaining business time is calculated with the current business calendar.
-  </p>
+  <p class="hint">{{ 'tickets.sla.dueNote' | t }}</p>
 
   @for (t of targets(); track t.kind) {
     <section class="target" [attr.aria-label]="kindLabel(t.kind)">
       <h3>{{ kindLabel(t.kind) }}</h3>
       <dl class="readonly-list">
-        <dt>Target</dt>
-        <dd>{{ format(t.targetMinutes) }} business time</dd>
-        <dt>Due</dt>
-        <dd>{{ t.dueAtUtc | date: 'medium' }}</dd>
-        <dt>State</dt>
+        <dt>{{ 'tickets.sla.target' | t }}</dt>
+        <dd>{{ 'tickets.sla.businessTime' | t: { time: format(t.targetMinutes) } }}</dd>
+        <dt>{{ 'tickets.sla.due' | t }}</dt>
+        <dd>{{ t.dueAtUtc | crmDate: 'medium' }}</dd>
+        <dt>{{ 'tickets.sla.state' | t }}</dt>
         <dd>
           @switch (t.state) {
             @case ('Met') {
-              <crm-status-badge label="Met" tone="success" />
+              <crm-status-badge [label]="'tickets.sla.met' | t" tone="success" />
             }
             @case ('Breached') {
-              <crm-status-badge label="Breached" tone="error" />
+              <crm-status-badge [label]="'tickets.sla.breached' | t" tone="error" />
             }
             @default {
-              <crm-status-badge label="Pending" tone="pending" />
+              <crm-status-badge [label]="'tickets.sla.pending' | t" tone="pending" />
             }
           }
           @if (t.isWarning) {
-            <crm-status-badge label="Warning" tone="pending" />
+            <crm-status-badge [label]="'tickets.sla.warning' | t" tone="pending" />
           }
         </dd>
         @if (t.completedAtUtc) {
           <dt>{{ completedLabel(t) }}</dt>
           <dd>
-            {{ t.completedAtUtc | date: 'medium' }}
+            {{ t.completedAtUtc | crmDate: 'medium' }}
             @if (t.completedByName) {
-              <span class="hint">by {{ t.completedByName }}</span>
+              <span class="hint">{{ 'tickets.sla.by' | t: { name: t.completedByName } }}</span>
             }
           </dd>
         } @else if (t.businessMinutesRemaining !== null) {
-          <dt>Time</dt>
+          <dt>{{ 'tickets.sla.time' | t }}</dt>
           <dd>
             @if (t.businessMinutesRemaining >= 0) {
-              {{ format(t.businessMinutesRemaining) }} business time remaining
+              {{ 'tickets.sla.remaining' | t: { time: format(t.businessMinutesRemaining) } }}
             } @else {
-              Overdue by {{ format(-t.businessMinutesRemaining) }} business time
+              {{ 'tickets.sla.overdue' | t: { time: format(-t.businessMinutesRemaining) } }}
             }
           </dd>
         }
-        <dt>Elapsed</dt>
-        <dd>{{ format(t.businessMinutesElapsed) }} business time</dd>
+        <dt>{{ 'tickets.sla.elapsed' | t }}</dt>
+        <dd>{{ 'tickets.sla.businessTime' | t: { time: format(t.businessMinutesElapsed) } }}</dd>
       </dl>
     </section>
   }
 
   @if (canMarkResponded()) {
-    <button mat-flat-button type="button" [disabled]="busy()" (click)="markResponded.emit()">Mark as Responded</button>
-    <p class="hint">Records that you already responded to the customer outside the CRM. Nothing is sent.</p>
+    <button mat-flat-button type="button" [disabled]="busy()" (click)="markResponded.emit()">{{ 'tickets.sla.markResponded' | t }}</button>
+    <p class="hint">{{ 'tickets.sla.markRespondedHint' | t }}</p>
   }
 } @else {
   <p>
-    <crm-status-badge label="Not tracked" tone="neutral" />
+    <crm-status-badge [label]="'tickets.sla.notTracked' | t" tone="neutral" />
   </p>
-  <p class="hint">Not tracked — this ticket was created before SLA tracking or while no SLA policy was enabled.</p>
+  <p class="hint">{{ 'tickets.sla.notTrackedHint' | t }}</p>
 }

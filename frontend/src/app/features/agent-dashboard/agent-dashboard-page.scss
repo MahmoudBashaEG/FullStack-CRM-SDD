@@ -1,14 +1,15 @@
-.toolbar {
+.action-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;
-  gap: var(--crm-space-3);
+  gap: var(--crm-space-3) var(--crm-space-4);
   margin-block-end: var(--crm-space-4);
 }
 
-section {
-  margin-block-start: var(--crm-space-6);
+.tab-body {
+  display: grid;
+  gap: var(--crm-space-6);
+  padding-block: var(--crm-space-4);
 }
 
 h2 {
@@ -18,24 +19,14 @@ h2 {
 
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
   gap: var(--crm-space-4);
   margin-block-start: var(--crm-space-4);
 }
 
-.summary-card mat-card-content {
-  display: grid;
-  gap: var(--crm-space-1);
-  padding-block: var(--crm-space-4);
-}
-
-.count {
-  font: var(--mat-sys-display-small);
-}
-
 .queue {
   list-style: none;
-  margin: 0;
+  margin: var(--crm-space-4) 0 0;
   padding: 0;
   display: grid;
   gap: var(--crm-space-3);
@@ -49,17 +40,21 @@ h2 {
   padding: var(--crm-space-3) var(--crm-space-4);
   border: 1px solid var(--mat-sys-outline-variant);
   border-radius: var(--crm-radius-md);
+  background: var(--mat-sys-surface);
 }
 
 .subject {
   flex: 1 1 240px;
+  min-inline-size: 0;
   font: var(--mat-sys-title-medium);
+  overflow-wrap: anywhere;
 }
 
 .meta {
   flex-basis: 100%;
   color: var(--mat-sys-on-surface-variant);
   font: var(--mat-sys-body-medium);
+  overflow-wrap: anywhere;
 }
 
 .email {
@@ -70,8 +65,4 @@ h2 {
   margin: 0;
   color: var(--mat-sys-on-surface-variant);
   font: var(--mat-sys-body-medium);
-}
-
-.error {
-  color: var(--mat-sys-error);
 }

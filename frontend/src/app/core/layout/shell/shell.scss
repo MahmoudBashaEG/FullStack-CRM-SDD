@@ -1,34 +1,141 @@
+.skip-link {
+  position: absolute;
+  inset-block-start: var(--crm-space-2);
+  inset-inline-start: var(--crm-space-2);
+  z-index: 1000;
+  padding: var(--crm-space-2) var(--crm-space-4);
+  border-radius: var(--crm-radius-sm);
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  transform: translateY(-300%);
+}
+
+.skip-link:focus {
+  transform: none;
+}
+
 .shell {
   block-size: 100dvh;
 }
 
 .shell__nav {
   inline-size: var(--crm-nav-inline-size);
-  background: var(--mat-sys-surface-container-low);
+  background: var(--mat-sys-surface);
   border-inline-end: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 0;
+  transition: inline-size 200ms ease;
+  overflow-x: hidden;
+}
+
+.shell__nav--rail {
+  inline-size: var(--crm-nav-rail-inline-size);
 }
 
 .shell__brand {
   display: flex;
   align-items: center;
   gap: var(--crm-space-3);
-  padding-block: var(--crm-space-6) var(--crm-space-4);
-  padding-inline: var(--crm-space-6);
-  font: var(--mat-sys-title-large);
-  color: var(--mat-sys-primary);
+  block-size: var(--crm-topbar-block-size);
+  box-sizing: border-box;
+  padding-inline: var(--crm-space-4);
+  border-block-end: 1px solid var(--mat-sys-outline-variant);
+  font: var(--mat-sys-title-medium);
+  color: var(--mat-sys-on-surface);
+  overflow: hidden;
+}
+
+.shell__logo {
+  inline-size: 40px;
+  block-size: 40px;
+  object-fit: contain;
+  border-radius: var(--crm-radius-sm);
+  flex: none;
+}
+
+.shell__logo-icon {
+  display: grid;
+  place-items: center;
+  inline-size: 40px;
+  block-size: 40px;
+  flex: none;
+  border-radius: var(--crm-radius-sm);
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+}
+
+.shell__org {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shell__menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--crm-space-3);
+}
+
+.shell__group {
+  margin: var(--crm-space-4) 0 var(--crm-space-1);
+  padding-inline: var(--crm-space-3);
+  font: var(--mat-sys-label-small);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.shell__divider {
+  inline-size: 100%;
+  margin: var(--crm-space-2) 0;
+  border: 0;
+  border-block-start: 1px solid var(--mat-sys-outline-variant);
+}
+
+.shell__link {
+  display: flex;
+  align-items: center;
+  gap: var(--crm-space-3);
+  min-block-size: 44px;
+  box-sizing: border-box;
+  padding-inline: var(--crm-space-3);
+  border-radius: var(--crm-radius-sm);
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-label-large);
+  text-decoration: none;
+}
+
+.shell__link:hover {
+  background: var(--mat-sys-surface-container);
+  color: var(--mat-sys-on-surface);
+}
+
+.shell__link.is-active {
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+}
+
+.shell__nav--rail .shell__link {
+  justify-content: center;
+}
+
+.visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .shell__toolbar {
   position: sticky;
   inset-block-start: 0;
   z-index: 2;
+  block-size: var(--crm-topbar-block-size);
   background: var(--mat-sys-surface);
   border-block-end: 1px solid var(--mat-sys-outline-variant);
-  gap: var(--crm-space-2);
-}
-
-.shell__title {
-  font: var(--mat-sys-title-medium);
+  gap: var(--crm-space-1);
 }
 
 .shell__spacer {
@@ -36,8 +143,22 @@
 }
 
 .shell__user {
+  margin-inline-start: var(--crm-space-2);
+}
+
+.shell__avatar {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 32px;
+  block-size: 32px;
+  border-radius: 50%;
+  background: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
   font: var(--mat-sys-label-large);
-  color: var(--mat-sys-on-surface-variant);
+}
+
+.shell__username {
+  margin-inline: var(--crm-space-2) 0;
 }
 
 .shell__content {
@@ -45,10 +166,11 @@
   max-inline-size: var(--crm-content-max-inline-size);
   margin-inline: auto;
   padding: var(--crm-space-6);
+  outline: none;
 }
 
 @media (max-width: 599.98px) {
-  .shell__user {
+  .shell__username {
     display: none;
   }
 

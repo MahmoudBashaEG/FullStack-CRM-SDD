@@ -1,34 +1,40 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { EMPTY, Subject, catchError, map, merge, switchMap, tap } from 'rxjs';
-import { describeSaveError } from '../sla/sla-errors';
+import { I18n } from '../../core/i18n/i18n';
+import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { CrmChart } from '../../shared/charts/crm-chart';
+import { ChartCard, ChartRow } from '../../shared/ui/chart-card/chart-card';
+import { ErrorState } from '../../shared/ui/error-state/error-state';
+import { KpiCard } from '../../shared/ui/kpi-card/kpi-card';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
-import { ReportBar, ReportBars } from './report-bars';
-import { formatUtcDay, parsePeriodParams, toPeriodQueryParams } from './report-format';
+import { describeSaveError } from '../sla/sla-errors';
+import type { TicketPriority } from '../tickets/ticket-models';
+import { barChartHeight, formatUtcDay, parsePeriodParams, toPeriodQueryParams } from './report-format';
 import { ReportPeriodFilter } from './report-period-filter';
 import { ReportsApi } from './reports-api';
 import { AgentPerformanceReport, DEFAULT_PRESET, ReportCount, ReportPeriodParams } from './reports-models';
-import type { TicketPriority } from '../tickets/ticket-models';
+import { ReportsNav } from './reports-nav';
 
 @Component({
   selector: 'crm-agent-report-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    RouterLink,
-    DatePipe,
+    LocalizedDatePipe,
+    TranslatePipe,
     PageHeader,
     StatusBadge,
+    ReportsNav,
     ReportPeriodFilter,
-    ReportBars,
-    MatCardModule,
-    MatButtonModule,
+    ChartCard,
+    CrmChart,
+    ErrorState,
+    KpiCard,
     MatProgressBarModule,
   ],
   templateUrl: './agent-report-page.html',
@@ -39,15 +45,28 @@ export class AgentReportPage {
   private readonly router = inject(Router);
   private readonly api = inject(ReportsApi);
   private readonly reloads = new Subject<void>();
+  protected readonly i18n = inject(I18n);
 
-  protected readonly formatUtcDay = formatUtcDay;
   protected readonly period = signal<ReportPeriodParams>({ preset: DEFAULT_PRESET, from: null, to: null });
   protected readonly report = signal<AgentPerformanceReport | null>(null);
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
 
-  protected readonly workloadBars = computed<ReportBar[]>(() =>
-    (this.report()?.agents ?? []).map((a) => ({ label: a.name, value: a.activeAssigned })),
+  protected readonly workloadLabels = computed(() => (this.report()?.agents ?? []).map((a) => a.name));
+  protected readonly workloadSeries = computed(() => {
+    const agents = this.report()?.agents ?? [];
+    return [
+      { label: this.i18n.t('enums.ticketStatus.Open'), data: agents.map((a) => a.open) },
+      { label: this.i18n.t('enums.ticketStatus.InProgress'), data: agents.map((a) => a.inProgress) },
+    ];
+  });
+  protected readonly workloadEmpty = computed(() => (this.report()?.agents ?? []).every((a) => a.activeAssigned === 0));
+  protected readonly workloadHeight = computed(() => barChartHeight(this.workloadLabels().length));
+  protected readonly workloadRows = computed<ChartRow[]>(() =>
+    (this.report()?.agents ?? []).map((a) => ({
+      label: a.name,
+      value: `${this.i18n.t('enums.ticketStatus.Open')} ${a.open} · ${this.i18n.t('enums.ticketStatus.InProgress')} ${a.inProgress}`,
+    })),
   );
 
   constructor() {
@@ -71,7 +90,7 @@ export class AgentReportPage {
           this.api.agents(p).pipe(
             catchError((error: HttpErrorResponse) => {
               this.report.set(null); // never show stale numbers after a failure
-              this.error.set(describeSaveError(error, 'Could not load the report.'));
+              this.error.set(describeSaveError(error, this.i18n.t('reports.loadError'), this.i18n.t));
               this.loading.set(false);
               return EMPTY;
             }),
@@ -89,8 +108,12 @@ export class AgentReportPage {
   protected priorityMix(mix: ReportCount<TicketPriority>[]): string {
     return [...mix]
       .reverse()
-      .map((c) => `${c.value} ${c.count}`)
+      .map((c) => `${this.i18n.t('enums.ticketPriority.' + c.value)} ${c.count}`)
       .join(' · ');
+  }
+
+  protected formatDay(day: string): string {
+    return formatUtcDay(day, this.i18n.locale());
   }
 
   protected onPeriodChanged(p: ReportPeriodParams): void {

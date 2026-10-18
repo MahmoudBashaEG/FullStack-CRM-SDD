@@ -34,11 +34,14 @@ public sealed record AdminAuditLogResponse(
 /// <summary>Version = base64 rowversion (the ETag value without quotes).</summary>
 public sealed record OrganizationSettingsResponse(
     bool IsConfigured, string? DisplayName, string? SupportEmail, string? SupportPhone, string? SupportInformation,
+    string? AccentColor, bool HasLogo, string? LogoContentType, int? LogoSizeBytes, DateTimeOffset? LogoUpdatedAtUtc, int LogoVersion,
     DateTimeOffset? UpdatedAtUtc, string? UpdatedByName, string Version)
 {
     public static OrganizationSettingsResponse From(OrganizationSettingsDetails d) =>
-        new(d.IsConfigured, d.DisplayName, d.SupportEmail, d.SupportPhone, d.SupportInformation, d.UpdatedAtUtc, d.UpdatedByName,
+        new(d.IsConfigured, d.DisplayName, d.SupportEmail, d.SupportPhone, d.SupportInformation,
+            d.AccentColor, d.HasLogo, d.LogoContentType, d.LogoSizeBytes, d.LogoUpdatedAtUtc, d.LogoVersion, d.UpdatedAtUtc, d.UpdatedByName,
             Convert.ToBase64String(d.Version));
 }
 
-public sealed record UpdateOrganizationSettingsRequest(string? DisplayName, string? SupportEmail, string? SupportPhone, string? SupportInformation);
+/// <summary>AccentColor omitted or null keeps the saved accent (older clients do not reset it); send a preset id to change it.</summary>
+public sealed record UpdateOrganizationSettingsRequest(string? DisplayName, string? SupportEmail, string? SupportPhone, string? SupportInformation, string? AccentColor = null);

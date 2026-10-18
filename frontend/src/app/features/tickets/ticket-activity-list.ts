@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -6,49 +5,63 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { EMPTY, Subject, catchError, map, switchMap } from 'rxjs';
 import { describeHttpError } from '../../core/api/describe-http-error';
+import { I18n } from '../../core/i18n/i18n';
+import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { Translate, englishT } from '../../core/i18n/translate-fn';
+import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { TicketActivity, TicketStatus, statusLabel } from './ticket-models';
 import { TicketsApi } from './tickets-api';
 
 const PAGE_SIZE = 20;
 
-export function describeActivity(a: TicketActivity): { title: string; detail: string | null } {
+export function describeActivity(a: TicketActivity, t: Translate = englishT): { title: string; detail: string | null } {
+  const value = (v: string | null): string =>
+    v !== null && (a.field === 'Category' || a.field === 'Priority') ? t(`enums.ticket${a.field}.${v}`) : String(v);
   switch (a.type) {
     case 'Created':
-      return { title: 'Ticket created', detail: a.toAgentName ? `Assigned to ${a.toAgentName}` : 'Unassigned' };
+      return {
+        title: t('tickets.activity.created'),
+        detail: a.toAgentName ? t('tickets.activity.assignedTo', { name: a.toAgentName }) : t('tickets.activity.unassigned'),
+      };
     case 'FieldChanged':
       return a.field === 'Description'
-        ? { title: 'Description changed', detail: null }
-        : { title: `${a.field} changed`, detail: `${a.oldValue} → ${a.newValue}` };
+        ? { title: t('tickets.activity.descriptionChanged'), detail: null }
+        : {
+            title: t('tickets.activity.fieldChanged', { field: a.field ? t(`tickets.fields.${a.field}`) : '' }),
+            detail: `${value(a.oldValue)} → ${value(a.newValue)}`,
+          };
     case 'AssigneeChanged':
-      if (a.isAutomatic) return { title: 'Assigned automatically', detail: a.reason ?? `To ${a.toAgentName}` };
-      if (!a.fromAgentName) return { title: 'Assigned', detail: `To ${a.toAgentName}` };
-      if (!a.toAgentName) return { title: 'Unassigned', detail: `Was ${a.fromAgentName}` };
-      return { title: 'Reassigned', detail: `${a.fromAgentName} → ${a.toAgentName}` };
+      if (a.isAutomatic) return { title: t('tickets.activity.assignedAutomatically'), detail: a.reason ?? t('tickets.activity.to', { name: a.toAgentName ?? '' }) };
+      if (!a.fromAgentName) return { title: t('tickets.activity.assigned'), detail: t('tickets.activity.to', { name: a.toAgentName ?? '' }) };
+      if (!a.toAgentName) return { title: t('tickets.activity.unassigned'), detail: t('tickets.activity.was', { name: a.fromAgentName }) };
+      return { title: t('tickets.activity.reassigned'), detail: `${a.fromAgentName} → ${a.toAgentName}` };
     case 'StatusChanged':
       return {
-        title: a.oldValue === 'Closed' && a.newValue === 'Open' ? 'Reopened' : 'Status changed',
-        detail: `${statusLabel(a.oldValue as TicketStatus)} → ${statusLabel(a.newValue as TicketStatus)}`,
+        title: a.oldValue === 'Closed' && a.newValue === 'Open' ? t('tickets.activity.reopened') : t('tickets.activity.statusChanged'),
+        detail: `${statusLabel(a.oldValue as TicketStatus, t)} → ${statusLabel(a.newValue as TicketStatus, t)}`,
       };
     case 'Escalated':
-      return { title: a.isAutomatic ? 'Escalated automatically' : 'Escalated', detail: a.reason };
+      return { title: a.isAutomatic ? t('tickets.activity.escalatedAutomatically') : t('tickets.activity.escalated'), detail: a.reason };
     case 'EscalationCleared':
-      return { title: 'Escalation cleared', detail: null };
+      return { title: t('tickets.activity.escalationCleared'), detail: null };
     case 'EscalationAutoCleared':
-      return { title: 'Escalation cleared automatically', detail: 'The ticket was resolved.' };
+      return { title: t('tickets.activity.escalationAutoCleared'), detail: t('tickets.activity.ticketResolved') };
     case 'FirstResponseRecorded':
-      return { title: 'First response recorded', detail: 'Manual acknowledgement — nothing was sent to the customer.' };
+      return { title: t('tickets.activity.firstResponseRecorded'), detail: t('tickets.activity.manualAck') };
   }
 }
 
 @Component({
   selector: 'crm-ticket-activity-list',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, MatButtonModule, MatProgressBarModule],
+  imports: [LocalizedDatePipe, TranslatePipe, ErrorState, MatButtonModule, MatProgressBarModule],
   templateUrl: './ticket-activity-list.html',
   styleUrl: './ticket-activity-list.scss',
 })
 export class TicketActivityList {
   private readonly api = inject(TicketsApi);
+  private readonly i18n = inject(I18n);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly ticketId = input.required<string>();
@@ -70,7 +83,9 @@ export class TicketActivityList {
   protected readonly showTrackingNote = computed(
     () => this.loaded() && !this.loading() && !this.error() && !this.hasMore() && !this.items().some(a => a.type === 'Created'),
   );
-  protected readonly describe = describeActivity;
+  protected describe(a: TicketActivity): { title: string; detail: string | null } {
+    return describeActivity(a, this.i18n.t);
+  }
 
   private readonly requests = new Subject<{ id: string; page: number }>();
   private nextPage = 1;
@@ -83,7 +98,7 @@ export class TicketActivityList {
           this.api.activity(r.id, r.page, PAGE_SIZE).pipe(
             map(result => ({ r, result })),
             catchError((error: HttpErrorResponse) => {
-              this.error.set(describeHttpError(error, 'Could not load activity.'));
+              this.error.set(describeHttpError(error, this.i18n.t('tickets.activity.loadError'), this.i18n.t));
               this.loading.set(false);
               return EMPTY;
             }),

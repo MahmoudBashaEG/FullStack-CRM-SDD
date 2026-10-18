@@ -3,86 +3,136 @@
 }
 
 @if (error(); as message) {
-  <p class="form-error" role="alert">{{ message }}</p>
-  <button mat-stroked-button type="button" (click)="load()">Retry</button>
+  <crm-error-state [message]="message" (retry)="load()" />
 }
 
 @if (overview(); as o) {
   <div class="stack">
     <div class="inline">
       <button mat-stroked-button type="button" (click)="load()" [disabled]="loading()">
-        <mat-icon>refresh</mat-icon> Refresh
+        <mat-icon>refresh</mat-icon> {{ 'common.refresh' | t }}
       </button>
-      <span class="hint">Updated {{ o.generatedAtUtc | date: 'mediumTime' }}</span>
+      <span class="hint">{{ 'sla.overview.updated' | t: { time: (o.generatedAtUtc | crmDate: 'time') } }}</span>
     </div>
 
-    <div class="counts">
-      <div class="count"><strong>{{ o.warningCount }}</strong> Warning</div>
-      <div class="count"><strong>{{ o.breachedCount }}</strong> Breached</div>
-      <div class="count"><strong>{{ o.onTrackCount }}</strong> On track</div>
+    <div class="crm-grid">
+      <crm-kpi-card icon="warning" [label]="'sla.indicator.Warning' | t" [value]="'' + o.warningCount" [scope]="'common.live' | t" />
+      <crm-kpi-card icon="error" [label]="'sla.indicator.Breached' | t" [value]="'' + o.breachedCount" [scope]="'common.live' | t" />
+      <crm-kpi-card icon="check_circle" [label]="'sla.indicator.OnTrack' | t" [value]="'' + o.onTrackCount" [scope]="'common.live' | t" />
     </div>
-    <p class="hint">Counts cover the first 500 active tracked tickets, oldest due first.</p>
+    <p class="hint">{{ 'sla.overview.countsHint' | t }}</p>
 
-    <h2>Breached</h2>
+    <h2>{{ 'sla.indicator.Breached' | t }}</h2>
     @if (o.breached.length === 0) {
-      <p>No breached tickets.</p>
-    }
-    <ul class="list">
-      @for (t of o.breached; track t.ticketId) {
-        <li class="list-item">
-          <a class="grow" [routerLink]="['/tickets', t.ticketId]">{{ t.subject }}</a>
-          <crm-status-badge label="Breached" tone="error" />
-          <span class="hint">
-            {{ t.assignedAgentName ?? 'Unassigned' }} · {{ statusLabel(t.status) }} · {{ kindLabel(focus(t.sla, true).kind) }} due
-            {{ focus(t.sla, true).dueAtUtc | date: 'medium' }}
-            @if (timeText(focus(t.sla, true))) {
-              · {{ timeText(focus(t.sla, true)) }}
+      <crm-empty-state icon="check_circle" [title]="'sla.overview.noBreached' | t" />
+    } @else {
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">{{ 'sla.overview.ticket' | t }}</th>
+              <th scope="col">{{ 'common.status' | t }}</th>
+              <th scope="col">{{ 'sla.overview.agent' | t }}</th>
+              <th scope="col">{{ 'sla.overview.target' | t }}</th>
+              <th scope="col">{{ 'sla.overview.due' | t }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (t of o.breached; track t.ticketId) {
+              <tr>
+                <td class="wrap"><a [routerLink]="['/tickets', t.ticketId]">{{ t.subject }}</a></td>
+                <td>{{ 'enums.ticketStatus.' + t.status | t }}</td>
+                <td class="wrap">{{ t.assignedAgentName ?? ('sla.overview.unassigned' | t) }}</td>
+                <td>
+                  <crm-status-badge [label]="'sla.indicator.Breached' | t" tone="error" />
+                  {{ kindLabel(focus(t.sla, true).kind) }}
+                </td>
+                <td>
+                  {{ focus(t.sla, true).dueAtUtc | crmDate: 'medium' }}
+                  @if (timeText(focus(t.sla, true))) {
+                    · {{ timeText(focus(t.sla, true)) }}
+                  }
+                </td>
+              </tr>
             }
-          </span>
-        </li>
-      }
-    </ul>
+          </tbody>
+        </table>
+      </div>
+    }
 
-    <h2>Warning</h2>
+    <h2>{{ 'sla.indicator.Warning' | t }}</h2>
     @if (o.warning.length === 0) {
-      <p>No tickets at warning level.</p>
-    }
-    <ul class="list">
-      @for (t of o.warning; track t.ticketId) {
-        <li class="list-item">
-          <a class="grow" [routerLink]="['/tickets', t.ticketId]">{{ t.subject }}</a>
-          <crm-status-badge label="Warning" tone="pending" />
-          <span class="hint">
-            {{ t.assignedAgentName ?? 'Unassigned' }} · {{ statusLabel(t.status) }} · {{ kindLabel(focus(t.sla, false).kind) }} due
-            {{ focus(t.sla, false).dueAtUtc | date: 'medium' }}
-            @if (timeText(focus(t.sla, false))) {
-              · {{ timeText(focus(t.sla, false)) }}
+      <crm-empty-state icon="check_circle" [title]="'sla.overview.noWarning' | t" />
+    } @else {
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">{{ 'sla.overview.ticket' | t }}</th>
+              <th scope="col">{{ 'common.status' | t }}</th>
+              <th scope="col">{{ 'sla.overview.agent' | t }}</th>
+              <th scope="col">{{ 'sla.overview.target' | t }}</th>
+              <th scope="col">{{ 'sla.overview.due' | t }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (t of o.warning; track t.ticketId) {
+              <tr>
+                <td class="wrap"><a [routerLink]="['/tickets', t.ticketId]">{{ t.subject }}</a></td>
+                <td>{{ 'enums.ticketStatus.' + t.status | t }}</td>
+                <td class="wrap">{{ t.assignedAgentName ?? ('sla.overview.unassigned' | t) }}</td>
+                <td>
+                  <crm-status-badge [label]="'sla.indicator.Warning' | t" tone="pending" />
+                  {{ kindLabel(focus(t.sla, false).kind) }}
+                </td>
+                <td>
+                  {{ focus(t.sla, false).dueAtUtc | crmDate: 'medium' }}
+                  @if (timeText(focus(t.sla, false))) {
+                    · {{ timeText(focus(t.sla, false)) }}
+                  }
+                </td>
+              </tr>
             }
-          </span>
-        </li>
-      }
-    </ul>
+          </tbody>
+        </table>
+      </div>
+    }
 
-    <h2>Recent automation</h2>
+    <h2>{{ 'sla.overview.recent' | t }}</h2>
     @if (o.recentExecutions.length === 0) {
-      <p>No automation has run yet.</p>
+      <crm-empty-state icon="history" [title]="'sla.overview.noAutomation' | t" />
+    } @else {
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">{{ 'sla.overview.when' | t }}</th>
+              <th scope="col">{{ 'sla.overview.rule' | t }}</th>
+              <th scope="col">{{ 'sla.overview.ticket' | t }}</th>
+              <th scope="col">{{ 'sla.overview.detail' | t }}</th>
+              <th scope="col">{{ 'sla.overview.outcome' | t }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (e of o.recentExecutions; track e.id) {
+              <tr>
+                <td>{{ e.occurredAtUtc | crmDate: 'medium' }}</td>
+                <td class="wrap">{{ e.ruleName }}</td>
+                <td class="wrap">
+                  <a [routerLink]="['/tickets', e.ticketId]">{{ e.ticketSubject }}</a>
+                  @if (e.slaKind) {
+                    · {{ kindLabel(e.slaKind) }}
+                  }
+                </td>
+                <td class="wrap">{{ e.detail }}</td>
+                <td>
+                  <crm-status-badge [label]="outcomeLabel(e.outcome)" [tone]="e.outcome === 'Escalated' ? 'error' : 'neutral'" />
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
     }
-    <ul class="list">
-      @for (e of o.recentExecutions; track e.id) {
-        <li class="list-item">
-          <span class="grow">
-            {{ e.occurredAtUtc | date: 'medium' }} · {{ e.ruleName }} ·
-            <a [routerLink]="['/tickets', e.ticketId]">{{ e.ticketSubject }}</a>
-            @if (e.slaKind) {
-              · {{ kindLabel(e.slaKind) }}
-            }
-            @if (e.detail) {
-              <span class="hint"> · {{ e.detail }}</span>
-            }
-          </span>
-          <crm-status-badge [label]="outcomeLabel(e.outcome)" [tone]="e.outcome === 'Escalated' ? 'error' : 'neutral'" />
-        </li>
-      }
-    </ul>
   </div>
 }

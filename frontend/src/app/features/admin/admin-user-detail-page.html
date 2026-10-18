@@ -1,55 +1,82 @@
-<crm-page-header title="Account" subtitle="Account status and details." />
-<crm-admin-section-nav />
-<a mat-button routerLink="/admin/users">Back to users</a>
+<crm-page-header [title]="'admin.detail.title' | t" [subtitle]="'admin.detail.subtitle' | t" icon="manage_accounts">
+  <a mat-stroked-button actions routerLink="/admin/users"><mat-icon class="dir-icon">arrow_back</mat-icon> {{ 'admin.detail.back' | t }}</a>
+</crm-page-header>
 
-@if (loading()) {
-  <mat-progress-bar mode="indeterminate" />
-}
-
-@if (loadError(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
-  <button mat-stroked-button type="button" (click)="load()">Retry</button>
-}
-
-@if (account(); as a) {
-  <dl class="detail-list">
-    <dt>Account ID</dt>
-    <dd>{{ a.id }}</dd>
-    <dt>Name</dt>
-    <dd class="user-text">{{ a.firstName }} {{ a.lastName }}</dd>
-    <dt>Email</dt>
-    <dd class="user-text">{{ a.email }}</dd>
-    <dt>Phone</dt>
-    <dd class="user-text">{{ a.phoneNumber ?? '—' }}</dd>
-    <dt>Role</dt>
-    <dd>{{ a.role }} <span class="hint">(fixed at creation)</span></dd>
-    <dt>Status</dt>
-    <dd><crm-status-badge [label]="a.isActive ? 'Active' : 'Inactive'" [tone]="a.isActive ? 'success' : 'neutral'" /></dd>
-    <dt>Created</dt>
-    <dd>{{ formatUtcTimestamp(a.createdAtUtc) }}</dd>
-  </dl>
-
-  @if (actionError(); as message) {
-    <p class="error" role="alert">{{ message }}</p>
+<crm-admin-section-nav>
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
   }
 
-  <div class="actions">
-    @if (canDeactivate(a)) {
-      <button mat-stroked-button type="button" [disabled]="saving()" (click)="changeStatus(a, false)">Deactivate account</button>
-    } @else if (!a.isActive) {
-      <button mat-stroked-button type="button" [disabled]="saving()" (click)="changeStatus(a, true)">Reactivate account</button>
-    } @else if (isSelf(a)) {
-      <p class="hint">You cannot deactivate your own account.</p>
-    }
-  </div>
+  @if (loadError(); as message) {
+    <crm-error-state [message]="message" (retry)="load()" />
+  }
 
-  @if (a.role === 'Agent') {
-    <p class="hint">
-      Assigned tickets stay assigned to this Agent. Reassign them from <a routerLink="/tickets">Tickets</a>.
-      <a [routerLink]="['/agents', a.id]">Edit profile or set password</a>
-    </p>
+  @if (account(); as a) {
+    <div class="page-stack">
+      <mat-card appearance="outlined">
+        <mat-card-header>
+          <mat-card-title>{{ 'admin.detail.overview' | t }}</mat-card-title>
+        </mat-card-header>
+        <mat-card-content class="card-body">
+          <dl class="detail-list">
+            <dt>{{ 'admin.detail.id' | t }}</dt>
+            <dd class="ltr-value">{{ a.id }}</dd>
+            <dt>{{ 'admin.detail.name' | t }}</dt>
+            <dd class="user-text">{{ a.firstName }} {{ a.lastName }}</dd>
+            <dt>{{ 'admin.detail.email' | t }}</dt>
+            <dd class="user-text ltr-value">{{ a.email }}</dd>
+            <dt>{{ 'admin.detail.phone' | t }}</dt>
+            <dd class="user-text ltr-value">{{ a.phoneNumber ?? '—' }}</dd>
+            <dt>{{ 'admin.detail.role' | t }}</dt>
+            <dd>{{ 'enums.role.' + a.role | t }} <span class="hint">{{ 'admin.detail.roleFixed' | t }}</span></dd>
+            <dt>{{ 'admin.detail.status' | t }}</dt>
+            <dd>
+              <crm-status-badge
+                [label]="(a.isActive ? 'admin.status.active' : 'admin.status.inactive') | t"
+                [tone]="a.isActive ? 'success' : 'neutral'" />
+            </dd>
+            <dt>{{ 'admin.detail.created' | t }}</dt>
+            <dd>{{ a.createdAtUtc | crmDate: 'medium' : 'UTC' }}</dd>
+          </dl>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card appearance="outlined">
+        <mat-card-header>
+          <mat-card-title>{{ 'admin.detail.actions' | t }}</mat-card-title>
+        </mat-card-header>
+        <mat-card-content class="card-body">
+          @if (actionError(); as message) {
+            <p class="error" role="alert">{{ message }}</p>
+          }
+
+          <div class="actions">
+            @if (canDeactivate(a)) {
+              <button mat-stroked-button type="button" [disabled]="saving()" (click)="changeStatus(a, false)">
+                {{ 'admin.detail.deactivate' | t }}
+              </button>
+            } @else if (!a.isActive) {
+              <button mat-stroked-button type="button" [disabled]="saving()" (click)="changeStatus(a, true)">
+                {{ 'admin.detail.reactivate' | t }}
+              </button>
+            } @else if (isSelf(a)) {
+              <p class="hint">{{ 'admin.detail.selfHint' | t }}</p>
+            }
+          </div>
+
+          @if (a.role === 'Agent') {
+            <p class="hint">
+              {{ 'admin.detail.agentHintBefore' | t
+              }}<a routerLink="/tickets">{{ 'admin.detail.agentHintLink' | t }}</a
+              >{{ 'admin.detail.agentHintAfter' | t }}
+              <a [routerLink]="['/agents', a.id]">{{ 'admin.detail.editProfile' | t }}</a>
+            </p>
+          }
+          @if (a.role === 'Customer') {
+            <p class="hint">{{ 'admin.detail.customerHint' | t }}</p>
+          }
+        </mat-card-content>
+      </mat-card>
+    </div>
   }
-  @if (a.role === 'Customer') {
-    <p class="hint">The CRM customer profile and ticket history are kept.</p>
-  }
-}
+</crm-admin-section-nav>

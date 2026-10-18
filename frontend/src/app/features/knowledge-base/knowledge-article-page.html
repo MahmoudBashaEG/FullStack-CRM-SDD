@@ -1,50 +1,55 @@
-<p><a routerLink="/knowledge-base">← Back to Knowledge Base</a></p>
+<p>
+  <a mat-button routerLink="/knowledge-base"><mat-icon class="dir-icon">arrow_back</mat-icon> {{ 'kb.article.back' | t }}</a>
+</p>
 
 @if (loadError(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
-  <button mat-stroked-button type="button" (click)="load()">Retry</button>
+  <crm-error-state [message]="message" (retry)="load()" />
 } @else if (article(); as a) {
-  <crm-page-header [title]="a.title" [subtitle]="a.summary ?? ''" />
+  <crm-page-header [title]="a.title" [subtitle]="a.summary ?? ''" icon="article" />
 
-  <dl class="readonly-list">
-    <dt>Type</dt>
-    <dd>{{ typeLabel(a.type) }}</dd>
-    <dt>Category</dt>
-    <dd>{{ a.categoryName }}{{ a.categoryIsActive ? '' : ' (inactive)' }}</dd>
-    <dt>Visibility</dt>
-    <dd>
-      {{ a.visibility }}
-      @if (a.visibility === 'Public') {
-        <span class="hint">{{ publicHint }}</span>
-      }
-    </dd>
-    <dt>Status</dt>
-    <dd><crm-status-badge [label]="statusLabel(a.status)" [tone]="statusTone(a.status)" /></dd>
-    <dt>Author</dt>
-    <dd>{{ a.authorName }}</dd>
-    <dt>Created</dt>
-    <dd>{{ a.createdAtUtc | date: 'medium' }}</dd>
-    <dt>Last updated</dt>
-    <dd>{{ a.updatedByName }} · {{ a.updatedAtUtc | date: 'medium' }}</dd>
-    @if (a.submittedAtUtc) {
-      <dt>Submitted</dt>
-      <dd>{{ a.submittedAtUtc | date: 'medium' }}</dd>
-    }
-    @if (a.publishedAtUtc) {
-      <dt>Published</dt>
-      <dd>{{ a.publishedAtUtc | date: 'medium' }}{{ a.publishedByName ? ' · ' + a.publishedByName : '' }}</dd>
-    }
-    @if (a.archivedAtUtc) {
-      <dt>Archived</dt>
-      <dd>{{ a.archivedAtUtc | date: 'medium' }}</dd>
-    }
-    @if (a.status === 'Draft' && a.returnReason) {
-      <dt>Returned for revision</dt>
-      <dd class="user-text">{{ a.returnReason }}</dd>
-    }
-  </dl>
+  <mat-card appearance="outlined" class="meta-card">
+    <mat-card-content>
+      <dl class="readonly-list">
+        <dt>{{ 'kb.article.type' | t }}</dt>
+        <dd>{{ typeLabel(a.type, i18n.t) }}</dd>
+        <dt>{{ 'kb.article.category' | t }}</dt>
+        <dd>{{ a.categoryIsActive ? a.categoryName : ('kb.categoryInactive' | t: { name: a.categoryName }) }}</dd>
+        <dt>{{ 'kb.article.visibility' | t }}</dt>
+        <dd>
+          {{ 'kb.visibility.' + a.visibility | t }}
+          @if (a.visibility === 'Public') {
+            <span class="hint">{{ 'kb.publicHint' | t }}</span>
+          }
+        </dd>
+        <dt>{{ 'kb.article.status' | t }}</dt>
+        <dd><crm-status-badge [label]="statusLabel(a.status, i18n.t)" [tone]="statusTone(a.status)" /></dd>
+        <dt>{{ 'kb.article.author' | t }}</dt>
+        <dd>{{ a.authorName }}</dd>
+        <dt>{{ 'kb.article.created' | t }}</dt>
+        <dd>{{ a.createdAtUtc | crmDate: 'medium' }}</dd>
+        <dt>{{ 'kb.article.lastUpdated' | t }}</dt>
+        <dd>{{ a.updatedByName }} · {{ a.updatedAtUtc | crmDate: 'medium' }}</dd>
+        @if (a.submittedAtUtc) {
+          <dt>{{ 'kb.article.submitted' | t }}</dt>
+          <dd>{{ a.submittedAtUtc | crmDate: 'medium' }}</dd>
+        }
+        @if (a.publishedAtUtc) {
+          <dt>{{ 'kb.article.published' | t }}</dt>
+          <dd>{{ a.publishedAtUtc | crmDate: 'medium' }}{{ a.publishedByName ? ' · ' + a.publishedByName : '' }}</dd>
+        }
+        @if (a.archivedAtUtc) {
+          <dt>{{ 'kb.article.archived' | t }}</dt>
+          <dd>{{ a.archivedAtUtc | crmDate: 'medium' }}</dd>
+        }
+        @if (a.status === 'Draft' && a.returnReason) {
+          <dt>{{ 'kb.article.returned' | t }}</dt>
+          <dd class="user-text">{{ a.returnReason }}</dd>
+        }
+      </dl>
+    </mat-card-content>
+  </mat-card>
 
-  <mat-card appearance="outlined">
+  <mat-card appearance="outlined" class="body-card">
     <mat-card-content><crm-markdown-view [source]="a.body" /></mat-card-content>
   </mat-card>
 
@@ -53,36 +58,36 @@
   }
 
   <div class="actions">
-    <button mat-stroked-button type="button" (click)="copy(a)"><mat-icon>content_copy</mat-icon> Copy</button>
+    <button mat-stroked-button type="button" (click)="copy(a)"><mat-icon>content_copy</mat-icon> {{ 'common.copy' | t }}</button>
     @if (a.canEdit) {
-      <a mat-stroked-button [routerLink]="['/knowledge-base', a.id, 'edit']">Edit</a>
+      <a mat-stroked-button [routerLink]="['/knowledge-base', a.id, 'edit']">{{ 'common.edit' | t }}</a>
     }
     @if (a.canSubmit) {
-      <button mat-flat-button type="button" [disabled]="busy()" (click)="submit()">Submit for publication</button>
+      <button mat-flat-button type="button" [disabled]="busy()" (click)="submit()">{{ 'kb.article.submit' | t }}</button>
     }
     @if (isSuperAdmin() && a.status === 'ReadyForPublication') {
-      <button mat-flat-button type="button" [disabled]="busy()" (click)="publish()">Publish</button>
+      <button mat-flat-button type="button" [disabled]="busy()" (click)="publish()">{{ 'kb.article.publish' | t }}</button>
     }
     @if (isSuperAdmin() && a.status !== 'Archived') {
-      <button mat-button type="button" [disabled]="busy()" (click)="archive()">Archive</button>
+      <button mat-button type="button" [disabled]="busy()" (click)="archive()">{{ 'kb.article.archive' | t }}</button>
     }
     @if (isSuperAdmin() && a.status === 'Archived') {
-      <button mat-flat-button type="button" [disabled]="busy()" (click)="restore()">Restore to Draft</button>
+      <button mat-flat-button type="button" [disabled]="busy()" (click)="restore()">{{ 'kb.article.restore' | t }}</button>
     }
   </div>
-  <p class="hint">{{ copyHint }}</p>
+  <p class="hint">{{ 'kb.copyHint' | t }}</p>
 
   @if (isSuperAdmin() && a.status === 'ReadyForPublication') {
     <div class="form">
       <mat-form-field appearance="outline">
-        <mat-label>Reason for returning (optional)</mat-label>
+        <mat-label>{{ 'kb.article.returnReason' | t }}</mat-label>
         <textarea matInput rows="2" [formControl]="reason" [attr.maxlength]="reasonMax"></textarea>
       </mat-form-field>
       <div class="actions">
-        <button mat-stroked-button type="button" [disabled]="busy() || reason.invalid" (click)="returnToDraft()">Return to Draft</button>
+        <button mat-stroked-button type="button" [disabled]="busy() || reason.invalid" (click)="returnToDraft()">{{ 'kb.article.returnToDraft' | t }}</button>
       </div>
     </div>
   }
 } @else {
-  <p class="hint">Loading…</p>
+  <p class="hint">{{ 'common.loading' | t }}</p>
 }

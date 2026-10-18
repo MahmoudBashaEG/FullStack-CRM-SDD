@@ -1,15 +1,21 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatTabsModule } from '@angular/material/tabs';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { describeHttpError } from '../../core/api/describe-http-error';
+import { I18n } from '../../core/i18n/i18n';
+import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { ErrorState } from '../../shared/ui/error-state/error-state';
+import { tabQuery } from '../../shared/ui/tab-query';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
 import { CustomerAttachments } from './customer-attachments';
@@ -25,7 +31,11 @@ import { CustomersApi } from './customers-api';
   imports: [
     ReactiveFormsModule,
     RouterLink,
-    DatePipe,
+    LocalizedDatePipe,
+    TranslatePipe,
+    ErrorState,
+    MatIconModule,
+    MatTabsModule,
     PageHeader,
     StatusBadge,
     MatCardModule,
@@ -41,12 +51,14 @@ import { CustomersApi } from './customers-api';
   styleUrl: './customer-detail-page.scss',
 })
 export class CustomerDetailPage {
+  private readonly i18n = inject(I18n);
   private readonly api = inject(CustomersApi);
   private readonly snackBar = inject(MatSnackBar);
   private readonly destroyRef = inject(DestroyRef);
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly id = inject(ActivatedRoute).snapshot.paramMap.get('id') ?? '';
 
+  protected readonly tabs = tabQuery(['profile', 'tickets', 'notes', 'interactions', 'attachments']);
   protected readonly customer = signal<Customer | null>(null);
   protected readonly loadError = signal<string | null>(null);
 
@@ -61,13 +73,22 @@ export class CustomerDetailPage {
   protected readonly saveError = signal<string | null>(null);
 
   constructor() {
+    this.load();
+  }
+
+  protected reload(): void {
+    this.loadError.set(null);
+    this.load();
+  }
+
+  private load(): void {
     this.api
       .get(this.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: customer => this.show(customer),
         error: (error: HttpErrorResponse) =>
-          this.loadError.set(describeHttpError(error, 'Could not load the customer.')),
+          this.loadError.set(describeHttpError(error, this.i18n.t('customers.detail.loadFailed'), this.i18n.t)),
       });
   }
 
@@ -111,10 +132,10 @@ export class CustomerDetailPage {
         next: updated => {
           this.show(updated);
           this.saving.set(false);
-          this.snackBar.open('Customer updated.', undefined, { duration: 3000 });
+          this.snackBar.open(this.i18n.t('customers.detail.updated'), undefined, { duration: 3000 });
         },
         error: (error: HttpErrorResponse) => {
-          this.saveError.set(describeHttpError(error, 'Could not update the customer.'));
+          this.saveError.set(describeHttpError(error, this.i18n.t('customers.detail.updateFailed'), this.i18n.t));
           this.saving.set(false);
         },
       });

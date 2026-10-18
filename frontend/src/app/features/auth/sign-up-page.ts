@@ -11,11 +11,13 @@ import {
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { Router, RouterLink } from '@angular/router';
 import { describeHttpError } from '../../core/api/describe-http-error';
 import { AuthService } from '../../core/auth/auth-service';
+import { I18n } from '../../core/i18n/i18n';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { AuthLayout } from '../../core/layout/auth-layout/auth-layout';
 
 function passwordsMatch(group: AbstractControl): ValidationErrors | null {
   const password = group.get('password')?.value as string;
@@ -29,17 +31,19 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
   imports: [
     ReactiveFormsModule,
     RouterLink,
+    AuthLayout,
+    TranslatePipe,
     MatCardModule,
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
-    MatIconModule,
   ],
   templateUrl: './sign-up-page.html',
   styleUrl: './sign-up-page.scss',
 })
 export class SignUpPage {
   private readonly auth = inject(AuthService);
+  private readonly i18n = inject(I18n);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -78,7 +82,7 @@ export class SignUpPage {
       .subscribe({
         next: () => void this.router.navigateByUrl('/'),
         error: (error: HttpErrorResponse) => {
-          this.error.set(describeHttpError(error, 'Could not create the account.'));
+          this.error.set(describeHttpError(error, this.i18n.t('auth.signUp.fallback'), this.i18n.t));
           this.submitting.set(false);
         },
       });

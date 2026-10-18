@@ -1,35 +1,33 @@
-<mat-card appearance="outlined" class="auth-card">
-  <div class="auth-brand">
-    <mat-icon aria-hidden="true">support_agent</mat-icon>
-    <span>Support CRM</span>
-  </div>
-  <h1 class="auth-title">Sign in</h1>
+<crm-auth-layout>
+  <mat-card appearance="outlined" class="auth-card">
+    <h1 class="auth-title">{{ 'auth.signIn.title' | t }}</h1>
 
-  <form [formGroup]="form" (ngSubmit)="submit()" class="auth-form">
-    <mat-form-field appearance="outline">
-      <mat-label>Email</mat-label>
-      <input matInput type="email" formControlName="email" autocomplete="username" />
-      @if (form.controls.email.hasError('required')) {
-        <mat-error>Email is required</mat-error>
-      } @else if (form.controls.email.hasError('email')) {
-        <mat-error>Enter a valid email address</mat-error>
+    <form [formGroup]="form" (ngSubmit)="submit()" class="auth-form">
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'auth.signIn.email' | t }}</mat-label>
+        <input matInput type="email" formControlName="email" autocomplete="username" />
+        @if (form.controls.email.hasError('required')) {
+          <mat-error>{{ 'auth.signIn.emailRequired' | t }}</mat-error>
+        } @else if (form.controls.email.hasError('email')) {
+          <mat-error>{{ 'auth.signIn.emailInvalid' | t }}</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'auth.signIn.password' | t }}</mat-label>
+        <input matInput type="password" formControlName="password" autocomplete="current-password" />
+        @if (form.controls.password.hasError('required')) {
+          <mat-error>{{ 'auth.signIn.passwordRequired' | t }}</mat-error>
+        }
+      </mat-form-field>
+
+      @if (error(); as message) {
+        <p class="auth-error" role="alert">{{ message }}</p>
       }
-    </mat-form-field>
 
-    <mat-form-field appearance="outline">
-      <mat-label>Password</mat-label>
-      <input matInput type="password" formControlName="password" autocomplete="current-password" />
-      @if (form.controls.password.hasError('required')) {
-        <mat-error>Password is required</mat-error>
-      }
-    </mat-form-field>
+      <button mat-flat-button type="submit" [disabled]="submitting()">{{ 'auth.signIn.submit' | t }}</button>
+    </form>
 
-    @if (error(); as message) {
-      <p class="auth-error" role="alert">{{ message }}</p>
-    }
-
-    <button mat-flat-button type="submit" [disabled]="submitting()">Sign in</button>
-  </form>
-
-  <p class="auth-link">New customer? <a routerLink="/sign-up">Create an account</a></p>
-</mat-card>
+    <p class="auth-link">{{ 'auth.signIn.newCustomer' | t }} <a routerLink="/sign-up">{{ 'auth.signIn.createAccount' | t }}</a></p>
+  </mat-card>
+</crm-auth-layout>

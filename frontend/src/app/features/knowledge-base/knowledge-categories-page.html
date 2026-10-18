@@ -1,40 +1,47 @@
-<p><a routerLink="/knowledge-base">← Back to Knowledge Base</a></p>
-<crm-page-header title="Knowledge Base categories" subtitle="Flat list shared by all articles." />
-<p class="hint">Deactivated categories stay on existing articles but cannot be chosen for new ones.</p>
+<crm-page-header [title]="'kb.categories.title' | t" [subtitle]="'kb.categories.subtitle' | t" icon="category" />
 
-<form class="toolbar" [formGroup]="addForm" (ngSubmit)="add()">
-  <mat-form-field appearance="outline" class="search">
-    <mat-label>New category</mat-label>
-    <input matInput formControlName="name" [attr.maxlength]="maxLength" />
-  </mat-form-field>
-  <button mat-flat-button type="submit" [disabled]="busy()">Add category</button>
-</form>
+<crm-kb-section-nav>
+  <mat-card appearance="outlined" class="section-card">
+    <mat-card-content>
+      <p class="hint">{{ 'kb.categories.hint' | t }}</p>
 
-@if (error(); as message) {
-  <p class="form-error" role="alert">{{ message }}</p>
-}
-
-@if (loadError(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
-  <button mat-stroked-button type="button" (click)="load()">Retry</button>
-} @else if (categories().length === 0) {
-  <p class="hint">No categories yet.</p>
-} @else {
-  <ul class="rows">
-    @for (c of categories(); track c.id) {
-      <li class="row">
+      <form class="toolbar" [formGroup]="addForm" (ngSubmit)="add()">
         <mat-form-field appearance="outline" class="search">
-          <mat-label>Name</mat-label>
-          <input matInput [formControl]="nameFor(c.id)" [attr.maxlength]="maxLength" />
+          <mat-label>{{ 'kb.categories.newCategory' | t }}</mat-label>
+          <input matInput formControlName="name" [attr.maxlength]="maxLength" />
         </mat-form-field>
-        <crm-status-badge [label]="c.isActive ? 'Active' : 'Inactive'" [tone]="c.isActive ? 'success' : 'neutral'" />
-        <div class="actions">
-          <button mat-stroked-button type="button" [disabled]="busy()" (click)="save(c, c.isActive)">Save name</button>
-          <button mat-button type="button" [disabled]="busy()" (click)="save(c, !c.isActive)">
-            {{ c.isActive ? 'Deactivate' : 'Activate' }}
-          </button>
-        </div>
-      </li>
-    }
-  </ul>
-}
+        <button mat-flat-button type="submit" [disabled]="busy()">{{ 'kb.categories.add' | t }}</button>
+      </form>
+
+      @if (error(); as message) {
+        <p class="form-error" role="alert">{{ message }}</p>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  @if (loadError(); as message) {
+    <crm-error-state [message]="message" (retry)="load()" />
+  } @else if (categories().length === 0) {
+    <crm-empty-state icon="category" [title]="'kb.categories.empty' | t" />
+  } @else {
+    <ul class="rows">
+      @for (c of categories(); track c.id) {
+        <li class="row">
+          <mat-form-field appearance="outline" class="search">
+            <mat-label>{{ 'kb.categories.name' | t }}</mat-label>
+            <input matInput [formControl]="nameFor(c.id)" [attr.maxlength]="maxLength" />
+          </mat-form-field>
+          <crm-status-badge
+            [label]="(c.isActive ? 'kb.categories.active' : 'kb.categories.inactive') | t"
+            [tone]="c.isActive ? 'success' : 'neutral'" />
+          <div class="actions">
+            <button mat-stroked-button type="button" [disabled]="busy()" (click)="save(c, c.isActive)">{{ 'kb.categories.saveName' | t }}</button>
+            <button mat-button type="button" [disabled]="busy()" (click)="save(c, !c.isActive)">
+              {{ (c.isActive ? 'kb.categories.deactivate' : 'kb.categories.activate') | t }}
+            </button>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</crm-kb-section-nav>

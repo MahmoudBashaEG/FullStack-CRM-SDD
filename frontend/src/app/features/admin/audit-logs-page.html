@@ -1,73 +1,83 @@
-<crm-page-header title="Audit Logs" subtitle="Append-only record of administrative changes. Times are UTC." />
-<crm-admin-section-nav />
+<crm-page-header [title]="'admin.auditPage.title' | t" [subtitle]="'admin.auditPage.subtitle' | t" icon="fact_check" />
 
-<div class="toolbar" [formGroup]="filters">
-  <mat-form-field appearance="outline" class="filter">
-    <mat-label>Action</mat-label>
-    <mat-select formControlName="action">
-      <mat-option value="">All</mat-option>
-      @for (a of actions; track a) {
-        <mat-option [value]="a">{{ auditActionLabel(a) }}</mat-option>
+<crm-admin-section-nav>
+  <mat-card appearance="outlined">
+    <div class="card-body">
+      <div class="toolbar" [formGroup]="filters">
+        <mat-form-field appearance="outline" class="filter">
+          <mat-label>{{ 'admin.auditPage.action' | t }}</mat-label>
+          <mat-select formControlName="action">
+            <mat-option value="">{{ 'common.all' | t }}</mat-option>
+            @for (a of actions; track a) {
+              <mat-option [value]="a">{{ auditActionLabel(a, i18n.t) }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="date-range">
+          <mat-label>{{ 'admin.auditPage.dateRange' | t }}</mat-label>
+          <mat-date-range-input [rangePicker]="rangePicker">
+            <input matStartDate formControlName="from" [placeholder]="'datepicker.startDate' | t" [attr.aria-label]="'datepicker.startDate' | t" />
+            <input matEndDate formControlName="to" [placeholder]="'datepicker.endDate' | t" [attr.aria-label]="'datepicker.endDate' | t" />
+          </mat-date-range-input>
+          <mat-hint>{{ 'dates.inputFormatHint' | t }}</mat-hint>
+          <mat-datepicker-toggle matIconSuffix [for]="rangePicker" [attr.aria-label]="'dates.openCalendar' | t" />
+          <mat-date-range-picker #rangePicker />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="search">
+          <mat-label>{{ 'admin.auditPage.search' | t }}</mat-label>
+          <input matInput type="search" formControlName="search" maxlength="100" />
+          <mat-hint>{{ 'admin.auditPage.searchHint' | t }}</mat-hint>
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+      </div>
+
+      @if (rangeError(); as message) {
+        <p class="error" role="alert">{{ message }}</p>
       }
-    </mat-select>
-  </mat-form-field>
 
-  <mat-form-field appearance="outline" class="date-field">
-    <mat-label>From (UTC)</mat-label>
-    <input matInput type="date" formControlName="from" />
-  </mat-form-field>
+      @if (loading()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
 
-  <mat-form-field appearance="outline" class="date-field">
-    <mat-label>To (UTC)</mat-label>
-    <input matInput type="date" formControlName="to" />
-  </mat-form-field>
+      @if (error(); as message) {
+        <crm-error-state [message]="message" (retry)="reload()" />
+      }
 
-  <mat-form-field appearance="outline" class="search">
-    <mat-label>Search</mat-label>
-    <input matInput type="search" formControlName="search" maxlength="100" />
-    <mat-hint>Actor or target ID, name, email</mat-hint>
-    <mat-icon matSuffix>search</mat-icon>
-  </mat-form-field>
-</div>
-
-@if (rangeError(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
-}
-
-@if (loading()) {
-  <mat-progress-bar mode="indeterminate" />
-}
-
-@if (error(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
-  <button mat-stroked-button type="button" (click)="reload()">Retry</button>
-}
-
-@if (!loading() && !error() && !rangeError()) {
-  @if (items().length === 0) {
-    <p>No administrative changes match these filters. The audit log starts with ADMIN-001; earlier actions were not recorded.</p>
-  } @else {
-    <ul class="rows">
-      @for (e of items(); track e.id) {
-        <li class="row">
-          <span class="row-title">{{ auditActionLabel(e.action) }}</span>
-          <span class="hint">{{ formatUtcTimestamp(e.occurredAtUtc) }}</span>
-          <span class="meta user-text">by {{ e.actorName ?? e.actorUserId }}@if (e.actorEmail) { ({{ e.actorEmail }}) }</span>
-          <span class="meta user-text">Target: {{ e.targetLabel }} · {{ e.targetId }}</span>
-          <ul class="changes">
-            @for (c of e.changes; track $index) {
-              <li class="user-text">{{ describeAuditChange(c) }}</li>
+      @if (!loading() && !error() && !rangeError()) {
+        @if (items().length === 0) {
+          <crm-empty-state icon="fact_check" [title]="'admin.auditPage.empty' | t" />
+        } @else {
+          <ul class="rows">
+            @for (e of items(); track e.id) {
+              <li class="row">
+                <span class="row-title">{{ auditActionLabel(e.action, i18n.t) }}</span>
+                <span class="hint">{{ e.occurredAtUtc | crmDate: 'medium' : 'UTC' }}</span>
+                <span class="meta user-text">
+                  {{ 'admin.auditPage.by' | t: { name: e.actorName ?? e.actorUserId } }}
+                  @if (e.actorEmail) {
+                    (<span class="ltr-value">{{ e.actorEmail }}</span>)
+                  }
+                </span>
+                <span class="meta user-text">{{ 'admin.auditPage.target' | t: { label: e.targetLabel, id: e.targetId } }}</span>
+                <ul class="changes">
+                  @for (c of e.changes; track $index) {
+                    <li class="user-text">{{ describeAuditChange(c, i18n.t) }}</li>
+                  }
+                </ul>
+              </li>
             }
           </ul>
-        </li>
+          <mat-paginator
+            [length]="totalCount()"
+            [pageIndex]="page() - 1"
+            [pageSize]="pageSize()"
+            [pageSizeOptions]="pageSizeOptions"
+            (page)="onPage($event)"
+            [attr.aria-label]="'admin.auditPage.pageAria' | t" />
+        }
       }
-    </ul>
-    <mat-paginator
-      [length]="totalCount()"
-      [pageIndex]="page() - 1"
-      [pageSize]="pageSize()"
-      [pageSizeOptions]="pageSizeOptions"
-      (page)="onPage($event)"
-      aria-label="Select page of audit entries" />
-  }
-}
+    </div>
+  </mat-card>
+</crm-admin-section-nav>

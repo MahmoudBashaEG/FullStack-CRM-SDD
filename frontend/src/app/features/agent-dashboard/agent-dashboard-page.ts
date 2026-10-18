@@ -1,20 +1,27 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
+import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatTabsModule } from '@angular/material/tabs';
 import { RouterLink } from '@angular/router';
 import { EMPTY, Subject, catchError, switchMap } from 'rxjs';
 import { describeHttpError } from '../../core/api/describe-http-error';
+import { I18n } from '../../core/i18n/i18n';
+import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { EmptyState } from '../../shared/ui/empty-state/empty-state';
+import { ErrorState } from '../../shared/ui/error-state/error-state';
+import { KpiCard } from '../../shared/ui/kpi-card/kpi-card';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
+import { tabQuery } from '../../shared/ui/tab-query';
 import { AgentTaskSummary } from '../tasks/task-models';
 import { TasksApi } from '../tasks/tasks-api';
-import { slaIndicatorLabel, slaIndicatorTone } from '../sla/sla-models';
-import { priorityTone, statusLabel, statusTone } from '../tickets/ticket-models';
+import { slaIndicatorTone } from '../sla/sla-models';
+import { priorityTone, statusTone } from '../tickets/ticket-models';
 import { AgentDashboardApi } from './agent-dashboard-api';
 import { AgentDashboard } from './agent-dashboard-models';
 
@@ -23,13 +30,18 @@ import { AgentDashboard } from './agent-dashboard-models';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     RouterLink,
-    DatePipe,
+    LocalizedDatePipe,
+    TranslatePipe,
+    EmptyState,
+    ErrorState,
+    KpiCard,
     PageHeader,
     StatusBadge,
-    MatCardModule,
     MatButtonModule,
+    MatChipsModule,
     MatIconModule,
     MatProgressBarModule,
+    MatTabsModule,
   ],
   templateUrl: './agent-dashboard-page.html',
   styleUrl: './agent-dashboard-page.scss',
@@ -38,13 +50,13 @@ export class AgentDashboardPage {
   private readonly api = inject(AgentDashboardApi);
   private readonly tasksApi = inject(TasksApi);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly i18n = inject(I18n);
   private readonly requests = new Subject<void>();
   private readonly taskRequests = new Subject<void>();
 
   protected readonly priorityTone = priorityTone;
-  protected readonly statusLabel = statusLabel;
   protected readonly statusTone = statusTone;
-  protected readonly slaIndicatorLabel = slaIndicatorLabel;
+  protected readonly tabs = tabQuery(['overview', 'tasks']);
   protected readonly slaIndicatorTone = slaIndicatorTone;
 
   protected readonly dashboard = signal<AgentDashboard | null>(null);
@@ -64,7 +76,7 @@ export class AgentDashboardPage {
           this.api.get().pipe(
             catchError((error: HttpErrorResponse) => {
               this.dashboard.set(null); // never show stale numbers or zeros after a failure
-              this.error.set(describeHttpError(error, 'Could not load your dashboard.'));
+              this.error.set(describeHttpError(error, this.i18n.t('dashboard.loadError'), this.i18n.t));
               this.loading.set(false);
               return EMPTY;
             }),
@@ -83,7 +95,7 @@ export class AgentDashboardPage {
           this.tasksApi.summary().pipe(
             catchError((error: HttpErrorResponse) => {
               this.taskSummary.set(null); // never show stale numbers or zeros after a failure
-              this.tasksError.set(describeHttpError(error, 'Could not load your tasks.'));
+              this.tasksError.set(describeHttpError(error, this.i18n.t('dashboard.tasksLoadError'), this.i18n.t));
               this.tasksLoading.set(false);
               return EMPTY;
             }),

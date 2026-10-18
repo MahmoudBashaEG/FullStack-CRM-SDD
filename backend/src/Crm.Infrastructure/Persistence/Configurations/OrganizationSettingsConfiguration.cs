@@ -16,7 +16,10 @@ internal sealed class OrganizationSettingsConfiguration : IEntityTypeConfigurati
         builder.Property(s => s.SupportEmail).HasMaxLength(256);
         builder.Property(s => s.SupportPhone).HasMaxLength(40);
         builder.Property(s => s.SupportInformation).HasMaxLength(1000);
+        builder.Property(s => s.AccentColor).HasMaxLength(20);
+        builder.Property(s => s.LogoContentType).HasMaxLength(20);
         builder.Ignore(s => s.IsConfigured);
+        builder.Ignore(s => s.HasLogo);
         builder.Property<byte[]>("Version").IsRowVersion(); // ETag; overlapping saves ⇒ 409 (EfUnitOfWork)
         builder.HasOne<ApplicationUser>().WithMany().HasForeignKey(s => s.UpdatedByUserId).OnDelete(DeleteBehavior.Restrict);
     }

@@ -1,32 +1,22 @@
-:host {
-  display: block;
-  padding-inline: var(--crm-space-4);
-}
-
 .auth-card {
   box-sizing: border-box;
-  max-inline-size: 420px;
-  margin-block: var(--crm-space-8);
-  margin-inline: auto;
-  padding: var(--crm-space-4);
-}
-
-.auth-brand {
-  display: flex;
-  align-items: center;
-  gap: var(--crm-space-3);
-  font: var(--mat-sys-title-large);
-  color: var(--mat-sys-primary);
+  padding: var(--crm-space-6) var(--crm-space-4);
 }
 
 .auth-title {
   font: var(--mat-sys-headline-small);
-  margin-block: var(--crm-space-4);
+  margin-block: 0 var(--crm-space-4);
 }
 
 .auth-form {
   display: grid;
   gap: var(--crm-space-2);
+}
+
+.auth-row {
+  display: grid;
+  gap: var(--crm-space-2);
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .auth-error {
@@ -36,4 +26,14 @@
 
 .auth-link {
   margin-block: var(--crm-space-4) 0;
+}
+
+button[type='submit'] {
+  min-block-size: 44px;
+}
+
+@media (min-width: 520px) {
+  .auth-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }

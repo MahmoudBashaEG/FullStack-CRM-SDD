@@ -1,29 +1,39 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
+import { MatTabsModule } from '@angular/material/tabs';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 
+/** Route-backed section tabs. The page content is projected into the tab panel (aria-controls / labelledby wiring). */
 @Component({
   selector: 'crm-admin-section-nav',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, RouterLinkActive, MatButtonModule],
+  imports: [RouterLink, RouterLinkActive, MatTabsModule, TranslatePipe],
   template: `
-    <nav class="section-nav" aria-label="Administration sections">
-      <a mat-button routerLink="/admin/users" routerLinkActive="active" ariaCurrentWhenActive="page">Users</a>
-      <a mat-button routerLink="/admin/permissions" routerLinkActive="active" ariaCurrentWhenActive="page">Roles &amp; Permissions</a>
-      <a mat-button routerLink="/admin/audit-logs" routerLinkActive="active" ariaCurrentWhenActive="page">Audit Logs</a>
-      <a mat-button routerLink="/admin/settings" routerLinkActive="active" ariaCurrentWhenActive="page">Organization Settings</a>
+    <nav mat-tab-nav-bar [tabPanel]="panel" [attr.aria-label]="'admin.nav.label' | t">
+      <a mat-tab-link routerLink="/admin/users" routerLinkActive #users="routerLinkActive" [active]="users.isActive">
+        {{ 'admin.nav.users' | t }}
+      </a>
+      <a mat-tab-link routerLink="/admin/permissions" routerLinkActive #permissions="routerLinkActive" [active]="permissions.isActive">
+        {{ 'admin.nav.permissions' | t }}
+      </a>
+      <a mat-tab-link routerLink="/admin/audit-logs" routerLinkActive #audit="routerLinkActive" [active]="audit.isActive">
+        {{ 'admin.nav.auditLogs' | t }}
+      </a>
+      <a mat-tab-link routerLink="/admin/settings" routerLinkActive #settings="routerLinkActive" [active]="settings.isActive">
+        {{ 'admin.nav.settings' | t }}
+      </a>
     </nav>
+    <mat-tab-nav-panel #panel class="panel">
+      <ng-content />
+    </mat-tab-nav-panel>
   `,
   styles: `
-    .section-nav {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--crm-space-2);
-      margin-block-end: var(--crm-space-4);
+    :host {
+      display: block;
     }
-    .active {
-      background: var(--mat-sys-secondary-container);
-      color: var(--mat-sys-on-secondary-container);
+    .panel {
+      display: block;
+      padding-block-start: var(--crm-space-5);
     }
   `,
 })

@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-export type StatusTone = 'success' | 'error' | 'pending' | 'neutral';
+export type StatusTone = 'success' | 'error' | 'pending' | 'neutral' | 'warning';
 
 @Component({
   selector: 'crm-status-badge',
@@ -28,6 +28,10 @@ export type StatusTone = 'success' | 'error' | 'pending' | 'neutral';
     :host([data-tone='pending']) {
       background: var(--mat-sys-tertiary-container);
       color: var(--mat-sys-on-tertiary-container);
+    }
+    :host([data-tone='warning']) {
+      background: var(--crm-warning-container);
+      color: var(--crm-warning);
     }
     :host([data-tone='neutral']) {
       background: var(--mat-sys-surface-container-high);

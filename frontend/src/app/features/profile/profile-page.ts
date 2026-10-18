@@ -14,9 +14,12 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { describeHttpError } from '../../core/api/describe-http-error';
+import { I18n } from '../../core/i18n/i18n';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { ProblemDetails } from '../../core/api/problem-details';
 import { CurrentUser } from '../../core/auth/auth-models';
 import { AuthService } from '../../core/auth/auth-service';
+import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
 import { MyCustomerProfile, ProfileApi } from './profile-api';
@@ -30,6 +33,8 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ReactiveFormsModule,
+    TranslatePipe,
+    ErrorState,
     PageHeader,
     StatusBadge,
     MatCardModule,
@@ -44,6 +49,7 @@ export class ProfilePage {
   private readonly api = inject(ProfileApi);
   private readonly auth = inject(AuthService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly i18n = inject(I18n);
   private readonly destroyRef = inject(DestroyRef);
   private readonly fb = inject(NonNullableFormBuilder);
 
@@ -88,7 +94,7 @@ export class ProfilePage {
           });
         },
         error: (error: HttpErrorResponse) =>
-          this.loadError.set(describeHttpError(error, 'Could not load your profile.')),
+          this.loadError.set(describeHttpError(error, this.i18n.t('profile.loadError'), this.i18n.t)),
       });
 
     if (this.isCustomer()) {
@@ -111,7 +117,7 @@ export class ProfilePage {
         },
         error: (error: HttpErrorResponse) => {
           this.customerProfile.set(null);
-          this.customerProfileError.set(describeHttpError(error, 'Could not load your customer details.'));
+          this.customerProfileError.set(describeHttpError(error, this.i18n.t('profile.customerLoadError'), this.i18n.t));
           this.customerProfileLoading.set(false);
         },
       });
@@ -131,7 +137,7 @@ export class ProfilePage {
     this.profileError.set(null);
 
     const onError = (error: HttpErrorResponse) => {
-      this.profileError.set(describeHttpError(error, 'Could not save your profile.'));
+      this.profileError.set(describeHttpError(error, this.i18n.t('profile.saveError'), this.i18n.t));
       this.profileSaving.set(false);
     };
 
@@ -150,7 +156,7 @@ export class ProfilePage {
               this.auth.updateCurrentUser(updated);
             }
             this.profileSaving.set(false);
-            this.snackBar.open('Profile saved.', undefined, { duration: 3000 });
+            this.snackBar.open(this.i18n.t('profile.saved'), undefined, { duration: 3000 });
           },
           error: onError,
         });
@@ -165,7 +171,7 @@ export class ProfilePage {
           this.user.set(user);
           this.auth.updateCurrentUser(user);
           this.profileSaving.set(false);
-          this.snackBar.open('Profile saved.', undefined, { duration: 3000 });
+          this.snackBar.open(this.i18n.t('profile.saved'), undefined, { duration: 3000 });
         },
         error: onError,
       });
@@ -185,13 +191,13 @@ export class ProfilePage {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
-          this.snackBar.open('Password changed. Please sign in again.', undefined, { duration: 4000 });
+          this.snackBar.open(this.i18n.t('profile.password.changed'), undefined, { duration: 4000 });
           this.auth.endSession();
         },
         error: (error: HttpErrorResponse) => {
           const problem = error.error as ProblemDetails | null;
           this.passwordError.set(
-            problem?.errors?.['currentPassword']?.[0] ?? describeHttpError(error, 'Could not change the password.'),
+            problem?.errors?.['currentPassword']?.[0] ?? describeHttpError(error, this.i18n.t('profile.password.error'), this.i18n.t),
           );
           this.passwordSaving.set(false);
         },

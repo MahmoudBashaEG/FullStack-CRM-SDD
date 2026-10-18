@@ -2,13 +2,17 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { describeHttpError } from '../../core/api/describe-http-error';
+import { I18n } from '../../core/i18n/i18n';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { describeSaveError } from '../sla/sla-errors';
 import { KnowledgeBaseApi } from './knowledge-base-api';
@@ -18,7 +22,6 @@ import {
   KB_LIMITS,
   KnowledgeArticle,
   KnowledgeCategory,
-  PUBLIC_VISIBILITY_HINT,
   articleStatusLabel,
   articleTypeLabel,
 } from './knowledge-base-models';
@@ -31,6 +34,9 @@ import { MarkdownView } from './markdown-view';
     ReactiveFormsModule,
     RouterLink,
     PageHeader,
+    TranslatePipe,
+    MatCardModule,
+    MatIconModule,
     MarkdownView,
     MatFormFieldModule,
     MatInputModule,
@@ -39,9 +45,10 @@ import { MarkdownView } from './markdown-view';
     MatButtonModule,
   ],
   templateUrl: './knowledge-article-edit-page.html',
-  styleUrl: '../../shared/ui/productivity-page.scss',
+  styleUrl: './knowledge-article-edit-page.scss',
 })
 export class KnowledgeArticleEditPage {
+  protected readonly i18n = inject(I18n);
   private readonly api = inject(KnowledgeBaseApi);
   private readonly snackBar = inject(MatSnackBar);
   private readonly router = inject(Router);
@@ -51,7 +58,6 @@ export class KnowledgeArticleEditPage {
   protected readonly types = ARTICLE_TYPES;
   protected readonly visibilities = ARTICLE_VISIBILITIES;
   protected readonly typeLabel = articleTypeLabel;
-  protected readonly publicHint = PUBLIC_VISIBILITY_HINT;
   protected readonly limits = KB_LIMITS;
   protected readonly article = signal<KnowledgeArticle | null>(null);
   protected readonly categories = signal<KnowledgeCategory[]>([]);
@@ -77,21 +83,22 @@ export class KnowledgeArticleEditPage {
         this.categoriesLoaded.set(true);
         this.ensureCurrentCategory();
       },
-      error: (error: HttpErrorResponse) => this.loadError.set(describeHttpError(error, 'Could not load categories.')),
+      error: (error: HttpErrorResponse) => this.loadError.set(describeHttpError(error, this.i18n.t('kb.edit.categoriesFailed'), this.i18n.t)),
     });
 
     if (this.id) {
       this.api.getArticle(this.id).subscribe({
         next: a => this.apply(a),
         error: (error: HttpErrorResponse) =>
-          this.loadError.set(error.status === 404 ? 'This article is not available to you.' : describeHttpError(error, 'Could not load the article.')),
+          this.loadError.set(error.status === 404 ? this.i18n.t('kb.edit.notAvailable') : describeHttpError(error, this.i18n.t('kb.edit.loadFailed'), this.i18n.t)),
       });
     }
   }
 
   protected statusLine(): string {
     const a = this.article();
-    return a ? `Status: ${articleStatusLabel(a.status)}. Saving does not change the status.` : 'New articles are saved as Draft. Submit them for publication when ready.';
+    const t = this.i18n.t;
+    return a ? t('kb.edit.statusLine', { status: articleStatusLabel(a.status, t) }) : t('kb.edit.newStatusLine');
   }
 
   protected save(): void {
@@ -113,12 +120,12 @@ export class KnowledgeArticleEditPage {
     (this.id ? this.api.updateArticle(this.id, body) : this.api.createArticle(body)).subscribe({
       next: a => {
         this.busy.set(false);
-        this.snackBar.open('Article saved.', 'OK', { duration: 4000 });
+        this.snackBar.open(this.i18n.t('kb.edit.saved'), this.i18n.t('quickReplies.ok'), { duration: 4000 });
         void this.router.navigate(['/knowledge-base', a.id]);
       },
       error: (error: HttpErrorResponse) => {
         this.busy.set(false);
-        this.error.set(describeSaveError(error, 'Could not save the article.'));
+        this.error.set(describeSaveError(error, this.i18n.t('kb.edit.saveFailed'), this.i18n.t));
       },
     });
   }
@@ -135,7 +142,7 @@ export class KnowledgeArticleEditPage {
   private ensureCurrentCategory(): void {
     const a = this.article();
     if (a && this.categoriesLoaded() && !this.categories().some(c => c.id === a.categoryId)) {
-      this.categories.update(list => [...list, { id: a.categoryId, name: `${a.categoryName} (inactive)`, isActive: false, updatedAtUtc: a.updatedAtUtc }]);
+      this.categories.update(list => [...list, { id: a.categoryId, name: this.i18n.t('kb.categoryInactive', { name: a.categoryName }), isActive: false, updatedAtUtc: a.updatedAtUtc }]);
     }
   }
 }

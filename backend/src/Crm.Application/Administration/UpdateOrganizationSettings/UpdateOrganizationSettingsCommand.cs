@@ -8,9 +8,11 @@ using Mediator;
 
 namespace Crm.Application.Administration.UpdateOrganizationSettings;
 
-/// <summary>Single save (settings + audit) — atomic without ITransactionalCommand. Requires the current version (If-Match).</summary>
+/// <summary>Single save (settings + audit) — atomic without ITransactionalCommand. Requires the current version (If-Match).
+/// AccentColor null (omitted by an older client) keeps the saved accent; a preset id sets it (PLAT-001 C1).</summary>
 public sealed record UpdateOrganizationSettingsCommand(
-    Guid ActorUserId, byte[] ExpectedVersion, string? DisplayName, string? SupportEmail, string? SupportPhone, string? SupportInformation)
+    Guid ActorUserId, byte[] ExpectedVersion, string? DisplayName, string? SupportEmail, string? SupportPhone, string? SupportInformation,
+    string? AccentColor = null)
     : ICommand<OrganizationSettingsDetails>;
 
 public sealed class UpdateOrganizationSettingsCommandHandler(
@@ -33,6 +35,7 @@ public sealed class UpdateOrganizationSettingsCommandHandler(
             AdministrationRules.Normalize(command.SupportEmail),
             AdministrationRules.Normalize(command.SupportPhone),
             AdministrationRules.Normalize(command.SupportInformation),
+            AdministrationRules.Normalize(command.AccentColor) is { } accent ? BrandingRules.ToStoredAccent(accent) : current.AccentColor,
             command.ActorUserId,
             now);
 
@@ -57,5 +60,7 @@ public sealed class UpdateOrganizationSettingsValidator : AbstractValidator<Upda
             .When(c => !string.IsNullOrWhiteSpace(c.SupportEmail));
         RuleFor(c => c.SupportPhone).MaximumLength(AdministrationRules.SupportPhoneMaxLength);
         RuleFor(c => c.SupportInformation).MaximumLength(AdministrationRules.SupportInformationMaxLength);
+        RuleFor(c => c.AccentColor).Must(v => BrandingRules.IsAccentPreset(AdministrationRules.Normalize(v)))
+            .WithMessage("Choose one of the available accent colors.");
     }
 }

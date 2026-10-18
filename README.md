@@ -1,6 +1,6 @@
 # Customer Support CRM
 
-A full-stack Customer Support CRM built spec-first with squad-kit: an ASP.NET Core (.NET 10) REST API in Clean Architecture with CQRS, EF Core and SQL Server, plus an Angular 22 + Angular Material frontend. This repository contains the architectural foundation (`ARCH-001`), identity & access (`AUTH-001`), customer profiles & contacts (`CUST-001`), ticket creation & management (`TICK-001`), ticket workflow, assignment & history (`TICK-002`) and the Agent Dashboard (`DASH-001`), agent productivity & collaboration (`DASH-002`), customer notes, interactions & attachments (`CUST-002`), SLA & basic automation (`SLA-001`), Knowledge Base management (`KB-001`) AI features with Google Gemini (`AI-001`), the Customer Portal (`PORTAL-001`), Reports & Management (`REPORT-001`) and Security & Administration (`ADMIN-001`); CRM business features arrive as separate stories. See [docs/](docs/) for the conventions.
+A full-stack Customer Support CRM built spec-first with squad-kit: an ASP.NET Core (.NET 10) REST API in Clean Architecture with CQRS, EF Core and SQL Server, plus an Angular 22 + Angular Material frontend. This repository contains the architectural foundation (`ARCH-001`), identity & access (`AUTH-001`), customer profiles & contacts (`CUST-001`), ticket creation & management (`TICK-001`), ticket workflow, assignment & history (`TICK-002`) and the Agent Dashboard (`DASH-001`), agent productivity & collaboration (`DASH-002`), customer notes, interactions & attachments (`CUST-002`), SLA & basic automation (`SLA-001`), Knowledge Base management (`KB-001`) AI features with Google Gemini (`AI-001`), the Customer Portal (`PORTAL-001`), Reports & Management (`REPORT-001`) Security & Administration (`ADMIN-001`) and the Platform Features UI modernization with English/Arabic, themes and organization branding (`PLAT-001`); CRM business features arrive as separate stories. See [docs/](docs/) for the conventions.
 
 ## Repository layout
 
@@ -18,12 +18,14 @@ frontend/
   src/app/shared/        reusable UI building blocks
   src/app/features/      one folder per business feature (lazy-loaded)
 .squad/                  squad-kit stories and plans
-docs/                    conventions and decisions
+docs/                    conventions and decisions (UI, language and branding: docs/platform-ui-and-localization.md)
 ```
 
 Dependency rule: Domain <- Application <- Infrastructure; Api composes Application + Infrastructure. Nothing points outward.
 
 Feature folder convention (backend): `Crm.Application/<Feature>/<UseCase>/` holding `<UseCase>Command|Query.cs`, the handler and `<UseCase>Validator.cs`. Per-aggregate repository interfaces go in `Crm.Application/Abstractions/Persistence/` when a feature needs them.
+
+Language and theme: the top bar has an English/العربية switcher (Arabic switches the whole UI to right-to-left) and a light/dark toggle. Both are remembered per browser (not synchronized across devices).
 
 ## Prerequisites
 
