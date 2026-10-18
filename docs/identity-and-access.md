@@ -29,6 +29,10 @@ Roles are assigned by the server only. Angular guards and navigation filtering a
 | Personal quick replies | — (never visible) | ✔ own | — |
 | Internal discussion (read / post) | ✔ any ticket | ✔ primary or active collaborator | — |
 | Invite / remove collaborators | ✔ any ticket | ✔ primary assignee only | — |
+| Knowledge Base: read/search Published articles | ✔ | ✔ | — |
+| Knowledge Base: create/edit own Draft, submit | ✔ any Draft | ✔ own | — |
+| Knowledge Base: return/publish/archive/restore, manage categories | ✔ | — | — |
+| Link/unlink KB articles on tickets | ✔ any ticket | ✔ assigned to them | — |
 | Create a SuperAdmin | nobody via the API (bootstrap only) | | |
 
 ## 2. API routes
@@ -65,6 +69,9 @@ Roles are assigned by the server only. Angular guards and navigation filtering a
 | * | `/api/v1/quick-replies/*` | SuperAdmin (Shared), Agent (Personal + read Shared) | 200 / 201 |
 | * | `/api/v1/collaborations/*` | SuperAdmin, Agent (primary / collaborator); `GET /collaborations` Agent | 200 / 201 / 204 |
 | GET / PUT | `/api/v1/me/customer-profile` | Customer | 200 |
+| * | `/api/v1/knowledge-base/articles/*` | SuperAdmin, Agent (`return`/`publish`/`archive`/`restore`: SuperAdmin only, Agent 403) | 200 / 201 |
+| GET / POST / PUT | `/api/v1/knowledge-base/categories[/{id}]` | GET staff; POST/PUT SuperAdmin | 200 / 201 |
+| GET / POST / DELETE | `/api/v1/tickets/{id}/knowledge-articles[/{articleId}]` | SuperAdmin any ticket; Agent only tickets assigned to them | 200 / 201 / 204 |
 | GET | `/api/health` | anonymous | 200 |
 
 `/api/v1/agents/{id}` only reaches Agent accounts; SuperAdmin and Customer ids return 404.

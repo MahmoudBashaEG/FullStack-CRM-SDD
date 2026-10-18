@@ -1,0 +1,88 @@
+<p><a routerLink="/knowledge-base">← Back to Knowledge Base</a></p>
+
+@if (loadError(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+  <button mat-stroked-button type="button" (click)="load()">Retry</button>
+} @else if (article(); as a) {
+  <crm-page-header [title]="a.title" [subtitle]="a.summary ?? ''" />
+
+  <dl class="readonly-list">
+    <dt>Type</dt>
+    <dd>{{ typeLabel(a.type) }}</dd>
+    <dt>Category</dt>
+    <dd>{{ a.categoryName }}{{ a.categoryIsActive ? '' : ' (inactive)' }}</dd>
+    <dt>Visibility</dt>
+    <dd>
+      {{ a.visibility }}
+      @if (a.visibility === 'Public') {
+        <span class="hint">{{ publicHint }}</span>
+      }
+    </dd>
+    <dt>Status</dt>
+    <dd><crm-status-badge [label]="statusLabel(a.status)" [tone]="statusTone(a.status)" /></dd>
+    <dt>Author</dt>
+    <dd>{{ a.authorName }}</dd>
+    <dt>Created</dt>
+    <dd>{{ a.createdAtUtc | date: 'medium' }}</dd>
+    <dt>Last updated</dt>
+    <dd>{{ a.updatedByName }} · {{ a.updatedAtUtc | date: 'medium' }}</dd>
+    @if (a.submittedAtUtc) {
+      <dt>Submitted</dt>
+      <dd>{{ a.submittedAtUtc | date: 'medium' }}</dd>
+    }
+    @if (a.publishedAtUtc) {
+      <dt>Published</dt>
+      <dd>{{ a.publishedAtUtc | date: 'medium' }}{{ a.publishedByName ? ' · ' + a.publishedByName : '' }}</dd>
+    }
+    @if (a.archivedAtUtc) {
+      <dt>Archived</dt>
+      <dd>{{ a.archivedAtUtc | date: 'medium' }}</dd>
+    }
+    @if (a.status === 'Draft' && a.returnReason) {
+      <dt>Returned for revision</dt>
+      <dd class="user-text">{{ a.returnReason }}</dd>
+    }
+  </dl>
+
+  <mat-card appearance="outlined">
+    <mat-card-content><crm-markdown-view [source]="a.body" /></mat-card-content>
+  </mat-card>
+
+  @if (error(); as message) {
+    <p class="form-error" role="alert">{{ message }}</p>
+  }
+
+  <div class="actions">
+    <button mat-stroked-button type="button" (click)="copy(a)"><mat-icon>content_copy</mat-icon> Copy</button>
+    @if (a.canEdit) {
+      <a mat-stroked-button [routerLink]="['/knowledge-base', a.id, 'edit']">Edit</a>
+    }
+    @if (a.canSubmit) {
+      <button mat-flat-button type="button" [disabled]="busy()" (click)="submit()">Submit for publication</button>
+    }
+    @if (isSuperAdmin() && a.status === 'ReadyForPublication') {
+      <button mat-flat-button type="button" [disabled]="busy()" (click)="publish()">Publish</button>
+    }
+    @if (isSuperAdmin() && a.status !== 'Archived') {
+      <button mat-button type="button" [disabled]="busy()" (click)="archive()">Archive</button>
+    }
+    @if (isSuperAdmin() && a.status === 'Archived') {
+      <button mat-flat-button type="button" [disabled]="busy()" (click)="restore()">Restore to Draft</button>
+    }
+  </div>
+  <p class="hint">{{ copyHint }}</p>
+
+  @if (isSuperAdmin() && a.status === 'ReadyForPublication') {
+    <div class="form">
+      <mat-form-field appearance="outline">
+        <mat-label>Reason for returning (optional)</mat-label>
+        <textarea matInput rows="2" [formControl]="reason" [attr.maxlength]="reasonMax"></textarea>
+      </mat-form-field>
+      <div class="actions">
+        <button mat-stroked-button type="button" [disabled]="busy() || reason.invalid" (click)="returnToDraft()">Return to Draft</button>
+      </div>
+    </div>
+  }
+} @else {
+  <p class="hint">Loading…</p>
+}

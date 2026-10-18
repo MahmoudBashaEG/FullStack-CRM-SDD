@@ -1,0 +1,88 @@
+<crm-page-header title="Knowledge Base" subtitle="FAQs, help articles, solutions and guides for staff." />
+
+<div class="toolbar" [formGroup]="filters">
+  <mat-form-field appearance="outline" class="search">
+    <mat-label>Search</mat-label>
+    <input matInput type="search" formControlName="search" placeholder="Title, summary or text" />
+    <mat-icon matSuffix>search</mat-icon>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="filter">
+    <mat-label>Type</mat-label>
+    <mat-select formControlName="type">
+      <mat-option [value]="null">Any</mat-option>
+      @for (t of types; track t) {
+        <mat-option [value]="t">{{ typeLabel(t) }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="filter">
+    <mat-label>Category</mat-label>
+    <mat-select formControlName="categoryId">
+      <mat-option [value]="null">Any</mat-option>
+      @for (c of categories(); track c.id) {
+        <mat-option [value]="c.id">{{ c.name }}{{ c.isActive ? '' : ' (inactive)' }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="filter">
+    <mat-label>View</mat-label>
+    <mat-select formControlName="view">
+      @for (v of views; track v.value) {
+        <mat-option [value]="v.value">{{ v.label }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <a mat-flat-button routerLink="/knowledge-base/new"><mat-icon>add</mat-icon> New article</a>
+  @if (isSuperAdmin()) {
+    <a mat-button routerLink="/knowledge-base/categories">Manage categories</a>
+  }
+</div>
+
+@if (noCategories()) {
+  @if (isSuperAdmin()) {
+    <p class="hint">No categories yet. <a routerLink="/knowledge-base/categories">Add the first category</a> before creating articles.</p>
+  } @else {
+    <p class="hint">No active categories yet — ask a SuperAdmin to add one before creating articles.</p>
+  }
+}
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+@if (error(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+  <button mat-stroked-button type="button" (click)="reload()">Retry</button>
+}
+
+@if (!loading() && !error()) {
+  @if (items().length === 0) {
+    <p>No articles match.</p>
+  } @else {
+    <ul class="rows">
+      @for (a of items(); track a.id) {
+        <li class="row">
+          <a class="row-title" [routerLink]="['/knowledge-base', a.id]">{{ a.title }}</a>
+          <crm-status-badge [label]="statusLabel(a.status)" [tone]="statusTone(a.status)" />
+          <crm-status-badge [label]="a.visibility" [tone]="a.visibility === 'Public' ? 'pending' : 'neutral'" />
+          <span class="hint">{{ typeLabel(a.type) }} · {{ a.categoryName }}</span>
+          <p class="meta">{{ a.authorName }} · updated {{ a.updatedAtUtc | date: 'medium' }}</p>
+          @if (a.summary) {
+            <p class="summary user-text">{{ a.summary }}</p>
+          }
+        </li>
+      }
+    </ul>
+    <mat-paginator
+      [length]="totalCount()"
+      [pageIndex]="page() - 1"
+      [pageSize]="pageSize()"
+      [pageSizeOptions]="pageSizeOptions"
+      (page)="onPage($event)"
+      aria-label="Select page of articles" />
+  }
+}

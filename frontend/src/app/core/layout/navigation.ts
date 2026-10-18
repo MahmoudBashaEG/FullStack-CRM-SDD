@@ -17,6 +17,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { label: 'Customers', icon: 'groups', path: '/customers', exact: false, roles: ['SuperAdmin', 'Agent'] },
   { label: 'Tasks', icon: 'task_alt', path: '/tasks', exact: false, roles: ['SuperAdmin', 'Agent'] },
   { label: 'Quick Replies', icon: 'quickreply', path: '/quick-replies', exact: false, roles: ['SuperAdmin', 'Agent'] },
+  { label: 'Knowledge Base', icon: 'menu_book', path: '/knowledge-base', exact: false, roles: ['SuperAdmin', 'Agent'] },
   { label: 'My Collaborations', icon: 'forum', path: '/collaboration', exact: false, roles: ['Agent'] },
   { label: 'Agents', icon: 'badge', path: '/agents', exact: false, roles: ['SuperAdmin'] },
   { label: 'SLA & Automation', icon: 'timer', path: '/sla', exact: false, roles: ['SuperAdmin'] },

@@ -19,6 +19,7 @@ import { Agent } from '../agents/agent-models';
 import { AgentsApi } from '../agents/agents-api';
 import { TicketCollaborators } from '../collaboration/ticket-collaborators';
 import { TicketDiscussion } from '../collaboration/ticket-discussion';
+import { TicketKnowledgeArticles } from '../knowledge-base/ticket-knowledge-articles';
 import { QuickReplyPanel } from '../quick-replies/quick-reply-panel';
 import { TicketActivityList } from './ticket-activity-list';
 import { TicketSlaCard } from './ticket-sla-card';
@@ -51,6 +52,7 @@ import { TicketsApi } from './tickets-api';
     TicketDiscussion,
     TicketCollaborators,
     QuickReplyPanel,
+    TicketKnowledgeArticles,
     MatCardModule,
     MatFormFieldModule,
     MatInputModule,

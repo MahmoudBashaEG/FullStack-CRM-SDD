@@ -118,6 +118,8 @@ After a 409 the Angular detail page shows the server message, refreshes the tick
 
 ## 9. API
 
+KB-001 additions: `GET/POST /tickets/{id}/knowledge-articles` and `DELETE /tickets/{id}/knowledge-articles/{articleId}` link Published Knowledge Base articles to a ticket. They use the same ticket scope as every other ticket endpoint and never change the ticket (status, assignment, SLA, `UpdatedAtUtc`, activity). `GET /tickets/{id}` is unchanged.
+
 SLA-001 additions: `POST /tickets/{id}/first-response`, `GET /tickets?slaBreached=true|false`, an `sla` object on every ticket response (null = not tracked) and `isAutomatic` on activity entries.
 
 | Method | Route | Auth | Success / errors |
@@ -148,6 +150,8 @@ SLA-001 additions: `POST /tickets/{id}/first-response`, `GET /tickets?slaBreache
 `AddTicketWorkflowAndActivity` is additive: five new `Tickets` columns (`IsEscalated` default `0`, three nullable escalation columns, `Version rowversion`), one FK + index for `EscalatedByUserId`, and the new `TicketActivities` table with `Restrict` FKs and indexes. No existing column is altered, no row is inserted or updated, and the `Status` column needs no change (names in `nvarchar(20)`). Existing tickets keep every value and start with no history. Rolling back drops `TicketActivities` (all history is lost) and the new columns; first reset any `InProgress`/`Resolved`/`Closed` tickets to `Open` or the TICK-001 code cannot read them.
 
 ## 12. Future stories
+
+Knowledge Base shipped in `KB-001`: see [knowledge-base.md](knowledge-base.md).
 
 SLA & automation shipped in `SLA-001`: see [sla-and-automation.md](sla-and-automation.md).
 

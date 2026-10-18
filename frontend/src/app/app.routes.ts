@@ -67,6 +67,11 @@ export const routes: Routes = [
         canActivate: [roleGuard('SuperAdmin')],
         loadChildren: () => import('./features/sla/sla.routes').then(m => m.SLA_ROUTES),
       },
+      {
+        path: 'knowledge-base',
+        canActivate: [roleGuard('SuperAdmin', 'Agent')],
+        loadChildren: () => import('./features/knowledge-base/knowledge-base.routes').then(m => m.KNOWLEDGE_BASE_ROUTES),
+      },
       // Feature stories add: { path: '<feature>', loadChildren: () => import('./features/<feature>/<feature>.routes') ... }
     ],
   },

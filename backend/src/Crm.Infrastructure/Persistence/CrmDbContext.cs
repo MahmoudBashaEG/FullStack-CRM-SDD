@@ -3,6 +3,7 @@ using Crm.Domain.Automation;
 using Crm.Domain.Collaboration;
 using Crm.Domain.Customers;
 using Crm.Domain.Identity;
+using Crm.Domain.KnowledgeBase;
 using Crm.Domain.QuickReplies;
 using Crm.Domain.Sla;
 using Crm.Domain.Tickets;
@@ -35,6 +36,9 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options)
     public DbSet<AutomationRule> AutomationRules => Set<AutomationRule>();
     public DbSet<AutomationRuleExecution> AutomationRuleExecutions => Set<AutomationRuleExecution>();
     public DbSet<SlaAlert> SlaAlerts => Set<SlaAlert>();
+    public DbSet<KnowledgeCategory> KnowledgeCategories => Set<KnowledgeCategory>();
+    public DbSet<KnowledgeArticle> KnowledgeArticles => Set<KnowledgeArticle>();
+    public DbSet<TicketKnowledgeArticleLink> TicketKnowledgeArticleLinks => Set<TicketKnowledgeArticleLink>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -12,6 +12,8 @@ internal sealed class EfUnitOfWork(CrmDbContext dbContext) : IUnitOfWork
     private static readonly IReadOnlyDictionary<string, string> KnownUniqueIndexes = new Dictionary<string, string>(StringComparer.Ordinal)
     {
         ["UX_TicketCollaborators_ActiveMembership"] = "This Agent is already a collaborator.",
+        ["UX_KnowledgeCategories_Name"] = "A category with this name already exists.",
+        ["UX_TicketKnowledgeArticleLinks_TicketArticle"] = "This article is already linked to the ticket.",
     };
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

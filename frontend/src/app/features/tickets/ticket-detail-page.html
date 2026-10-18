@@ -222,5 +222,12 @@
       <mat-card-header><mat-card-title>Quick replies</mat-card-title></mat-card-header>
       <mat-card-content><crm-quick-reply-panel /></mat-card-content>
     </mat-card>
+
+    <mat-card appearance="outlined">
+      <mat-card-header><mat-card-title>Knowledge Base</mat-card-title></mat-card-header>
+      <mat-card-content>
+        <crm-ticket-knowledge-articles [ticketId]="current.id" (accessLost)="onAccessLost()" />
+      </mat-card-content>
+    </mat-card>
   </div>
 }

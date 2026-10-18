@@ -1,0 +1,18 @@
+@use '../../shared/ui/productivity-page';
+
+.readonly-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--crm-space-2) var(--crm-space-4);
+  margin-block: var(--crm-space-4);
+  margin-inline: 0;
+
+  dt {
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+}

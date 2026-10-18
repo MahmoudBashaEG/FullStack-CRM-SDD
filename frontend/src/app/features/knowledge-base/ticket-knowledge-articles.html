@@ -1,0 +1,68 @@
+<h3 class="hint">Linked articles</h3>
+
+@if (loadError(); as message) {
+  <p class="form-error" role="alert">{{ message }}</p>
+  <button mat-stroked-button type="button" (click)="reloadLinks()">Retry</button>
+}
+
+<ul class="rows">
+  @for (l of links(); track l.id) {
+    <li class="row">
+      @if (l.articleStatus === 'Published') {
+        <a class="row-title" [routerLink]="['/knowledge-base', l.articleId]">{{ l.articleTitle }}</a>
+      } @else {
+        <span class="row-title">{{ l.articleTitle }}</span>
+        <crm-status-badge [label]="statusLabel(l.articleStatus)" [tone]="statusTone(l.articleStatus)" />
+        <span class="hint">No longer published — its content is hidden.</span>
+      }
+      <span class="hint">{{ typeLabel(l.articleType) }} · {{ l.categoryName }}</span>
+      <p class="meta">Linked by {{ l.linkedByName }} · {{ l.linkedAtUtc | date: 'medium' }}</p>
+      <button mat-button type="button" [disabled]="busy()" (click)="unlink(l)">Unlink</button>
+    </li>
+  } @empty {
+    <li class="hint">No articles linked to this ticket yet.</li>
+  }
+</ul>
+
+<h3 class="hint">Find an article</h3>
+<mat-form-field appearance="outline" class="search">
+  <mat-label>Search published articles</mat-label>
+  <input matInput type="search" [formControl]="search" />
+  <mat-icon matSuffix>search</mat-icon>
+</mat-form-field>
+
+@if (error(); as message) {
+  <p class="form-error" role="alert">{{ message }}</p>
+}
+
+<ul class="rows">
+  @for (a of results(); track a.id) {
+    <li class="row">
+      <span class="row-title">{{ a.title }}</span>
+      <span class="hint">{{ typeLabel(a.type) }} · {{ a.categoryName }}</span>
+      <div class="actions">
+        <button mat-stroked-button type="button" (click)="read(a)">{{ selected()?.id === a.id ? 'Close' : 'Read' }}</button>
+        <button mat-stroked-button type="button" [disabled]="busy() || isLinked(a.id)" (click)="link(a)">
+          {{ isLinked(a.id) ? 'Linked' : 'Link' }}
+        </button>
+      </div>
+      @if (rowError(); as row) {
+        @if (row.id === a.id) {
+          <p class="form-error" role="alert">{{ row.message }}</p>
+        }
+      }
+      @if (selected(); as s) {
+        @if (s.id === a.id) {
+          <div class="meta">
+            <crm-markdown-view [source]="s.body" />
+            <button mat-stroked-button type="button" (click)="copy(s)"><mat-icon>content_copy</mat-icon> Copy</button>
+            <p class="hint">{{ copyHint }}</p>
+          </div>
+        }
+      }
+    </li>
+  } @empty {
+    <li class="hint">No published articles match.</li>
+  }
+</ul>
+<p><a routerLink="/knowledge-base">Open the Knowledge Base</a></p>
