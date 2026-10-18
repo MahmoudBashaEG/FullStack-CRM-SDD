@@ -10,7 +10,7 @@ Roles are assigned by the server only. Angular guards and navigation filtering a
 | View / update own profile | ✔ | ✔ | ✔ |
 | Change own password | ✔ | ✔ | ✔ |
 | Public signup | — | — | ✔ (creates a Customer) |
-| List / create / edit / enable-disable / set password of Agents | ✔ | — | — |
+| List / create / edit / enable-disable / set password of Agents | ✔ | — | — | (status changes and creation are audited; see [security-administration.md](security-administration.md))
 | Manage CRM customers (list / view / create contact-only / edit) | ✔ | ✔ | — |
 | View / edit own CRM customer profile | — | — | ✔ |
 | Customer notes / interactions / attachments (read / add; append-only, no delete) | ✔ | ✔ | — |
@@ -41,6 +41,7 @@ Roles are assigned by the server only. Angular guards and navigation filtering a
 | Ticket satisfaction feedback (own Resolved/Closed ticket) | — | — | ✔ |
 | Management dashboard and reports (tickets, SLA, Agents, CSAT) | ✔ | — | — |
 | Create a SuperAdmin | nobody via the API (bootstrap only) | | |
+| Administration: users, account (de)activation (any role), audit logs, organization settings, permission matrix | ✔ | — | — |
 
 ## 2. API routes
 
@@ -92,6 +93,10 @@ Roles are assigned by the server only. Angular guards and navigation filtering a
 | GET | `/api/v1/reports/sla` | SuperAdmin | 200 |
 | GET | `/api/v1/reports/agents` | SuperAdmin | 200 |
 | GET | `/api/v1/reports/customer-satisfaction` | SuperAdmin | 200 |
+| GET | `/api/v1/admin/users`, `/api/v1/admin/users/{id}` | SuperAdmin | 200 |
+| PUT | `/api/v1/admin/users/{id}/status` | SuperAdmin | 200 |
+| GET | `/api/v1/admin/audit-logs` | SuperAdmin | 200 |
+| GET / PUT | `/api/v1/admin/organization-settings` | SuperAdmin | 200 |
 | GET | `/api/health` | anonymous | 200 |
 
 `/api/v1/agents/{id}` only reaches Agent accounts; SuperAdmin and Customer ids return 404.
@@ -109,7 +114,7 @@ Signup also creates the linked CRM customer profile (see [customer-management.md
 
 ## 4. Revocation and JWT trade-offs
 
-- Every authenticated request re-reads `IsActive` and the security stamp, so disable / password change / password reset take effect immediately (one extra indexed read per request).
+- Every authenticated request re-reads `IsActive` and the security stamp, so disable / password change / password reset take effect immediately (one extra indexed read per request). Verified for ADMIN-001 with retained Agent and Customer tokens.
 - **Logout does not rotate the stamp**: an access token copied before logout stays valid until it expires (at most 10 minutes).
 - Inside the grace window, a thief replaying a just-rotated token while the victim's login is still active gets a sibling session instead of triggering revocation. Accepted: the window is shorter than an access-token lifetime, siblings die with logout / password change / disable, and any replay after the window revokes the family. Set the grace period to `00:00:00` for strict rotation.
 

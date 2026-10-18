@@ -1,11 +1,12 @@
 using Crm.Api.Authentication;
 using Crm.Api.Contracts.Agents;
+using Crm.Application.Administration.SetAccountStatus;
 using Crm.Application.Agents.CreateAgent;
 using Crm.Application.Agents.GetAgent;
 using Crm.Application.Agents.ListAgents;
 using Crm.Application.Agents.SetAgentPassword;
-using Crm.Application.Agents.SetAgentStatus;
 using Crm.Application.Agents.UpdateAgent;
+using Crm.Domain.Identity;
 using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -36,7 +37,7 @@ public sealed class AgentsController(ISender sender) : ControllerBase
     public async Task<ActionResult<AgentResponse>> Create(CreateAgentRequest request, CancellationToken cancellationToken)
     {
         var agent = await sender.Send(
-            new CreateAgentCommand(request.FirstName, request.LastName, request.Email, request.PhoneNumber, request.Password),
+            new CreateAgentCommand(User.GetUserId(), request.FirstName, request.LastName, request.Email, request.PhoneNumber, request.Password),
             cancellationToken);
         return CreatedAtAction(nameof(Get), new { id = agent.Id }, AgentResponse.From(agent));
     }
@@ -50,12 +51,13 @@ public sealed class AgentsController(ISender sender) : ControllerBase
         return Ok(AgentResponse.From(agent));
     }
 
-    [EndpointDescription("Requires role: SuperAdmin.")]
+    [EndpointDescription("Requires role: SuperAdmin. Agent accounts only. Same rules and audit as PUT /api/v1/admin/users/{id}/status.")]
     [HttpPut("{id:guid}/status")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> SetStatus(Guid id, SetAgentStatusRequest request, CancellationToken cancellationToken)
     {
-        await sender.Send(new SetAgentStatusCommand(id, request.IsActive), cancellationToken);
+        // Same audited command as /admin/users/{id}/status, restricted to Agent accounts (others 404). Response stays 204.
+        await sender.Send(new SetAccountStatusCommand(User.GetUserId(), id, request.IsActive, UserRoles.Agent), cancellationToken);
         return NoContent();
     }
 

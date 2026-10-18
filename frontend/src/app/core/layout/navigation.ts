@@ -27,5 +27,6 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { label: 'Agents', icon: 'badge', path: '/agents', exact: false, roles: ['SuperAdmin'] },
   { label: 'SLA & Automation', icon: 'timer', path: '/sla', exact: false, roles: ['SuperAdmin'] },
   { label: 'Reports', icon: 'insights', path: '/reports', exact: false, roles: ['SuperAdmin'] },
+  { label: 'Administration', icon: 'admin_panel_settings', path: '/admin', exact: false, roles: ['SuperAdmin'] },
   { label: 'Profile', icon: 'account_circle', path: '/profile', exact: false },
 ];

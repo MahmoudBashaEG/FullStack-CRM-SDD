@@ -59,6 +59,8 @@ public static class DependencyInjection
         services.AddScoped<IPortalTicketRepository, PortalTicketRepository>();
         services.AddScoped<IHelpCenterRepository, HelpCenterRepository>();
         services.AddScoped<IReportingRepository, ReportingRepository>();
+        services.AddScoped<IAdminAuditRepository, AdminAuditRepository>();
+        services.AddScoped<IOrganizationSettingsRepository, OrganizationSettingsRepository>();
 
         services.AddIdentityCore<ApplicationUser>(options =>
             {
@@ -78,6 +80,7 @@ public static class DependencyInjection
             .AddEntityFrameworkStores<CrmDbContext>();
 
         services.AddScoped<IIdentityService, IdentityService>();
+        services.AddScoped<IAccountAdministration, AccountAdministration>();
         services.AddScoped<IdentityBootstrapper>();
         services.AddScoped<CustomerProfileInitializer>();
         services.AddSingleton<ITokenService, JwtTokenService>();

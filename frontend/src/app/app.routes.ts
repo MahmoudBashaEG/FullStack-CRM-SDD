@@ -87,6 +87,11 @@ export const routes: Routes = [
         canActivate: [roleGuard('SuperAdmin')],
         loadChildren: () => import('./features/reports/reports.routes').then(m => m.REPORTS_ROUTES),
       },
+      {
+        path: 'admin',
+        canActivate: [roleGuard('SuperAdmin')],
+        loadChildren: () => import('./features/admin/admin.routes').then(m => m.ADMIN_ROUTES),
+      },
       // Feature stories add: { path: '<feature>', loadChildren: () => import('./features/<feature>/<feature>.routes') ... }
     ],
   },

@@ -14,3 +14,4 @@ One row per feature folder under `.squad/plans/`. `NN` continues as a global exe
 | ai-features | [00-overview.md](ai-features/00-overview.md) | 11 |
 | customer-portal | [00-overview.md](customer-portal/00-overview.md) | 12 |
 | reports-management | [00-overview.md](reports-management/00-overview.md) | 13 |
+| security-administration | [00-overview.md](security-administration/00-overview.md) | 14 |

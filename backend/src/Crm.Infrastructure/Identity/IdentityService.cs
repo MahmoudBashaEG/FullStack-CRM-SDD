@@ -150,6 +150,11 @@ internal sealed class IdentityService(
             throw new ConflictException("An account with this email already exists.");
         }
 
+        if (result.Errors.Any(e => e.Code == nameof(IdentityErrorDescriber.ConcurrencyFailure)))
+        {
+            throw new ConflictException("The account was changed by another request. Reload it and try again.");
+        }
+
         // Identity descriptions never contain the submitted values.
         throw new ValidationException(result.Errors.Select(e => new ValidationFailure(
             e.Code.StartsWith("Password", StringComparison.Ordinal) ? "password"

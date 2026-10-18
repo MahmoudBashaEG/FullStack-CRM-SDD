@@ -1,3 +1,4 @@
+using Crm.Domain.Administration;
 using Crm.Domain.AgentTasks;
 using Crm.Domain.Automation;
 using Crm.Domain.Collaboration;
@@ -40,6 +41,8 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options)
     public DbSet<KnowledgeArticle> KnowledgeArticles => Set<KnowledgeArticle>();
     public DbSet<TicketKnowledgeArticleLink> TicketKnowledgeArticleLinks => Set<TicketKnowledgeArticleLink>();
     public DbSet<TicketFeedback> TicketFeedback => Set<TicketFeedback>();
+    public DbSet<AdminAuditEntry> AdminAuditLogs => Set<AdminAuditEntry>();
+    public DbSet<OrganizationSettings> OrganizationSettings => Set<OrganizationSettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

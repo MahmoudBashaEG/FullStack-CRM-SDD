@@ -1,0 +1,58 @@
+/* ADMIN-001 pages: layered on shared/ui/productivity-page.scss. Logical properties only. */
+.table-scroll {
+  overflow-x: auto;
+  margin-block-end: var(--crm-space-6);
+}
+
+.matrix {
+  inline-size: 100%;
+  border-collapse: collapse;
+  min-inline-size: 640px;
+
+  caption {
+    text-align: start;
+    font: var(--mat-sys-title-medium);
+    padding-block: var(--crm-space-2);
+  }
+
+  th,
+  td {
+    padding: var(--crm-space-2) var(--crm-space-3);
+    vertical-align: top;
+    text-align: start;
+    border-block-end: 1px solid var(--mat-sys-outline-variant);
+  }
+}
+
+.scope {
+  display: block;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.detail-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--crm-space-2) var(--crm-space-4);
+  margin-block: var(--crm-space-4);
+  margin-inline: 0;
+
+  dt {
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+.changes {
+  flex-basis: 100%;
+  margin: 0;
+  padding-inline-start: var(--crm-space-5);
+}
+
+.date-field {
+  flex: 0 1 170px;
+}

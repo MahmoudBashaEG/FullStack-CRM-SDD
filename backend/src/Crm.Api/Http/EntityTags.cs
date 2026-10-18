@@ -21,7 +21,7 @@ internal static class EntityTags
         var raw = header.ToString().Trim();
         if (header.Count == 0 || raw.Length == 0)
         {
-            throw new PreconditionRequiredException("Send If-Match with the task version you last loaded.");
+            throw new PreconditionRequiredException("Send If-Match with the version you last loaded.");
         }
 
         if (header.Count == 1 && raw.Length > 2 && raw[0] == '"' && raw[^1] == '"' && !raw.Contains(','))

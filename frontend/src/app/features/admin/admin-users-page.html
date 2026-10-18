@@ -1,0 +1,65 @@
+<crm-page-header title="Administration" subtitle="Users, roles, audit logs and organization settings." />
+<crm-admin-section-nav />
+
+<div class="toolbar" [formGroup]="filters">
+  <mat-form-field appearance="outline" class="search">
+    <mat-label>Search</mat-label>
+    <input matInput type="search" formControlName="search" placeholder="Name or email" maxlength="100" />
+    <mat-icon matSuffix>search</mat-icon>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="filter">
+    <mat-label>Role</mat-label>
+    <mat-select formControlName="role">
+      <mat-option value="">All</mat-option>
+      @for (r of roles; track r) {
+        <mat-option [value]="r">{{ r }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="filter">
+    <mat-label>Status</mat-label>
+    <mat-select formControlName="status">
+      <mat-option value="">All</mat-option>
+      <mat-option value="active">Active</mat-option>
+      <mat-option value="inactive">Inactive</mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <a mat-flat-button routerLink="/agents/new"><mat-icon>person_add</mat-icon> New Agent</a>
+</div>
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+@if (error(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+  <button mat-stroked-button type="button" (click)="reload()">Retry</button>
+}
+
+@if (!loading() && !error()) {
+  @if (items().length === 0) {
+    <p>No accounts match these filters.</p>
+  } @else {
+    <ul class="rows">
+      @for (a of items(); track a.id) {
+        <li class="row">
+          <span class="row-title user-text">{{ a.firstName }} {{ a.lastName }}</span>
+          <span class="hint user-text">{{ a.email }}</span>
+          <span class="hint">{{ a.role }}</span>
+          <crm-status-badge [label]="a.isActive ? 'Active' : 'Inactive'" [tone]="a.isActive ? 'success' : 'neutral'" />
+          <a mat-button [routerLink]="['/admin/users', a.id]">Manage</a>
+        </li>
+      }
+    </ul>
+    <mat-paginator
+      [length]="totalCount()"
+      [pageIndex]="page() - 1"
+      [pageSize]="pageSize()"
+      [pageSizeOptions]="pageSizeOptions"
+      (page)="onPage($event)"
+      aria-label="Select page of accounts" />
+  }
+}

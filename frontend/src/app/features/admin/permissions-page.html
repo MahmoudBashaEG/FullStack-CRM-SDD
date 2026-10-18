@@ -1,0 +1,35 @@
+<crm-page-header title="Roles &amp; Permissions" subtitle="Roles are fixed at account creation. This page describes the access the server enforces; it does not change it." />
+<crm-admin-section-nav />
+
+@for (group of matrix; track group.module) {
+  <div class="table-scroll">
+    <table class="matrix">
+      <caption>{{ group.module }}</caption>
+      <thead>
+        <tr>
+          <th scope="col">Ability</th>
+          <th scope="col">SuperAdmin</th>
+          <th scope="col">Agent</th>
+          <th scope="col">Customer</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of group.rows; track row.ability) {
+          <tr>
+            <th scope="row">{{ row.ability }}</th>
+            @for (access of [row.superAdmin, row.agent, row.customer]; track $index) {
+              <td>
+                <span aria-hidden="true">{{ symbol(access) }}</span> {{ label(access) }}
+                @if (access.note) {
+                  <span class="scope">{{ access.note }}</span>
+                }
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}
+
+<p class="hint">Display only. The server enforces every rule.</p>

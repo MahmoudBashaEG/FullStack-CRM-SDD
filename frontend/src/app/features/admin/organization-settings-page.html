@@ -1,0 +1,63 @@
+<crm-page-header title="Organization Settings" subtitle="Informational organization and support details." />
+<crm-admin-section-nav />
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+@if (loadError(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+  <button mat-stroked-button type="button" (click)="load()">Retry</button>
+}
+
+@if (settings(); as s) {
+  <p class="hint">
+    @if (!s.isConfigured) {
+      Not configured yet.
+    } @else if (s.updatedAtUtc) {
+      Last updated {{ formatUtcTimestamp(s.updatedAtUtc) }}@if (s.updatedByName) { by <span class="user-text">{{ s.updatedByName }}</span> }
+    }
+  </p>
+
+  <form class="form stack" [formGroup]="form" (ngSubmit)="save()">
+    <mat-form-field appearance="outline">
+      <mat-label>Display name</mat-label>
+      <input matInput formControlName="displayName" maxlength="150" required />
+      @if (form.controls.displayName.hasError('required')) {
+        <mat-error>Enter the organization name.</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Support email</mat-label>
+      <input matInput type="email" formControlName="supportEmail" maxlength="256" />
+      @if (form.controls.supportEmail.hasError('email')) {
+        <mat-error>Enter a valid email address.</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Support phone</mat-label>
+      <input matInput formControlName="supportPhone" maxlength="40" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Support information</mat-label>
+      <textarea matInput rows="5" formControlName="supportInformation" maxlength="1000"></textarea>
+      <mat-hint align="end">{{ form.controls.supportInformation.value.length }} / 1000</mat-hint>
+    </mat-form-field>
+
+    @if (saveError(); as message) {
+      <p class="form-error" role="alert">{{ message }}</p>
+    }
+
+    <div class="actions">
+      <button mat-flat-button type="submit" [disabled]="form.pristine || form.invalid || saving()">Save</button>
+      @if (conflict()) {
+        <button mat-stroked-button type="button" (click)="reload()">Reload</button>
+      }
+    </div>
+
+    <p class="hint">Informational only. These values are not used for tickets, SLA or messages yet.</p>
+  </form>
+}
