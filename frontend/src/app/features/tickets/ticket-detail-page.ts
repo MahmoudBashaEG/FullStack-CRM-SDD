@@ -17,6 +17,7 @@ import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
 import { Agent } from '../agents/agent-models';
 import { AgentsApi } from '../agents/agents-api';
+import { TicketAiAssistant } from '../ai/ticket-ai-assistant';
 import { TicketCollaborators } from '../collaboration/ticket-collaborators';
 import { TicketDiscussion } from '../collaboration/ticket-discussion';
 import { TicketKnowledgeArticles } from '../knowledge-base/ticket-knowledge-articles';
@@ -53,6 +54,7 @@ import { TicketsApi } from './tickets-api';
     TicketCollaborators,
     QuickReplyPanel,
     TicketKnowledgeArticles,
+    TicketAiAssistant,
     MatCardModule,
     MatFormFieldModule,
     MatInputModule,
@@ -245,6 +247,12 @@ export class TicketDetailPage {
     if (error.status === 409) {
       this.reload();
     }
+  }
+
+  /** AI card applied a category (or refreshed after a 409): show it without discarding unsaved form edits; refresh history. */
+  protected onTicketUpdated(ticket: Ticket): void {
+    this.show(ticket, false);
+    this.activityRefresh.update(v => v + 1);
   }
 
   /** The internal discussion returned 404: the caller lost access, same handling as any other 404 on this page. */

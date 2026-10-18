@@ -4,6 +4,7 @@ using Crm.Api.Contracts.Tickets;
 using Crm.Application.Common.Paging;
 using Crm.Application.Tickets;
 using Crm.Application.Tickets.ChangeAssignee;
+using Crm.Application.Tickets.ChangeCategory;
 using Crm.Application.Tickets.ClearTicketEscalation;
 using Crm.Application.Tickets.CreateTicket;
 using Crm.Application.Tickets.EscalateTicket;
@@ -72,6 +73,11 @@ public sealed class TicketsController(ISender sender) : ControllerBase
             cancellationToken);
         return Ok(TicketResponse.From(ticket));
     }
+
+    [EndpointDescription("Requires role: SuperAdmin (any ticket) or Agent (only tickets assigned to them; others 404). Changes the category only — e.g. to apply an AI suggestion after review. expectedCategory must equal the current category (409 otherwise). Same value = no change. Recorded in the ticket activity. Subject, description, priority, status, assignment and SLA never change here.")]
+    [HttpPut("{id:guid}/category")]
+    public async Task<ActionResult<TicketResponse>> ChangeCategory(Guid id, ChangeTicketCategoryRequest request, CancellationToken cancellationToken) =>
+        Ok(TicketResponse.From(await sender.Send(new ChangeTicketCategoryCommand(Actor, id, request.ExpectedCategory, request.Category), cancellationToken)));
 
     [EndpointDescription("Requires role: SuperAdmin. Assigns, reassigns or unassigns (assignedAgentUserId = null) an existing ticket. The assignee must be an active Agent (400 otherwise). Same assignee = no change. Recorded in the ticket activity.")]
     [HttpPut("{id:guid}/assignee")]

@@ -1,0 +1,160 @@
+<mat-tab-group animationDuration="0ms">
+  <mat-tab label="Category">
+    <div class="ai-pane">
+      @if (suggestionBusy()) {
+        <mat-progress-bar mode="indeterminate" />
+        <p class="hint">Analyzing category…</p>
+      }
+      @if (suggestionError(); as message) {
+        <p class="error" role="alert">{{ message }}</p>
+      }
+      @if (applied(); as message) {
+        <p class="hint">{{ message }}</p>
+      }
+      @if (suggestion(); as s) {
+        <dl class="ai-compare">
+          <div><dt>Current category</dt><dd>{{ ticket().category }}</dd></div>
+          <div><dt>Suggested</dt><dd>{{ s.suggestedCategory }}</dd></div>
+        </dl>
+        <p class="ai-text">{{ s.explanation }}</p>
+        <p class="hint">{{ reviewLabel }}</p>
+        @if (s.suggestedCategory === ticket().category) {
+          <p class="hint">The suggestion matches the current category.</p>
+        }
+        <div class="actions">
+          @if (s.suggestedCategory !== ticket().category) {
+            <button mat-flat-button type="button" [disabled]="suggestionBusy()" (click)="apply(s)">Apply suggestion</button>
+            <button mat-button type="button" [disabled]="suggestionBusy()" (click)="dismiss()">Dismiss</button>
+          }
+          <button mat-button type="button" [disabled]="suggestionBusy()" (click)="suggestCategory()">Regenerate</button>
+        </div>
+      } @else if (suggestionError() && !suggestionBusy()) {
+        <div class="actions">
+          <button mat-button type="button" (click)="suggestCategory()">Retry</button>
+        </div>
+      } @else if (!suggestionBusy()) {
+        @if (!applied()) {
+          <p class="hint">No category recommendation yet. Nothing is sent to the AI until you ask.</p>
+        }
+        <div class="actions">
+          <button mat-flat-button type="button" (click)="suggestCategory()">Suggest Category</button>
+        </div>
+      }
+    </div>
+  </mat-tab>
+
+  <mat-tab label="Summary">
+    <div class="ai-pane">
+      @if (summaryBusy()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+      @if (summaryError(); as message) {
+        <p class="error" role="alert">{{ message }}</p>
+      }
+      @if (summary(); as s) {
+        <p class="ai-text">{{ s.text }}</p>
+        <p class="hint">{{ reviewLabel }} Generated {{ s.generatedAtUtc | date: 'medium' }}</p>
+        <div class="actions">
+          <button mat-stroked-button type="button" (click)="copy(s.text)">Copy</button>
+          <button mat-button type="button" [disabled]="summaryBusy()" (click)="generateSummary()">Regenerate</button>
+        </div>
+      } @else {
+        <div class="actions">
+          <button mat-flat-button type="button" [disabled]="summaryBusy()" (click)="generateSummary()">Generate summary</button>
+        </div>
+      }
+    </div>
+  </mat-tab>
+
+  <mat-tab label="Reply">
+    <div class="ai-pane">
+      <mat-form-field>
+        <mat-label>Tone</mat-label>
+        <mat-select [formControl]="tone" placeholder="Choose a tone">
+          @for (t of tones; track t) {
+            <mat-option [value]="t">{{ t }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field>
+        <mat-label>Instructions for the AI (optional)</mat-label>
+        <textarea matInput rows="2" [maxlength]="instructionMax" [formControl]="instructions"></textarea>
+        <mat-hint align="end">{{ instructions.value.length }} / {{ instructionMax }}</mat-hint>
+      </mat-form-field>
+      @if (draftBusy()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+      @if (draftError(); as message) {
+        <p class="error" role="alert">{{ message }}</p>
+      }
+      @if (draftResult()) {
+        <mat-form-field>
+          <mat-label>Reply draft</mat-label>
+          <textarea matInput rows="8" [formControl]="draft"></textarea>
+          <mat-hint>Draft only — not sent to the customer. Regenerate replaces your edits.</mat-hint>
+        </mat-form-field>
+        <p class="hint">{{ reviewLabel }}</p>
+        <div class="actions">
+          <button mat-stroked-button type="button" (click)="copy(draft.value)">Copy</button>
+          <button mat-button type="button" [disabled]="draftBusy() || !tone.value" (click)="generateDraft()">Regenerate</button>
+          <button mat-button type="button" (click)="discardDraft()">Discard</button>
+        </div>
+      } @else {
+        <div class="actions">
+          <button mat-flat-button type="button" [disabled]="draftBusy() || !tone.value" (click)="generateDraft()">Generate draft</button>
+        </div>
+      }
+    </div>
+  </mat-tab>
+
+  <mat-tab label="Solutions">
+    <div class="ai-pane">
+      @if (solutionsBusy()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+      @if (solutionsError(); as message) {
+        <p class="error" role="alert">{{ message }}</p>
+      }
+      @if (solutions(); as s) {
+        @if (s.articlesConsidered === 0) {
+          <p class="hint">No matching published Knowledge Base article was found.</p>
+        }
+        @if (s.knowledgeBaseRecommendations.length > 0) {
+          <h3 class="ai-heading">From the Knowledge Base</h3>
+          @for (r of s.knowledgeBaseRecommendations; track r.articleId) {
+            <p><a [routerLink]="['/knowledge-base', r.articleId]">{{ r.articleTitle }}</a></p>
+            <ul class="ai-list">
+              @for (step of r.steps; track $index) {
+                <li class="ai-text">{{ step }}</li>
+              }
+            </ul>
+          }
+        }
+        @if (s.generalRecommendations.length > 0) {
+          <h3 class="ai-heading">
+            General suggestions — not verified against this Knowledge Base.
+            <crm-status-badge label="General" tone="neutral" />
+          </h3>
+          <ul class="ai-list">
+            @for (g of s.generalRecommendations; track $index) {
+              <li class="ai-text">{{ g }}</li>
+            }
+          </ul>
+        }
+        <p class="hint">{{ reviewLabel }} Generated {{ s.generatedAtUtc | date: 'medium' }}</p>
+        <div class="actions">
+          <button mat-stroked-button type="button" (click)="copyAllSolutions(s)">Copy all</button>
+          <button mat-button type="button" [disabled]="solutionsBusy()" (click)="generateSolutions()">Regenerate</button>
+        </div>
+      } @else {
+        <div class="actions">
+          <button mat-flat-button type="button" [disabled]="solutionsBusy()" (click)="generateSolutions()">Suggest solutions</button>
+        </div>
+      }
+    </div>
+  </mat-tab>
+</mat-tab-group>
+
+<div class="actions ai-footer">
+  <a mat-stroked-button routerLink="/ai-assistant" [queryParams]="{ ticketId: ticket().id }">Ask AI about this ticket</a>
+</div>

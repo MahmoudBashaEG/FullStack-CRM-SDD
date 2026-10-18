@@ -33,6 +33,9 @@ Roles are assigned by the server only. Angular guards and navigation filtering a
 | Knowledge Base: create/edit own Draft, submit | ✔ any Draft | ✔ own | — |
 | Knowledge Base: return/publish/archive/restore, manage categories | ✔ | — | — |
 | Link/unlink KB articles on tickets | ✔ any ticket | ✔ assigned to them | — |
+| AI ticket assistance (summary, reply draft, category suggestion, solutions) | ✔ any ticket | ✔ assigned to them | — |
+| Apply a category (`PUT /tickets/{id}/category`) | ✔ any ticket | ✔ assigned to them | — |
+| AI Assistant chat (general / ticket context) | ✔ | ✔ (ticket: assigned only) | — |
 | Create a SuperAdmin | nobody via the API (bootstrap only) | | |
 
 ## 2. API routes
@@ -72,6 +75,9 @@ Roles are assigned by the server only. Angular guards and navigation filtering a
 | * | `/api/v1/knowledge-base/articles/*` | SuperAdmin, Agent (`return`/`publish`/`archive`/`restore`: SuperAdmin only, Agent 403) | 200 / 201 |
 | GET / POST / PUT | `/api/v1/knowledge-base/categories[/{id}]` | GET staff; POST/PUT SuperAdmin | 200 / 201 |
 | GET / POST / DELETE | `/api/v1/tickets/{id}/knowledge-articles[/{articleId}]` | SuperAdmin any ticket; Agent only tickets assigned to them | 200 / 201 / 204 |
+| POST | `/api/v1/tickets/{id}/ai/{summary\|reply-draft\|category-suggestion\|solutions}` | SuperAdmin any ticket; Agent own assigned; rate limited | 200 |
+| PUT | `/api/v1/tickets/{id}/category` | SuperAdmin any ticket; Agent own assigned | 200 |
+| POST | `/api/v1/ai/chat` | SuperAdmin, Agent; rate limited | 200 |
 | GET | `/api/health` | anonymous | 200 |
 
 `/api/v1/agents/{id}` only reaches Agent accounts; SuperAdmin and Customer ids return 404.

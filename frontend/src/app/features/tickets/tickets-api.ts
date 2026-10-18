@@ -5,6 +5,7 @@ import { ApiUrl } from '../../core/api/api-url';
 import { PagedResponse } from '../customers/customer-models';
 import {
   ChangeTicketAssigneeRequest,
+  ChangeTicketCategoryRequest,
   CreateTicketRequest,
   EscalateTicketRequest,
   Ticket,
@@ -57,6 +58,11 @@ export class TicketsApi {
 
   update(id: string, body: UpdateTicketRequest): Observable<Ticket> {
     return this.http.put<Ticket>(this.apiUrl.versioned(`tickets/${id}`), body);
+  }
+
+  /** Category only (e.g. applying an AI suggestion). 409 when the category changed since it was shown. */
+  changeCategory(id: string, body: ChangeTicketCategoryRequest): Observable<Ticket> {
+    return this.http.put<Ticket>(this.apiUrl.versioned(`tickets/${id}/category`), body);
   }
 
   changeAssignee(id: string, body: ChangeTicketAssigneeRequest): Observable<Ticket> {

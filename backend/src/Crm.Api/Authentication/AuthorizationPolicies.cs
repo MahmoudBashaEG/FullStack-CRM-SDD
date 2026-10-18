@@ -11,4 +11,5 @@ public static class AuthorizationPolicies
 public static class RateLimitPolicies
 {
     public const string Credentials = "credentials";
+    public const string Ai = "ai";
 }

@@ -1,0 +1,60 @@
+<crm-page-header title="AI Assistant" subtitle="Advisory help for support work. Nothing is saved or sent to customers." />
+
+<mat-card appearance="outlined">
+  <mat-card-content class="chat">
+    @if (ticketLost()) {
+      <p class="error" role="alert">This ticket is no longer available to you. Start a general conversation instead.</p>
+      <div class="actions">
+        <a mat-stroked-button routerLink="/ai-assistant">General chat</a>
+      </div>
+    } @else if (store.ticketId()) {
+      <p class="hint">
+        About ticket: <a [routerLink]="['/tickets', store.ticketId()]">{{ ticketSubject() ?? 'Loading…' }}</a>
+        · <a routerLink="/ai-assistant">General chat</a>
+      </p>
+    }
+
+    @if (store.turns().length === 0) {
+      <p class="hint">Ask a question about support work or this ticket. Conversations are kept only in this browser tab and are never saved.</p>
+    }
+
+    <ol class="turns">
+      @for (turn of store.turns(); track $index) {
+        <li class="turn" [class.assistant]="turn.role === 'Assistant'">
+          <strong>{{ turn.role === 'User' ? 'You' : 'AI assistant' }}</strong>
+          <p class="ai-text">{{ turn.text }}</p>
+          @if (turn.role === 'Assistant') {
+            @if (turn.sources.length > 0) {
+              <p class="hint">
+                Sources:
+                @for (source of turn.sources; track source.articleId) {
+                  <a [routerLink]="['/knowledge-base', source.articleId]">{{ source.title }}</a>{{ $last ? '' : ', ' }}
+                }
+              </p>
+            }
+            <p class="hint">{{ reviewLabel }}</p>
+          }
+        </li>
+      }
+    </ol>
+
+    @if (busy()) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+    @if (error(); as message) {
+      <p class="error" role="alert">{{ message }}</p>
+    }
+
+    <form class="composer" (submit)="$event.preventDefault(); send()">
+      <mat-form-field>
+        <mat-label>Your message</mat-label>
+        <textarea matInput rows="3" [maxlength]="maxLength" [formControl]="message" (keydown.control.enter)="send()"></textarea>
+        <mat-hint align="end">{{ message.value.length }} / {{ maxLength }}</mat-hint>
+      </mat-form-field>
+      <div class="actions">
+        <button mat-flat-button type="submit" [disabled]="busy() || ticketLost() || message.invalid">{{ error() ? 'Retry' : 'Send' }}</button>
+        <button mat-button type="button" [disabled]="busy() || store.turns().length === 0" (click)="newConversation()">New conversation</button>
+      </div>
+    </form>
+  </mat-card-content>
+</mat-card>

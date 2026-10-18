@@ -63,6 +63,8 @@ Headings, emphasis, lists, code and fenced code, blockquotes, and `http`/`https`
 
 Scope is `TicketRepository.Scope`. Only Published, visible articles can be linked (409 otherwise); duplicates 409; at most 25 per ticket (409). Links to archived articles remain and show their status. The ticket row is never tracked, so linking cannot change status, assignment, SLA, `UpdatedAtUtc` or activity. Nothing is sent to the customer.
 
+AI-001 reads Published articles (both visibilities) as reference excerpts for suggestions and chat; it never reads drafts, submitted or archived articles, and never links articles automatically ([ai-features.md](ai-features.md)).
+
 ## 9. API
 
 | Route | Roles | Success |

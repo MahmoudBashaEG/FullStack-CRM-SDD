@@ -1,0 +1,36 @@
+.chat,
+.composer {
+  display: grid;
+  gap: var(--crm-space-3);
+}
+
+.turns {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--crm-space-3);
+}
+
+.turn {
+  padding: var(--crm-space-3) var(--crm-space-4);
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: var(--crm-radius-md);
+  min-inline-size: 0;
+
+  &.assistant {
+    background: var(--mat-sys-surface-container-low);
+  }
+}
+
+.ai-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--crm-space-2);
+}

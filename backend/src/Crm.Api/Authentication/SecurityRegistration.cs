@@ -72,6 +72,7 @@ internal static class SecurityRegistration
                 RateLimitPartition.GetFixedWindowLimiter(
                     httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                     _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+            options.AddPolicy<string, AiRateLimitPolicy>(RateLimitPolicies.Ai);
         });
 
         return services;

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Crm.Application.Common.Exceptions;
 using Crm.Domain.Common;
@@ -69,6 +70,20 @@ internal sealed class GlobalExceptionHandler(
                 Title = "Conflict.",
                 Detail = conflict.Message,
             },
+            AiUnavailableException ai => new ProblemDetails
+            {
+                Status = ai.Kind switch
+                {
+                    AiFailureKind.QuotaExceeded => StatusCodes.Status429TooManyRequests,
+                    AiFailureKind.Timeout => StatusCodes.Status504GatewayTimeout,
+                    AiFailureKind.InvalidResponse => StatusCodes.Status502BadGateway,
+                    AiFailureKind.Blocked => StatusCodes.Status422UnprocessableEntity,
+                    _ => StatusCodes.Status503ServiceUnavailable, // NotConfigured, InvalidCredentials, ModelUnavailable, ProviderUnavailable
+                },
+                Title = "AI assistance unavailable.",
+                Detail = ai.Message, // fixed, user-safe (AiMessages)
+                Extensions = { ["aiError"] = ai.Kind.ToString() },
+            },
             _ => new ProblemDetails
             {
                 Status = StatusCodes.Status500InternalServerError,
@@ -76,6 +91,13 @@ internal sealed class GlobalExceptionHandler(
                 Detail = environment.IsDevelopment() ? exception.Message : null,
             },
         };
+
+        if (exception is AiUnavailableException { RetryAfter: { } wait })
+        {
+            var seconds = (int)Math.Ceiling(wait.TotalSeconds);
+            httpContext.Response.Headers.RetryAfter = seconds.ToString(CultureInfo.InvariantCulture);
+            problem.Extensions["retryAfterSeconds"] = seconds;
+        }
 
         if (problem.Status >= StatusCodes.Status500InternalServerError)
         {

@@ -105,6 +105,8 @@ Enforcement: the `Staff` policy (plus `SuperAdmin` on assignment and clearing es
 
 `PUT /tickets/{id}` changes only `subject`, `description`, `category`, `priority` (+ `UpdatedAtUtc`), records a `FieldChanged` per changed field, and when nothing changed returns 200 without saving (no event, `UpdatedAtUtc` unchanged).
 
+`PUT /tickets/{id}/category` (AI-001) changes only the category with the same scope, permissions and `FieldChanged` event; subject, description and priority are taken from the stored row. `expectedCategory` must equal the current category (409 otherwise).
+
 ## 8. Concurrency
 
 Two separate mechanisms:
@@ -112,7 +114,7 @@ Two separate mechanisms:
 1. **Overlapping requests — row version.** `Tickets.Version` is a server-side `rowversion`. The version checked is the one EF loaded in the **same request**; it is never exposed to the client. If another request commits to the ticket between this request's load and save, the `UPDATE … WHERE Version = @loaded` affects 0 rows, `EfUnitOfWork.SaveChangesAsync` raises `ConflictException` ⇒ **409** "The record was changed by another request. Reload it and try again.", and nothing (ticket or events) is saved. This applies to every ticket command, including `PUT`.
 2. **Stale browser pages — request preconditions.** The row version cannot detect a page that was merely open for a while. Instead: a transition's `fromStatus` must equal the stored status (409); escalate requires "not already escalated" and Open/InProgress (409); clear requires "currently escalated" (409); assigning the current assignee is a no-op.
 
-**Last-write-wins (unchanged from TICK-001):** a basic edit (`PUT`) and an assignment choice submitted from a stale page are applied as submitted. The history records both changes in order. A client-supplied version/ETag would change the TICK-001 `PUT` contract and is deferred.
+**Last-write-wins (unchanged from TICK-001):** a basic edit (`PUT`) and an assignment choice submitted from a stale page are applied as submitted. The history records both changes in order. A client-supplied version/ETag would change the TICK-001 `PUT` contract and is deferred. The category-only edit carries `expectedCategory`, so an AI suggestion applied from a stale page returns 409 instead of overwriting.
 
 After a 409 the Angular detail page shows the server message, refreshes the ticket and its activity (so buttons match the real status), keeps unsaved edit-form values and a typed escalation reason, and lets the user retry. Buttons are disabled while a request is in flight. After a 404 on an action (e.g. the ticket was reassigned) the page drops the stale record and shows "This ticket is no longer available to you. It may have been reassigned."
 
@@ -128,6 +130,7 @@ SLA-001 additions: `POST /tickets/{id}/first-response`, `GET /tickets?slaBreache
 | POST | `/api/v1/tickets` | SuperAdmin, Agent | 201 + Location; 400 unknown customer / invalid assignee |
 | GET | `/api/v1/tickets/{id}` | SuperAdmin, Agent | 200; 404 unknown or not visible |
 | PUT | `/api/v1/tickets/{id}` | SuperAdmin, Agent | 200; 400; 404; 409 (overlapping write) |
+| PUT | `/api/v1/tickets/{id}/category` | SuperAdmin, Agent | 200; 400; 404; 409 (category changed / overlapping write) |
 | PUT | `/api/v1/tickets/{id}/assignee` | **SuperAdmin** | 200; 400 invalid assignee; 403; 404; 409 |
 | POST | `/api/v1/tickets/{id}/transitions` | SuperAdmin, Agent (assigned) | 200; 400 missing/unknown status; 404; 409 stale/illegal |
 | POST | `/api/v1/tickets/{id}/escalation` | SuperAdmin, Agent (assigned) | 200; 400 reason; 404; 409 already escalated / Resolved / Closed |

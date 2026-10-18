@@ -1,6 +1,6 @@
 # Customer Support CRM
 
-A full-stack Customer Support CRM built spec-first with squad-kit: an ASP.NET Core (.NET 10) REST API in Clean Architecture with CQRS, EF Core and SQL Server, plus an Angular 22 + Angular Material frontend. This repository contains the architectural foundation (`ARCH-001`), identity & access (`AUTH-001`), customer profiles & contacts (`CUST-001`), ticket creation & management (`TICK-001`), ticket workflow, assignment & history (`TICK-002`) and the Agent Dashboard (`DASH-001`), agent productivity & collaboration (`DASH-002`), customer notes, interactions & attachments (`CUST-002`) SLA & basic automation (`SLA-001`) and Knowledge Base management (`KB-001`); CRM business features arrive as separate stories. See [docs/](docs/) for the conventions.
+A full-stack Customer Support CRM built spec-first with squad-kit: an ASP.NET Core (.NET 10) REST API in Clean Architecture with CQRS, EF Core and SQL Server, plus an Angular 22 + Angular Material frontend. This repository contains the architectural foundation (`ARCH-001`), identity & access (`AUTH-001`), customer profiles & contacts (`CUST-001`), ticket creation & management (`TICK-001`), ticket workflow, assignment & history (`TICK-002`) and the Agent Dashboard (`DASH-001`), agent productivity & collaboration (`DASH-002`), customer notes, interactions & attachments (`CUST-002`), SLA & basic automation (`SLA-001`), Knowledge Base management (`KB-001`) and AI features with Google Gemini (`AI-001`); CRM business features arrive as separate stories. See [docs/](docs/) for the conventions.
 
 ## Repository layout
 
@@ -53,6 +53,16 @@ dotnet user-secrets set "Bootstrap:SuperAdmin:Password" "<initial-superadmin-pas
 ```
 
 On first start with an empty database the API creates the three roles and `admin@admin.com`. Sign in with the configured password; no password change is forced.
+
+### Gemini (AI) secrets
+
+```powershell
+cd backend
+dotnet user-secrets set "Gemini:ApiKey" "<your-gemini-api-key>" --project src/Crm.Api
+dotnet user-secrets set "Gemini:Model" "<model-id-from-ai-studio>" --project src/Crm.Api
+```
+
+Alternative: set the `GEMINI_API_KEY` environment variable. Optional: without them the CRM runs and the AI features show "not configured". Use synthetic data only (Free Tier data use). Details: [docs/ai-features.md](docs/ai-features.md).
 
 ## Database migrations
 

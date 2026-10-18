@@ -72,6 +72,11 @@ export const routes: Routes = [
         canActivate: [roleGuard('SuperAdmin', 'Agent')],
         loadChildren: () => import('./features/knowledge-base/knowledge-base.routes').then(m => m.KNOWLEDGE_BASE_ROUTES),
       },
+      {
+        path: 'ai-assistant',
+        canActivate: [roleGuard('SuperAdmin', 'Agent')],
+        loadChildren: () => import('./features/ai/ai.routes').then(m => m.AI_ROUTES),
+      },
       // Feature stories add: { path: '<feature>', loadChildren: () => import('./features/<feature>/<feature>.routes') ... }
     ],
   },

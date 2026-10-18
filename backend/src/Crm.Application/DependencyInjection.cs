@@ -13,6 +13,7 @@ public static class DependencyInjection
         services.AddScoped<Auth.AuthSessionFactory>();
         services.AddScoped<Sla.SlaEvaluator>();
         services.AddScoped<Sla.ITicketCreationAutomation, Sla.TicketCreationAutomation>();
+        services.AddScoped<Ai.AiTicketContextLoader>();
         return services;
     }
 }

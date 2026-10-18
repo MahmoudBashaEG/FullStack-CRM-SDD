@@ -37,6 +37,12 @@ export interface Ticket {
   sla: TicketSla | null;
 }
 
+/** AI-001 D1: category-only edit; expectedCategory = the value on screen (409 if changed). */
+export interface ChangeTicketCategoryRequest {
+  expectedCategory: TicketCategory;
+  category: TicketCategory;
+}
+
 export interface TicketListParams {
   page: number;
   pageSize: number;
