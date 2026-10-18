@@ -1,0 +1,49 @@
+<p class="hint">Staff only. Max 5 MB. PDF, PNG, JPG/JPEG, TXT or DOCX. Files cannot be deleted.</p>
+
+<div class="composer">
+  <input #picker type="file" hidden [accept]="accept" (change)="onPicked(picker)" />
+  <div class="record-meta">
+    <button mat-stroked-button type="button" [disabled]="uploading()" (click)="picker.click()">Choose file</button>
+    @if (selected(); as file) {
+      <span class="user-text">{{ file.name }} ({{ formatFileSize(file.size) }})</span>
+    }
+    <button mat-flat-button type="button" [disabled]="!selected() || !!fileError() || uploading()" (click)="upload(picker)">Upload</button>
+  </div>
+  @if (uploading()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+  @if (fileError(); as message) {
+    <p class="form-error" role="alert">{{ message }}</p>
+  }
+</div>
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+@if (error(); as message) {
+  <p class="form-error" role="alert">{{ message }}</p>
+  <button mat-button type="button" (click)="retry()">Retry</button>
+}
+
+@if (loaded() && items().length === 0 && !error()) {
+  <p class="hint">No files uploaded yet.</p>
+}
+
+<div class="thread">
+  @for (a of items(); track a.id) {
+    <article>
+      <header class="record-meta">
+        <strong class="user-text">{{ a.fileName }}</strong>
+        <span class="hint">{{ formatFileSize(a.sizeBytes) }}</span>
+        <span class="hint">Uploaded by {{ a.uploadedByName }}</span>
+        <span class="hint">{{ a.uploadedAtUtc | date: 'medium' }}</span>
+        <button mat-button type="button" [disabled]="downloadingId() === a.id" (click)="download(a)">Download</button>
+      </header>
+    </article>
+  }
+</div>
+
+@if (hasMore() && !loading()) {
+  <button mat-button type="button" (click)="loadMore()">Load more files</button>
+}

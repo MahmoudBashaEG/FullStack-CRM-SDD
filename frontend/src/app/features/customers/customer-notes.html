@@ -1,0 +1,47 @@
+<p class="internal-banner" role="note">
+  <mat-icon aria-hidden="true">lock</mat-icon>
+  Internal only — not visible to customers. Notes cannot be edited or deleted; add a new note to correct one.
+</p>
+
+<form class="composer" (submit)="$event.preventDefault(); add()">
+  <mat-form-field appearance="outline">
+    <mat-label>Add a note</mat-label>
+    <textarea matInput rows="3" [formControl]="composer" maxlength="2000" required></textarea>
+    <mat-hint align="end">{{ composer.value.length }} / 2000</mat-hint>
+  </mat-form-field>
+  @if (postError(); as message) {
+    <p class="form-error" role="alert">{{ message }}</p>
+  }
+  <div>
+    <button mat-flat-button type="submit" [disabled]="posting() || !composer.value.trim()">Add note</button>
+  </div>
+</form>
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+@if (error(); as message) {
+  <p class="form-error" role="alert">{{ message }}</p>
+  <button mat-button type="button" (click)="retry()">Retry</button>
+}
+
+@if (loaded() && items().length === 0 && !error()) {
+  <p class="hint">No notes yet.</p>
+}
+
+<div class="thread">
+  @for (n of items(); track n.id) {
+    <article>
+      <header>
+        <strong>{{ n.authorName }}</strong>
+        <span class="hint">{{ n.createdAtUtc | date: 'medium' }}</span>
+      </header>
+      <p class="user-text">{{ n.body }}</p>
+    </article>
+  }
+</div>
+
+@if (hasMore() && !loading()) {
+  <button mat-button type="button" (click)="loadMore()">Load older notes</button>
+}

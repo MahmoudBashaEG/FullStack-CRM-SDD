@@ -1,4 +1,4 @@
-# Customer management (CUST-001)
+# Customer management (CUST-001, CUST-002)
 
 ## 1. CRM customers vs Identity accounts
 
@@ -32,6 +32,11 @@ The server enforces roles (`Staff` / `Customer` policies) and ownership (the use
 | Edit contact-only customer | ✔ | ✔ | — |
 | Edit registered customer (name, phone, company) | ✔ | ✔ | — |
 | View / edit own linked profile | — | — | ✔ |
+| Add / read internal notes | ✔ | ✔ | — |
+| Log / read interactions | ✔ | ✔ | — |
+| Upload / list / download attachments | ✔ | ✔ | — |
+| Edit / delete notes, interactions or attachments | — | — | — |
+| Related tickets on Customer Details | ✔ all | ✔ assigned to them | — |
 
 ## 4. API
 
@@ -41,6 +46,12 @@ The server enforces roles (`Staff` / `Customer` policies) and ownership (the use
 | POST | `/api/v1/customers` | Staff | 201 + Location |
 | GET / PUT | `/api/v1/customers/{id}` | Staff | 200; 404 unknown id; 422 changed login email |
 | GET / PUT | `/api/v1/me/customer-profile` | Customer | 200; 404 when no profile |
+| GET / POST | `/api/v1/customers/{id}/notes` | Staff | 200 paged / 201; 400 invalid; 404 unknown customer |
+| GET / POST | `/api/v1/customers/{id}/interactions` | Staff | 200 paged / 201; 400 invalid; 404 unknown customer |
+| GET / POST | `/api/v1/customers/{id}/attachments` | Staff | 200 paged metadata / 201 (POST = multipart `file`); 400 invalid file; 404 unknown customer |
+| GET | `/api/v1/customers/{id}/attachments/{attachmentId}/content` | Staff | 200 file download; 404 unknown or other customer's attachment |
+
+Customer-role tokens get 403 on all CUST-002 routes. Related tickets reuse the existing, scoped `GET /api/v1/tickets?customerId=`.
 
 List contract (`GET /api/v1/customers`):
 
@@ -59,4 +70,29 @@ There is no automatic link or merge between a contact-only record and an account
 
 ## 7. Future stories
 
-CUST-002 notes, CUST-003 attachments, CUST-004 interaction history reference `Customers.Id`; tickets already do (`Tickets.CustomerId`, see [ticket-management.md](ticket-management.md)). Deferred: verified linking/merge, deletion/archiving, invitations, per-agent assignment, departments/branches, optimistic concurrency, full-text search.
+Notes, interactions and attachments shipped in CUST-002 (§8–§11) and reference `Customers.Id`; tickets already do (`Tickets.CustomerId`, see [ticket-management.md](ticket-management.md)). Deferred: verified linking/merge, deletion/archiving, invitations, per-agent assignment, departments/branches, optimistic concurrency, full-text search, attachment deletion, note/interaction corrections in place.
+
+## 8. Notes and interactions (CUST-002)
+
+- **Ownership:** staff-only data, global for SuperAdmin and Agents (any staff member can read and add on any customer). The author / recorder comes from the JWT subject only, never from the body. Names are joined from `AspNetUsers` at read time, not stored.
+- **Append-only (C2 Option A):** there is no edit or delete API or UI. A correction is a new note or interaction.
+- **Notes:** plain text, 1–2 000 characters (trimmed on save), listed newest first (`CreatedAtUtc DESC, Id DESC`).
+- **Interactions:** type `PhoneCall` / `Meeting` / `Other`, summary 1–500 characters, `occurredAtUtc` optional (default now). `OccurredAtUtc` is when the contact happened (past allowed; later than now + 5 minutes is rejected; before 2000-01-01 is rejected); `CreatedAtUtc` is when it was logged. Listed newest occurrence first (`OccurredAtUtc DESC, Id DESC`), so a back-dated entry can appear below newer ones. After saving, Angular reloads the first page so order and paging stay correct.
+- All lists use `page` / `pageSize` and return `PagedResponse<T>`; the UI shows 10 per page with a "Load older" button.
+
+## 9. Related tickets
+
+The Customer Details page lists the customer's tickets by calling the existing `GET /api/v1/tickets?customerId=`. The server scopes Agents to tickets assigned to them before the customer filter, so an Agent never sees an unassigned or other Agent's ticket. Ticket discussion membership (DASH-002) grants nothing here. No new ticket access path exists.
+
+## 10. Attachments
+
+- Stored in SQL Server (`CustomerAttachments.Content varbinary(max)`, C4). Bytes are never part of any JSON response or metadata query: list queries project metadata columns only, and only the download query selects `Content`.
+- One file per upload, ≤ 5 MB, empty files rejected. Allowed: PDF, PNG, JPG/JPEG, TXT, DOCX. The extension (case-insensitive) **and** the file signature are checked on the server (`%PDF-`, PNG, JPEG and zip signatures; TXT must contain no NUL byte). The client `Content-Type` is ignored; the stored type comes from the extension allow-list. Validation errors use the `file` key (400).
+- The request is capped at 6 MB (`RequestSizeLimit`), so 5–6 MB files get the friendly "larger than 5 MB" message; bigger requests are rejected by the framework with a 400 form-read error (observed, never 500).
+- The stored file name is the sanitized last path segment (display only, never used as a path; nothing is written to disk).
+- Download: authenticated `GET …/content` with `Content-Disposition: attachment`, `X-Content-Type-Options: nosniff`, `Cache-Control: private, no-store`. No public URL, preview, delete or antivirus scan.
+- **Trade-off:** files grow the database. If volumes grow, move content to object storage in a later story.
+
+## 11. Not Communication Channels
+
+Interactions are manual logs only. No Email, WhatsApp, SMS or Live Chat message is sent, received or synced; that is the final roadmap module (Communication Channels).

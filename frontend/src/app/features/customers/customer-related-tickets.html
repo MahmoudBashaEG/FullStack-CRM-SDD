@@ -1,0 +1,31 @@
+<p class="hint">Only tickets you are allowed to open are listed.</p>
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+@if (error(); as message) {
+  <p class="form-error" role="alert">{{ message }}</p>
+  <button mat-button type="button" (click)="retry()">Retry</button>
+}
+
+@if (loaded() && items().length === 0 && !error()) {
+  <p class="hint">No tickets you can access for this customer.</p>
+}
+
+<div class="thread">
+  @for (t of items(); track t.id) {
+    <article>
+      <header class="record-meta">
+        <a [routerLink]="['/tickets', t.id]">{{ t.subject }}</a>
+        <crm-status-badge [label]="statusLabel(t.status)" [tone]="statusTone(t.status)" />
+        <crm-status-badge [label]="t.priority" [tone]="priorityTone(t.priority)" />
+        <span class="hint">{{ t.createdAtUtc | date: 'mediumDate' }}</span>
+      </header>
+    </article>
+  }
+</div>
+
+@if (hasMore() && !loading()) {
+  <button mat-button type="button" (click)="loadMore()">Load more tickets</button>
+}

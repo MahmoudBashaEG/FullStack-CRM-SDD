@@ -12,7 +12,11 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { describeHttpError } from '../../core/api/describe-http-error';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
+import { CustomerAttachments } from './customer-attachments';
+import { CustomerInteractions } from './customer-interactions';
 import { Customer } from './customer-models';
+import { CustomerNotes } from './customer-notes';
+import { CustomerRelatedTickets } from './customer-related-tickets';
 import { CustomersApi } from './customers-api';
 
 @Component({
@@ -28,6 +32,10 @@ import { CustomersApi } from './customers-api';
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
+    CustomerNotes,
+    CustomerInteractions,
+    CustomerRelatedTickets,
+    CustomerAttachments,
   ],
   templateUrl: './customer-detail-page.html',
   styleUrl: './customer-detail-page.scss',

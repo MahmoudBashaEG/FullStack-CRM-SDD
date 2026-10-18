@@ -37,6 +37,7 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
         services.AddScoped<IRefreshSessionRepository, RefreshSessionRepository>();
         services.AddScoped<ICustomerRepository, CustomerRepository>();
+        services.AddScoped<ICustomerRecordRepository, CustomerRecordRepository>();
         services.AddScoped<ITicketRepository, TicketRepository>();
         services.AddScoped<IAgentDashboardRepository, AgentDashboardRepository>();
         services.AddScoped<IAgentTaskRepository, AgentTaskRepository>();

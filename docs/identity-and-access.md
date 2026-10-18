@@ -13,6 +13,7 @@ Roles are assigned by the server only. Angular guards and navigation filtering a
 | List / create / edit / enable-disable / set password of Agents | ✔ | — | — |
 | Manage CRM customers (list / view / create contact-only / edit) | ✔ | ✔ | — |
 | View / edit own CRM customer profile | — | — | ✔ |
+| Customer notes / interactions / attachments (read / add; append-only, no delete) | ✔ | ✔ | — |
 | Create tickets (Agent: assigned to self; SuperAdmin: active Agent or unassigned) | ✔ | ✔ | — |
 | List / view / edit tickets | ✔ all | ✔ assigned to them | — |
 | Assign / reassign / unassign existing tickets | ✔ | — | — |
@@ -46,6 +47,10 @@ Roles are assigned by the server only. Angular guards and navigation filtering a
 | PUT | `/api/v1/agents/{id}/password` | SuperAdmin | 204 |
 | GET / POST | `/api/v1/customers` | SuperAdmin, Agent | 200 / 201 |
 | GET / PUT | `/api/v1/customers/{id}` | SuperAdmin, Agent | 200 |
+| GET / POST | `/api/v1/customers/{id}/notes` | SuperAdmin, Agent | 200 / 201 |
+| GET / POST | `/api/v1/customers/{id}/interactions` | SuperAdmin, Agent | 200 / 201 |
+| GET / POST | `/api/v1/customers/{id}/attachments` | SuperAdmin, Agent | 200 / 201 |
+| GET | `/api/v1/customers/{id}/attachments/{attachmentId}/content` | SuperAdmin, Agent | 200 |
 | GET / POST | `/api/v1/tickets` | SuperAdmin, Agent | 200 / 201 |
 | GET / PUT | `/api/v1/tickets/{id}` | SuperAdmin, Agent (Agent only own assigned) | 200 |
 | PUT | `/api/v1/tickets/{id}/assignee` | SuperAdmin | 200 |

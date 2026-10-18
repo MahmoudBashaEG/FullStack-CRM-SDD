@@ -1,0 +1,43 @@
+@use '../../shared/ui/productivity-page';
+
+.internal-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--crm-space-2);
+  margin-block: 0 var(--crm-space-3);
+  padding: var(--crm-space-2) var(--crm-space-3);
+  border-radius: var(--crm-radius-md);
+  background: var(--mat-sys-tertiary-container);
+  color: var(--mat-sys-on-tertiary-container);
+  font: var(--mat-sys-label-large);
+}
+
+.composer {
+  display: grid;
+  gap: var(--crm-space-2);
+}
+
+.thread {
+  display: grid;
+  gap: var(--crm-space-3);
+  margin-block: var(--crm-space-3);
+
+  article {
+    padding: var(--crm-space-3);
+    border: 1px solid var(--mat-sys-outline-variant);
+    border-radius: var(--crm-radius-md);
+  }
+
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--crm-space-2) var(--crm-space-3);
+  }
+}
+
+.record-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--crm-space-2) var(--crm-space-3);
+  align-items: center;
+}

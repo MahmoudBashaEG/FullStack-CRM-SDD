@@ -25,6 +25,9 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options)
     public DbSet<QuickReplyTemplate> QuickReplyTemplates => Set<QuickReplyTemplate>();
     public DbSet<TicketCollaborator> TicketCollaborators => Set<TicketCollaborator>();
     public DbSet<TicketInternalMessage> TicketInternalMessages => Set<TicketInternalMessage>();
+    public DbSet<CustomerNote> CustomerNotes => Set<CustomerNote>();
+    public DbSet<CustomerInteraction> CustomerInteractions => Set<CustomerInteraction>();
+    public DbSet<CustomerAttachment> CustomerAttachments => Set<CustomerAttachment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

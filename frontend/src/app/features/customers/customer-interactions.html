@@ -1,0 +1,57 @@
+<p class="hint">Manual log only — no email, WhatsApp or SMS is sent or received. Interactions cannot be edited or deleted.</p>
+
+<form class="composer" [formGroup]="form" (submit)="$event.preventDefault(); save()">
+  <mat-form-field appearance="outline">
+    <mat-label>Type</mat-label>
+    <mat-select formControlName="type">
+      @for (t of types; track t) {
+        <mat-option [value]="t">{{ typeLabel(t) }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+  <mat-form-field appearance="outline">
+    <mat-label>Occurred at</mat-label>
+    <input matInput type="datetime-local" formControlName="occurredAt" required />
+  </mat-form-field>
+  <mat-form-field appearance="outline">
+    <mat-label>Summary</mat-label>
+    <textarea matInput rows="3" formControlName="summary" maxlength="500" required></textarea>
+    <mat-hint align="end">{{ form.controls.summary.value.length }} / 500</mat-hint>
+  </mat-form-field>
+  @if (saveError(); as message) {
+    <p class="form-error" role="alert">{{ message }}</p>
+  }
+  <div>
+    <button mat-flat-button type="submit" [disabled]="saving() || !form.controls.summary.value.trim()">Save interaction</button>
+  </div>
+</form>
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+@if (error(); as message) {
+  <p class="form-error" role="alert">{{ message }}</p>
+  <button mat-button type="button" (click)="retry()">Retry</button>
+}
+
+@if (loaded() && items().length === 0 && !error()) {
+  <p class="hint">No interactions logged yet.</p>
+}
+
+<div class="thread">
+  @for (i of items(); track i.id) {
+    <article>
+      <header class="record-meta">
+        <crm-status-badge [label]="typeLabel(i.type)" tone="neutral" />
+        <span class="hint">{{ i.occurredAtUtc | date: 'medium' }}</span>
+        <span class="hint">Recorded by {{ i.recordedByName }}</span>
+      </header>
+      <p class="user-text">{{ i.summary }}</p>
+    </article>
+  }
+</div>
+
+@if (hasMore() && !loading()) {
+  <button mat-button type="button" (click)="loadMore()">Load older interactions</button>
+}

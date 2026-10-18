@@ -1,4 +1,4 @@
-<crm-page-header title="Customer" subtitle="Profile and contact details." />
+<crm-page-header title="Customer" subtitle="Profile, contact details, notes, interactions, tickets and files." />
 
 <p><a mat-button routerLink="/customers">Back to customers</a></p>
 
@@ -96,6 +96,26 @@
           </div>
         </form>
       </mat-card-content>
+    </mat-card>
+
+    <mat-card appearance="outlined">
+      <mat-card-header><mat-card-title>Notes</mat-card-title></mat-card-header>
+      <mat-card-content><crm-customer-notes [customerId]="current.id" /></mat-card-content>
+    </mat-card>
+
+    <mat-card appearance="outlined">
+      <mat-card-header><mat-card-title>Interactions</mat-card-title></mat-card-header>
+      <mat-card-content><crm-customer-interactions [customerId]="current.id" /></mat-card-content>
+    </mat-card>
+
+    <mat-card appearance="outlined">
+      <mat-card-header><mat-card-title>Related tickets</mat-card-title></mat-card-header>
+      <mat-card-content><crm-customer-related-tickets [customerId]="current.id" /></mat-card-content>
+    </mat-card>
+
+    <mat-card appearance="outlined">
+      <mat-card-header><mat-card-title>Attachments</mat-card-title></mat-card-header>
+      <mat-card-content><crm-customer-attachments [customerId]="current.id" /></mat-card-content>
     </mat-card>
   </div>
 }
