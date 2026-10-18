@@ -1,0 +1,72 @@
+<crm-page-header title="My request" subtitle="Status and history of your support request." />
+
+<div class="detail-stack">
+  <p><a mat-button routerLink="/portal/tickets">Back to my tickets</a></p>
+
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+
+  @if (loadError(); as message) {
+    <p class="error" role="alert">{{ message }}</p>
+    <div class="actions">
+      <button mat-stroked-button type="button" (click)="reload()">Retry</button>
+      <a mat-button routerLink="/portal/tickets">My tickets</a>
+    </div>
+  }
+
+  @if (ticket(); as current) {
+    <mat-card appearance="outlined">
+      <mat-card-header><mat-card-title>Request</mat-card-title></mat-card-header>
+      <mat-card-content>
+        <dl class="readonly-list">
+          <dt>Reference</dt>
+          <dd>
+            {{ current.id }}
+            <button mat-icon-button type="button" aria-label="Copy reference" (click)="copyReference(current.id)">
+              <mat-icon>content_copy</mat-icon>
+            </button>
+          </dd>
+          <dt>Status</dt>
+          <dd><crm-status-badge [label]="statusLabel(current.status)" [tone]="statusTone(current.status)" /></dd>
+          <dt>Category</dt>
+          <dd>{{ current.category }}</dd>
+          <dt>Created</dt>
+          <dd>{{ current.createdAtUtc | date: 'medium' }}</dd>
+          <dt>Subject</dt>
+          <dd class="user-text">{{ current.subject }}</dd>
+          <dt>Description</dt>
+          <dd><p class="user-text">{{ current.description }}</p></dd>
+        </dl>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card appearance="outlined">
+      <mat-card-header><mat-card-title>History</mat-card-title></mat-card-header>
+      <mat-card-content>
+        @if (timeline().length === 0) {
+          <p>No history yet.</p>
+        } @else {
+          <ol class="timeline">
+            @for (e of timeline(); track $index) {
+              @let text = describe(e);
+              <li>
+                <strong>{{ text.title }}</strong>
+                <span class="hint"> · {{ e.occurredAtUtc | date: 'medium' }}</span>
+                <p class="user-text">{{ text.text }}</p>
+              </li>
+            }
+          </ol>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    @if (current.canSubmitFeedback || current.feedback) {
+      <crm-portal-ticket-feedback
+        [ticketId]="current.id"
+        [canSubmit]="current.canSubmitFeedback"
+        [feedback]="current.feedback"
+        (saved)="onFeedbackSaved($event)" />
+    }
+  }
+</div>

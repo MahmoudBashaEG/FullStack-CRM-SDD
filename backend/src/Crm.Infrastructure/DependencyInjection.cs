@@ -56,6 +56,8 @@ public static class DependencyInjection
         services.AddScoped<IKnowledgeBaseRepository, KnowledgeBaseRepository>();
         services.AddScoped<ITicketKnowledgeLinkRepository, TicketKnowledgeLinkRepository>();
         services.AddScoped<IAiKnowledgeSearch, AiKnowledgeSearch>();
+        services.AddScoped<IPortalTicketRepository, PortalTicketRepository>();
+        services.AddScoped<IHelpCenterRepository, HelpCenterRepository>();
 
         services.AddIdentityCore<ApplicationUser>(options =>
             {

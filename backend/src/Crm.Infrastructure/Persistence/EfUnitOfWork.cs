@@ -14,6 +14,7 @@ internal sealed class EfUnitOfWork(CrmDbContext dbContext) : IUnitOfWork
         ["UX_TicketCollaborators_ActiveMembership"] = "This Agent is already a collaborator.",
         ["UX_KnowledgeCategories_Name"] = "A category with this name already exists.",
         ["UX_TicketKnowledgeArticleLinks_TicketArticle"] = "This article is already linked to the ticket.",
+        ["UX_TicketFeedback_TicketId"] = "Feedback for this request was already submitted. Reload to see it.",
     };
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

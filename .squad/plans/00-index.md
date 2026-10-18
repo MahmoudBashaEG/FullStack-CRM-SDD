@@ -12,3 +12,4 @@ One row per feature folder under `.squad/plans/`. `NN` continues as a global exe
 | sla-automation | [00-overview.md](sla-automation/00-overview.md) | 09 |
 | knowledge-base | [00-overview.md](knowledge-base/00-overview.md) | 10 |
 | ai-features | [00-overview.md](ai-features/00-overview.md) | 11 |
+| customer-portal | [00-overview.md](customer-portal/00-overview.md) | 12 |

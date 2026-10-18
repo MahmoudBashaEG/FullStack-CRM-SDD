@@ -1,6 +1,6 @@
 # Ticket management (TICK-001, TICK-002)
 
-Ticket creation and basic management (TICK-001) plus post-creation assignment, status workflow, manual escalation and append-only activity history (TICK-002) for staff. Customer Portal and SLA/automation remain future work (section 12).
+Ticket creation and basic management (TICK-001) plus post-creation assignment, status workflow, manual escalation and append-only activity history (TICK-002) for staff. Customer self-service submission and tracking shipped in PORTAL-001 ([customer-portal.md](customer-portal.md)); SLA/automation shipped in SLA-001 (section 12).
 
 ## 1. Ticket entity
 
@@ -158,7 +158,7 @@ Knowledge Base shipped in `KB-001`: see [knowledge-base.md](knowledge-base.md).
 
 SLA & automation shipped in `SLA-001`: see [sla-and-automation.md](sla-and-automation.md).
 
-- **Customer Portal:** customer self-service submission and tracking.
+- **Customer Portal:** shipped in `PORTAL-001`; portal tickets use the same creation hook and appear in staff lists like any other ticket.
 - **SLA & Automation:** SLA targets, rule/workload-based assignment, notifications.
 - **Deferred:** attachments, escalation levels and notifications, auto-close, configurable workflows/custom statuses, ticket deletion/merge/bulk actions.
 - **Never:** Agent self-claim or Agent-to-Agent transfer.

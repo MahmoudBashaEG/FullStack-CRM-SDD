@@ -12,6 +12,10 @@ export interface NavItem {
 /** Feature stories append their entry here when their first screen ships. */
 export const NAV_ITEMS: readonly NavItem[] = [
   { label: 'Home', icon: 'home', path: '/', exact: true },
+  { label: 'Support Portal', icon: 'support_agent', path: '/portal', exact: true, roles: ['Customer'] },
+  { label: 'My Tickets', icon: 'confirmation_number', path: '/portal/tickets', exact: false, roles: ['Customer'] },
+  { label: 'New Ticket', icon: 'add_circle', path: '/portal/new-ticket', exact: true, roles: ['Customer'] },
+  { label: 'Help Center', icon: 'help_center', path: '/portal/help-center', exact: false, roles: ['Customer'] },
   { label: 'My Dashboard', icon: 'dashboard', path: '/agent-dashboard', exact: false, roles: ['Agent'] },
   { label: 'Tickets', icon: 'confirmation_number', path: '/tickets', exact: false, roles: ['SuperAdmin', 'Agent'] },
   { label: 'Customers', icon: 'groups', path: '/customers', exact: false, roles: ['SuperAdmin', 'Agent'] },

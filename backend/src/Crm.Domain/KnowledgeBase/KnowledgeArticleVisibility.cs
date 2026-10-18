@@ -1,8 +1,8 @@
 namespace Crm.Domain.KnowledgeBase;
 
 /// <summary>
-/// K2. Independent of status. Public = eligible for the future Customer Portal (Published + Public only).
-/// KB-001 exposes no customer/anonymous endpoint, so today both values are staff-only.
+/// K2. Independent of status. Public + Published = readable by signed-in Customers in the Customer Help Center
+/// (PORTAL-001, /api/v1/portal/help-center). Internal = staff only. No anonymous access.
 /// </summary>
 public enum KnowledgeArticleVisibility
 {

@@ -1,10 +1,11 @@
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
+import { RouterLink } from '@angular/router';
 import { HealthApi, HealthResponse } from '../../core/api/health-api';
 import { AuthService } from '../../core/auth/auth-service';
 import { ProblemDetails } from '../../core/api/problem-details';
@@ -27,14 +28,16 @@ function describeError(error: HttpErrorResponse): string {
 @Component({
   selector: 'crm-home-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PageHeader, StatusBadge, MatCardModule, MatButtonModule, MatIconModule, DatePipe],
+  imports: [PageHeader, StatusBadge, MatCardModule, MatButtonModule, MatIconModule, DatePipe, RouterLink],
   templateUrl: './home-page.html',
   styleUrl: './home-page.scss',
 })
 export class HomePage {
   private readonly healthApi = inject(HealthApi);
   private readonly destroyRef = inject(DestroyRef);
-  protected readonly user = inject(AuthService).currentUser;
+  private readonly auth = inject(AuthService);
+  protected readonly user = this.auth.currentUser;
+  protected readonly isCustomer = computed(() => this.auth.role() === 'Customer');
   protected readonly connection = signal<ConnectionState>({ kind: 'checking' });
 
   constructor() {

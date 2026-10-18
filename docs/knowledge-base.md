@@ -5,7 +5,7 @@ Staff-only module: FAQs, help articles, solutions and guides, with a publishing 
 ## 1. Decisions and interpretations
 
 - **K1** Agents create, edit and submit only their own Drafts. Only SuperAdmin returns, publishes, archives and restores. Nothing is hard-deleted.
-- **K2** `Internal`/`Public` is stored independently of status. Staff see Published articles of both visibilities. The future Customer Portal must expose only `Published` + `Public` through its own contract.
+- **K2** `Internal`/`Public` is stored independently of status. Staff see Published articles of both visibilities. The Customer Portal (PORTAL-001) exposes only `Published` + `Public` articles through `/api/v1/portal/help-center` (see [customer-portal.md](customer-portal.md)).
 - **K3** Markdown source is the only stored form; HTML is presentation. Preview and reading use one renderer (`marked` 18.0.14).
 - **K4** Staff search, read, copy, link and unlink articles from Ticket Details, using the existing ticket authorization.
 - **I1** A category is required and none is seeded; until a SuperAdmin adds one the editor cannot save.

@@ -2,6 +2,17 @@
   [title]="'Welcome, ' + (user()?.firstName ?? '')"
   subtitle="You are signed in to Support CRM. Modules appear here as they are delivered." />
 
+@if (isCustomer()) {
+  <mat-card appearance="outlined" class="status-card">
+    <mat-card-header><mat-card-title>Customer support</mat-card-title></mat-card-header>
+    <mat-card-content><p>Submit a request, follow its progress and find answers in the Help Center.</p></mat-card-content>
+    <mat-card-actions align="end">
+      <a mat-button routerLink="/portal/help-center">Help Center</a>
+      <a mat-flat-button routerLink="/portal">Open Support Portal</a>
+    </mat-card-actions>
+  </mat-card>
+}
+
 <mat-card appearance="outlined" class="status-card">
   <mat-card-header>
     <mat-card-title>System status</mat-card-title>

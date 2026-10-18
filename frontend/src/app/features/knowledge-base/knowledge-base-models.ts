@@ -52,5 +52,5 @@ export interface SaveKnowledgeArticleRequest {
 }
 
 export const KB_COPY_HINT = 'Copies the article’s Markdown text only — nothing is sent to the customer.';
-export const PUBLIC_VISIBILITY_HINT = 'Public articles become eligible for the future Customer Portal. Nothing is visible to customers today.';
+export const PUBLIC_VISIBILITY_HINT = 'Published + Public articles appear in the Customer Help Center for signed-in customers.';
 export const KB_LIMITS = { title: 200, summary: 500, body: 20000, categoryName: 100, returnReason: 500 } as const;

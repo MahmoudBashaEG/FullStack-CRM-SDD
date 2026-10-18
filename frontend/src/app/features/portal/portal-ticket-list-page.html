@@ -1,0 +1,58 @@
+<crm-page-header title="My tickets" subtitle="All your current and previous support requests." />
+
+<div class="toolbar" [formGroup]="filters">
+  <mat-form-field appearance="outline" class="search">
+    <mat-label>Search</mat-label>
+    <input matInput type="search" formControlName="search" placeholder="Subject or request ID" />
+    <mat-icon matSuffix>search</mat-icon>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="filter">
+    <mat-label>Status</mat-label>
+    <mat-select formControlName="status">
+      <mat-option [value]="null">Any</mat-option>
+      @for (s of statuses; track s) {
+        <mat-option [value]="s">{{ statusLabel(s) }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <a mat-flat-button routerLink="/portal/new-ticket"><mat-icon>add</mat-icon> New request</a>
+</div>
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+@if (error(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+  <button mat-stroked-button type="button" (click)="reload()">Retry</button>
+}
+
+@if (!loading() && !error()) {
+  @if (tickets().length === 0) {
+    @if (hasFilters()) {
+      <p>No requests match your filters.</p>
+    } @else {
+      <p>You have no support requests yet. <a routerLink="/portal/new-ticket">Submit a request</a>.</p>
+    }
+  } @else {
+    <ul class="rows">
+      @for (t of tickets(); track t.id) {
+        <li class="row">
+          <a class="row-title" [routerLink]="['/portal/tickets', t.id]">{{ t.subject }}</a>
+          <crm-status-badge [label]="statusLabel(t.status)" [tone]="statusTone(t.status)" />
+          <span class="hint">{{ t.category }}</span>
+          <p class="meta">Created {{ t.createdAtUtc | date: 'medium' }} · Ref {{ t.id }}</p>
+        </li>
+      }
+    </ul>
+    <mat-paginator
+      [length]="totalCount()"
+      [pageIndex]="page() - 1"
+      [pageSize]="pageSize()"
+      [pageSizeOptions]="pageSizeOptions"
+      (page)="onPage($event)"
+      aria-label="Select page of requests" />
+  }
+}

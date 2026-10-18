@@ -1,0 +1,7 @@
+.detail-stack { display: grid; gap: var(--crm-space-4); max-inline-size: 960px; }
+.readonly-list { display: grid; grid-template-columns: max-content 1fr; gap: var(--crm-space-2) var(--crm-space-4); margin: 0; }
+.readonly-list dd { margin: 0; overflow-wrap: anywhere; }
+.timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--crm-space-3); }
+.timeline li { padding-inline-start: var(--crm-space-3); border-inline-start: 3px solid var(--mat-sys-outline-variant); }
+.quick-actions { display: flex; flex-wrap: wrap; gap: var(--crm-space-3); }
+@media (max-width: 599px) { .readonly-list { grid-template-columns: 1fr; } }

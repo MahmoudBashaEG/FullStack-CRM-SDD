@@ -36,6 +36,9 @@ Roles are assigned by the server only. Angular guards and navigation filtering a
 | AI ticket assistance (summary, reply draft, category suggestion, solutions) | ✔ any ticket | ✔ assigned to them | — |
 | Apply a category (`PUT /tickets/{id}/category`) | ✔ any ticket | ✔ assigned to them | — |
 | AI Assistant chat (general / ticket context) | ✔ | ✔ (ticket: assigned only) | — |
+| Customer Portal: submit / list / view own tickets and their status history | — | — | ✔ own linked profile |
+| Customer Help Center: read Published + Public articles | — | — | ✔ |
+| Ticket satisfaction feedback (own Resolved/Closed ticket) | — | — | ✔ |
 | Create a SuperAdmin | nobody via the API (bootstrap only) | | |
 
 ## 2. API routes
@@ -78,6 +81,12 @@ Roles are assigned by the server only. Angular guards and navigation filtering a
 | POST | `/api/v1/tickets/{id}/ai/{summary\|reply-draft\|category-suggestion\|solutions}` | SuperAdmin any ticket; Agent own assigned; rate limited | 200 |
 | PUT | `/api/v1/tickets/{id}/category` | SuperAdmin any ticket; Agent own assigned | 200 |
 | POST | `/api/v1/ai/chat` | SuperAdmin, Agent; rate limited | 200 |
+| GET / POST | `/api/v1/portal/tickets` | Customer (own linked profile) | 200 / 201 |
+| GET | `/api/v1/portal/tickets/{id}` | Customer (own linked profile) | 200 |
+| GET | `/api/v1/portal/tickets/{id}/timeline` | Customer (own linked profile) | 200 |
+| PUT | `/api/v1/portal/tickets/{id}/feedback` | Customer (own linked profile) | 200 |
+| GET | `/api/v1/portal/help-center/articles[/{id}]` | Customer (Published + Public only) | 200 |
+| GET | `/api/v1/portal/help-center/categories` | Customer | 200 |
 | GET | `/api/health` | anonymous | 200 |
 
 `/api/v1/agents/{id}` only reaches Agent accounts; SuperAdmin and Customer ids return 404.

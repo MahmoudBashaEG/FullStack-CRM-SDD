@@ -1,0 +1,24 @@
+<div class="detail-stack">
+  <p><a mat-button routerLink="/portal/help-center">Back to Help Center</a></p>
+
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+
+  @if (loadError(); as message) {
+    <p class="error" role="alert">{{ message }}</p>
+  }
+
+  @if (article(); as a) {
+    <mat-card appearance="outlined">
+      <mat-card-content>
+        <h2>{{ a.title }}</h2>
+        <p class="hint">{{ typeLabel(a.type) }} · {{ a.categoryName }} · Published {{ a.publishedAtUtc | date: 'mediumDate' }}</p>
+        @if (a.summary) {
+          <p class="user-text">{{ a.summary }}</p>
+        }
+        <crm-markdown-view [source]="a.body" />
+      </mat-card-content>
+    </mat-card>
+  }
+</div>

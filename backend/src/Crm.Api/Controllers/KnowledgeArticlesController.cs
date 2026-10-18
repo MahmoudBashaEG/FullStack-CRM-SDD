@@ -21,7 +21,7 @@ namespace Crm.Api.Controllers;
 [Authorize(Policy = AuthorizationPolicies.Staff)]
 public sealed class KnowledgeArticlesController(ISender sender) : ControllerBase
 {
-    private const string Visibility = "Staff only — no customer or anonymous access (Customer Portal is a future story). Agent: Published (Internal + Public) and own Draft/Ready for Publication; SuperAdmin: all including Archived. Not visible: 404.";
+    private const string Visibility = "Staff only — customers read Published + Public articles through /api/v1/portal/help-center; no anonymous access. Agent: Published (Internal + Public) and own Draft/Ready for Publication; SuperAdmin: all including Archived. Not visible: 404.";
 
     [EndpointDescription("Requires role: SuperAdmin or Agent. " + Visibility + " One-based page, pageSize (default 20, clamped to 100), search on title/summary/body, type, categoryId, status, mine (own articles). Ordered by last update, newest first. Rows omit the body.")]
     [HttpGet]

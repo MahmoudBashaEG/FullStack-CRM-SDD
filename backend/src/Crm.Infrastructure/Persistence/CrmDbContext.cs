@@ -39,6 +39,7 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options)
     public DbSet<KnowledgeCategory> KnowledgeCategories => Set<KnowledgeCategory>();
     public DbSet<KnowledgeArticle> KnowledgeArticles => Set<KnowledgeArticle>();
     public DbSet<TicketKnowledgeArticleLink> TicketKnowledgeArticleLinks => Set<TicketKnowledgeArticleLink>();
+    public DbSet<TicketFeedback> TicketFeedback => Set<TicketFeedback>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
