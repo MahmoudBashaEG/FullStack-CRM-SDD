@@ -83,8 +83,8 @@ internal sealed class TicketRepository(CrmDbContext dbContext, SlaEvaluator slaE
     internal static IQueryable<Ticket> Scope(IQueryable<Ticket> tickets, Guid? agentScope) =>
         agentScope is { } agentId ? tickets.Where(t => t.AssignedAgentUserId == agentId) : tickets;
 
-    // At least one stored SLA target breached: completed late, or still open and past due (stored instants only).
-    private static Expression<Func<Ticket, bool>> IsBreached(DateTimeOffset now) => t =>
+    // At least one stored SLA target breached: completed late, or still open and past due (stored instants only). Shared with ReportingRepository (REPORT-001 R6).
+    internal static Expression<Func<Ticket, bool>> IsBreached(DateTimeOffset now) => t =>
         (t.SlaFirstResponseDueAtUtc != null
             && ((t.FirstRespondedAtUtc == null && t.SlaFirstResponseDueAtUtc < now) || t.FirstRespondedAtUtc > t.SlaFirstResponseDueAtUtc))
         || (t.SlaResolutionDueAtUtc != null

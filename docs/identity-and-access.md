@@ -39,6 +39,7 @@ Roles are assigned by the server only. Angular guards and navigation filtering a
 | Customer Portal: submit / list / view own tickets and their status history | — | — | ✔ own linked profile |
 | Customer Help Center: read Published + Public articles | — | — | ✔ |
 | Ticket satisfaction feedback (own Resolved/Closed ticket) | — | — | ✔ |
+| Management dashboard and reports (tickets, SLA, Agents, CSAT) | ✔ | — | — |
 | Create a SuperAdmin | nobody via the API (bootstrap only) | | |
 
 ## 2. API routes
@@ -87,6 +88,10 @@ Roles are assigned by the server only. Angular guards and navigation filtering a
 | PUT | `/api/v1/portal/tickets/{id}/feedback` | Customer (own linked profile) | 200 |
 | GET | `/api/v1/portal/help-center/articles[/{id}]` | Customer (Published + Public only) | 200 |
 | GET | `/api/v1/portal/help-center/categories` | Customer | 200 |
+| GET | `/api/v1/reports/tickets` | SuperAdmin | 200 |
+| GET | `/api/v1/reports/sla` | SuperAdmin | 200 |
+| GET | `/api/v1/reports/agents` | SuperAdmin | 200 |
+| GET | `/api/v1/reports/customer-satisfaction` | SuperAdmin | 200 |
 | GET | `/api/health` | anonymous | 200 |
 
 `/api/v1/agents/{id}` only reaches Agent accounts; SuperAdmin and Customer ids return 404.

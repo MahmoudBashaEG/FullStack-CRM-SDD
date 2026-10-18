@@ -1,0 +1,195 @@
+<crm-page-header
+  title="Management Dashboard"
+  subtitle="Key figures across tickets, SLA, Agents and customer satisfaction."
+/>
+
+<crm-report-period-filter
+  [value]="period()"
+  [loading]="loading()"
+  (changed)="onPeriodChanged($event)"
+  (refresh)="refresh()"
+/>
+
+@if (resolvedPeriod(); as p) {
+  <p class="hint">
+    Period: {{ formatUtcDay(p.from) }} – {{ formatUtcDay(p.to) }} (UTC calendar days) · Updated
+    {{ generatedAtUtc() | date: 'medium' : 'UTC' }} UTC
+  </p>
+}
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+<nav class="report-links" aria-label="Reports">
+  <a mat-stroked-button routerLink="/reports/tickets" queryParamsHandling="preserve">Ticket Reports</a>
+  <a mat-stroked-button routerLink="/reports/sla" queryParamsHandling="preserve">SLA Performance</a>
+  <a mat-stroked-button routerLink="/reports/agents" queryParamsHandling="preserve">Agent Performance</a>
+  <a mat-stroked-button routerLink="/reports/customer-satisfaction" queryParamsHandling="preserve">Customer Satisfaction</a>
+</nav>
+
+@if (overview(); as o) {
+  <section aria-labelledby="period-heading">
+    <h2 id="period-heading">Period figures</h2>
+    <div class="summary-grid">
+      <mat-card appearance="outlined" class="summary-card">
+        <mat-card-content>
+          <span class="scope">Period · by creation date</span>
+          <span>Tickets created</span>
+          @if (o.tickets.data; as t) {
+            <span class="count">{{ t.createdTickets }}</span>
+          } @else {
+            <span class="error" role="alert">{{ o.tickets.error }}</span>
+            <button mat-stroked-button type="button" (click)="refresh()">Retry</button>
+          }
+        </mat-card-content>
+      </mat-card>
+      <mat-card appearance="outlined" class="summary-card">
+        <mat-card-content>
+          <span class="scope">Period · tickets created in the period</span>
+          <span>First-response compliance</span>
+          @if (o.sla.data; as s) {
+            <span class="count">{{ formatPercent(s.firstResponse.compliancePercent) }}</span>
+            <span class="hint">{{ s.firstResponse.met }}/{{ s.firstResponse.met + s.firstResponse.breached }} decided</span>
+          } @else {
+            <span class="error" role="alert">{{ o.sla.error }}</span>
+            <button mat-stroked-button type="button" (click)="refresh()">Retry</button>
+          }
+        </mat-card-content>
+      </mat-card>
+      <mat-card appearance="outlined" class="summary-card">
+        <mat-card-content>
+          <span class="scope">Period · tickets created in the period</span>
+          <span>Resolution compliance</span>
+          @if (o.sla.data; as s) {
+            <span class="count">{{ formatPercent(s.resolution.compliancePercent) }}</span>
+            <span class="hint">{{ s.resolution.met }}/{{ s.resolution.met + s.resolution.breached }} decided</span>
+          } @else {
+            <span class="error" role="alert">{{ o.sla.error }}</span>
+          }
+        </mat-card-content>
+      </mat-card>
+      <mat-card appearance="outlined" class="summary-card">
+        <mat-card-content>
+          <span class="scope">Period · by feedback submission</span>
+          <span>Average rating</span>
+          @if (o.csat.data; as c) {
+            <span class="count">{{ formatAverage(c.averageRating) }}</span>
+            <span class="hint">{{ c.feedbackCount }} feedback</span>
+          } @else {
+            <span class="error" role="alert">{{ o.csat.error }}</span>
+            <button mat-stroked-button type="button" (click)="refresh()">Retry</button>
+          }
+        </mat-card-content>
+      </mat-card>
+      <mat-card appearance="outlined" class="summary-card">
+        <mat-card-content>
+          <span class="scope">Period · by event date</span>
+          <span>Resolution actions by Agents</span>
+          @if (o.agents.data; as a) {
+            <span class="count">{{ a.totals.resolutionActionsByAgents }}</span>
+          } @else {
+            <span class="error" role="alert">{{ o.agents.error }}</span>
+            <button mat-stroked-button type="button" (click)="refresh()">Retry</button>
+          }
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </section>
+
+  <section aria-labelledby="live-heading">
+    <h2 id="live-heading">Live snapshot</h2>
+    <p class="scope">Live snapshot · not affected by the date filter</p>
+    <div class="summary-grid">
+      @if (o.agents.data; as a) {
+        <mat-card appearance="outlined" class="summary-card">
+          <mat-card-content>
+            <span class="scope">Live snapshot</span>
+            <span>Open</span>
+            <span class="count">{{ a.totals.openTickets }}</span>
+          </mat-card-content>
+        </mat-card>
+        <mat-card appearance="outlined" class="summary-card">
+          <mat-card-content>
+            <span class="scope">Live snapshot</span>
+            <span>In Progress</span>
+            <span class="count">{{ a.totals.inProgressTickets }}</span>
+          </mat-card-content>
+        </mat-card>
+        <mat-card appearance="outlined" class="summary-card">
+          <mat-card-content>
+            <span class="scope">Live snapshot</span>
+            <span>Active assigned to Agents</span>
+            <span class="count">{{ a.totals.activeAssignedToAgents }}</span>
+          </mat-card-content>
+        </mat-card>
+        <mat-card appearance="outlined" class="summary-card">
+          <mat-card-content>
+            <span class="scope">Live snapshot</span>
+            <span>Unassigned active</span>
+            <span class="count">{{ a.totals.unassignedActive }}</span>
+          </mat-card-content>
+        </mat-card>
+      } @else {
+        <p class="error" role="alert">{{ o.agents.error }}</p>
+      }
+      @if (o.sla.data; as s) {
+        <mat-card appearance="outlined" class="summary-card">
+          <mat-card-content>
+            <span class="scope">Live snapshot</span>
+            <span>Active tickets with a breached SLA target</span>
+            <span class="count">{{ s.live.activeTicketsWithBreach }}</span>
+          </mat-card-content>
+        </mat-card>
+        <mat-card appearance="outlined" class="summary-card">
+          <mat-card-content>
+            <span class="scope">Live snapshot</span>
+            <span>SLA targets at risk</span>
+            <span class="count">{{ s.live.responseAtRisk + s.live.resolutionAtRisk }}</span>
+          </mat-card-content>
+        </mat-card>
+      } @else {
+        <p class="error" role="alert">{{ o.sla.error }}</p>
+      }
+    </div>
+  </section>
+
+  <section aria-labelledby="charts-heading">
+    <h2 id="charts-heading">Charts</h2>
+    <div class="charts">
+      <mat-card appearance="outlined" class="chart-card">
+        <mat-card-content>
+          <h3>Tickets created</h3>
+          @if (o.tickets.data) {
+            <crm-report-bars label="Tickets created" [items]="trendBars()" />
+          } @else {
+            <p class="error" role="alert">{{ o.tickets.error }}</p>
+          }
+          <a mat-button routerLink="/reports/tickets" queryParamsHandling="preserve">View report</a>
+        </mat-card-content>
+      </mat-card>
+      <mat-card appearance="outlined" class="chart-card">
+        <mat-card-content>
+          <h3>Active tickets per Agent (live)</h3>
+          @if (o.agents.data) {
+            <crm-report-bars label="Active tickets per Agent" [items]="workloadBars()" emptyText="No active tickets are assigned to Agents." />
+          } @else {
+            <p class="error" role="alert">{{ o.agents.error }}</p>
+          }
+          <a mat-button routerLink="/reports/agents" queryParamsHandling="preserve">View report</a>
+        </mat-card-content>
+      </mat-card>
+      <mat-card appearance="outlined" class="chart-card">
+        <mat-card-content>
+          <h3>Rating distribution</h3>
+          @if (o.csat.data) {
+            <crm-report-bars label="Rating distribution" [items]="ratingBars()" emptyText="No feedback was submitted in this period." />
+          } @else {
+            <p class="error" role="alert">{{ o.csat.error }}</p>
+          }
+          <a mat-button routerLink="/reports/customer-satisfaction" queryParamsHandling="preserve">View report</a>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </section>
+}

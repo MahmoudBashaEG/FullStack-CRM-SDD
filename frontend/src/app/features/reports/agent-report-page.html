@@ -1,0 +1,133 @@
+<crm-page-header
+  title="Agent Performance"
+  subtitle="Current workload per Agent and recorded resolution actions in the selected period."
+/>
+
+<p><a mat-button routerLink="/reports" queryParamsHandling="preserve">← Management Dashboard</a></p>
+
+<crm-report-period-filter
+  [value]="period()"
+  [loading]="loading()"
+  (changed)="onPeriodChanged($event)"
+  (refresh)="refresh()"
+/>
+
+@if (report(); as r) {
+  <p class="hint">
+    Period: {{ formatUtcDay(r.period.from) }} – {{ formatUtcDay(r.period.to) }} (UTC calendar days) · Updated
+    {{ r.generatedAtUtc | date: 'medium' : 'UTC' }} UTC
+  </p>
+}
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+@if (error(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+  <button mat-stroked-button type="button" (click)="refresh()">Retry</button>
+}
+
+@if (report(); as r) {
+  <section aria-labelledby="totals-heading">
+    <h2 id="totals-heading">Totals</h2>
+    <div class="summary-grid">
+      <mat-card appearance="outlined" class="summary-card">
+        <mat-card-content>
+          <span class="scope">Live snapshot</span>
+          <span>Active assigned to Agents</span>
+          <span class="count">{{ r.totals.activeAssignedToAgents }}</span>
+        </mat-card-content>
+      </mat-card>
+      <mat-card appearance="outlined" class="summary-card">
+        <mat-card-content>
+          <span class="scope">Live snapshot</span>
+          <span>Overdue (breached SLA)</span>
+          <span class="count">{{ r.totals.overdueActiveAssignedToAgents }}</span>
+        </mat-card-content>
+      </mat-card>
+      <mat-card appearance="outlined" class="summary-card">
+        <mat-card-content>
+          <span class="scope">Live snapshot</span>
+          <span>Unassigned active</span>
+          <span class="count">{{ r.totals.unassignedActive }}</span>
+        </mat-card-content>
+      </mat-card>
+      <mat-card appearance="outlined" class="summary-card">
+        <mat-card-content>
+          <span class="scope">Period · by event date</span>
+          <span>Resolution actions by Agents</span>
+          <span class="count">{{ r.totals.resolutionActionsByAgents }}</span>
+        </mat-card-content>
+      </mat-card>
+    </div>
+    @if (r.totals.resolutionActionsByOthers > 0) {
+      <p class="hint">
+        {{ r.totals.resolutionActionsByOthers }} resolution actions in this period were performed by SuperAdmin or other
+        non-Agent accounts and are not credited to any Agent.
+      </p>
+    }
+  </section>
+
+  <section aria-labelledby="workload-heading">
+    <h2 id="workload-heading">Active workload (live)</h2>
+    <mat-card appearance="outlined" class="chart-card">
+      <mat-card-content>
+        <crm-report-bars label="Active tickets per Agent" [items]="workloadBars()" emptyText="No active tickets are assigned to Agents." />
+      </mat-card-content>
+    </mat-card>
+  </section>
+
+  <section aria-labelledby="table-heading">
+    <h2 id="table-heading">Per Agent</h2>
+    @if (r.agents.length === 0) {
+      <p class="hint">No Agent accounts exist yet.</p>
+    } @else {
+      <div class="table-scroll">
+        <table>
+          <caption class="hint">
+            Live columns reflect current assignment and are not affected by the date filter. "Resolution actions" are
+            transitions to Resolved recorded by the Agent in the period; a ticket resolved again after reopening counts
+            again ("Tickets" counts it once).
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Agent</th>
+              <th scope="col" class="num">Open</th>
+              <th scope="col" class="num">In Progress</th>
+              <th scope="col" class="num">Active</th>
+              <th scope="col" class="num">Overdue</th>
+              <th scope="col">Active by priority</th>
+              <th scope="col" class="num">Resolved*</th>
+              <th scope="col" class="num">Closed*</th>
+              <th scope="col" class="num">Resolution actions</th>
+              <th scope="col" class="num">Tickets resolved</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of r.agents; track a.agentUserId) {
+              <tr>
+                <td>
+                  {{ a.name }}
+                  @if (!a.isActive) {
+                    <crm-status-badge label="Inactive" tone="neutral" />
+                  }
+                </td>
+                <td class="num">{{ a.open }}</td>
+                <td class="num">{{ a.inProgress }}</td>
+                <td class="num">{{ a.activeAssigned }}</td>
+                <td class="num">{{ a.overdueActive }}</td>
+                <td>{{ priorityMix(a.activeByPriority) }}</td>
+                <td class="num">{{ a.resolved }}</td>
+                <td class="num">{{ a.closed }}</td>
+                <td class="num">{{ a.resolutionActions }}</td>
+                <td class="num">{{ a.resolvedTicketsDistinct }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="hint">* currently assigned tickets with this status (supplementary, not historical).</p>
+    }
+  </section>
+}

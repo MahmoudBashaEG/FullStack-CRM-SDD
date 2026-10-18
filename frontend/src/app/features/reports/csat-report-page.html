@@ -1,0 +1,109 @@
+<crm-page-header
+  title="Customer Satisfaction"
+  subtitle="Feedback first submitted in the selected period, with the current rating after any edits."
+/>
+
+<p><a mat-button routerLink="/reports" queryParamsHandling="preserve">← Management Dashboard</a></p>
+
+<crm-report-period-filter
+  [value]="period()"
+  [loading]="loading()"
+  (changed)="onPeriodChanged($event)"
+  (refresh)="refresh()"
+/>
+
+@if (report(); as r) {
+  <p class="hint">
+    Period: {{ formatUtcDay(r.period.from) }} – {{ formatUtcDay(r.period.to) }} (UTC calendar days) · Updated
+    {{ r.generatedAtUtc | date: 'medium' : 'UTC' }} UTC
+  </p>
+}
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+@if (error(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+  <button mat-stroked-button type="button" (click)="refresh()">Retry</button>
+}
+
+@if (report(); as r) {
+  <section aria-labelledby="summary-heading">
+    <h2 id="summary-heading">Summary</h2>
+    <div class="summary-grid">
+      <mat-card appearance="outlined" class="summary-card">
+        <mat-card-content>
+          <span class="scope">Period · by first feedback submission</span>
+          <span>Feedback received</span>
+          <span class="count">{{ r.feedbackCount }}</span>
+        </mat-card-content>
+      </mat-card>
+      <mat-card appearance="outlined" class="summary-card">
+        <mat-card-content>
+          <span class="scope">Period · by first feedback submission</span>
+          <span>Average rating</span>
+          <span class="count">{{ formatAverage(r.averageRating) }}</span>
+        </mat-card-content>
+      </mat-card>
+      <mat-card appearance="outlined" class="summary-card">
+        <mat-card-content>
+          <span class="scope">Period · by first feedback submission</span>
+          <span>Positive (4–5 stars)</span>
+          <span class="count">{{ formatPercent(r.positivePercent) }}</span>
+          <span class="hint">{{ r.positiveCount }} of {{ r.feedbackCount }}</span>
+        </mat-card-content>
+      </mat-card>
+      <mat-card appearance="outlined" class="summary-card">
+        <mat-card-content>
+          <span class="scope">Period · tickets created in the period</span>
+          <span>Feedback participation</span>
+          <span class="count">{{ formatPercent(r.participation.percent) }}</span>
+          <span class="hint">
+            {{ r.participation.ticketsWithFeedback }} of {{ r.participation.eligibleTickets }} tickets created in this
+            period and currently Resolved/Closed have feedback.
+          </span>
+          @if (r.participation.eligibleTickets === 0) {
+            <span class="hint">N/A — no eligible tickets.</span>
+          }
+        </mat-card-content>
+      </mat-card>
+    </div>
+    <p class="hint">Ratings are not attributed to Agents. Missing feedback is not counted as a rating.</p>
+  </section>
+
+  <section aria-labelledby="distribution-heading">
+    <h2 id="distribution-heading">Rating distribution</h2>
+    <mat-card appearance="outlined" class="chart-card">
+      <mat-card-content>
+        <crm-report-bars label="Feedback by rating" [items]="distributionBars()" emptyText="No feedback was submitted in this period." />
+        <span class="hint">Total: {{ r.feedbackCount }}</span>
+      </mat-card-content>
+    </mat-card>
+  </section>
+
+  <section aria-labelledby="recent-heading">
+    <h2 id="recent-heading">Recent feedback</h2>
+    @if (r.recent.length === 0) {
+      <p class="hint">No feedback was submitted in this period.</p>
+    } @else {
+      <p class="hint">Newest first, at most {{ r.recentLimit }}.</p>
+      <div class="rows">
+        @for (f of r.recent; track f.ticketId) {
+          <div class="row">
+            <a class="row-title" [routerLink]="['/tickets', f.ticketId]">{{ f.ticketSubject }}</a>
+            <crm-status-badge [label]="f.rating + ' / 5'" [tone]="ratingTone(f.rating)" />
+            @if (f.comment) {
+              <p class="user-text">{{ f.comment }}</p>
+            } @else {
+              <p class="hint">No comment.</p>
+            }
+            <span class="meta">
+              Submitted {{ f.submittedAtUtc | date: 'medium' : 'UTC' }} UTC · Ref {{ f.ticketId }}@if (f.updatedAtUtc !== f.submittedAtUtc) { · edited }
+            </span>
+          </div>
+        }
+      </div>
+    }
+  </section>
+}

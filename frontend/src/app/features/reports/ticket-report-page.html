@@ -1,0 +1,91 @@
+<crm-page-header
+  title="Ticket Reports"
+  subtitle="Tickets created in the selected period, with their current status, category and priority."
+/>
+
+<p><a mat-button routerLink="/reports" queryParamsHandling="preserve">← Management Dashboard</a></p>
+
+<crm-report-period-filter
+  [value]="period()"
+  [loading]="loading()"
+  (changed)="onPeriodChanged($event)"
+  (refresh)="refresh()"
+/>
+
+@if (report(); as r) {
+  <p class="hint">
+    Period: {{ formatUtcDay(r.period.from) }} – {{ formatUtcDay(r.period.to) }} (UTC calendar days) · Updated
+    {{ r.generatedAtUtc | date: 'medium' : 'UTC' }} UTC
+  </p>
+}
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+@if (error(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+  <button mat-stroked-button type="button" (click)="refresh()">Retry</button>
+}
+
+@if (report(); as r) {
+  <section aria-labelledby="volume-heading">
+    <h2 id="volume-heading">Volume</h2>
+    <div class="summary-grid">
+      <mat-card appearance="outlined" class="summary-card">
+        <mat-card-content>
+          <span class="scope">Period · by creation date</span>
+          <span>Tickets created</span>
+          <span class="count">{{ r.createdTickets }}</span>
+        </mat-card-content>
+      </mat-card>
+    </div>
+    @if (r.createdTickets === 0) {
+      <p class="hint">No tickets were created in this period.</p>
+    }
+    <p class="hint">
+      Status, category and priority are the <strong>current</strong> values of the tickets created in this period, not
+      their values at creation.
+    </p>
+  </section>
+
+  <section aria-labelledby="distribution-heading">
+    <h2 id="distribution-heading">Distribution</h2>
+    <div class="charts">
+      <mat-card appearance="outlined" class="chart-card">
+        <mat-card-content>
+          <h3>Current status</h3>
+          <crm-report-bars label="Tickets by current status" [items]="statusBars()" />
+          <span class="hint">Total: {{ r.createdTickets }}</span>
+        </mat-card-content>
+      </mat-card>
+      <mat-card appearance="outlined" class="chart-card">
+        <mat-card-content>
+          <h3>Category</h3>
+          <crm-report-bars label="Tickets by category" [items]="categoryBars()" />
+          <span class="hint">Total: {{ r.createdTickets }}</span>
+        </mat-card-content>
+      </mat-card>
+      <mat-card appearance="outlined" class="chart-card">
+        <mat-card-content>
+          <h3>Priority</h3>
+          <crm-report-bars label="Tickets by priority" [items]="priorityBars()" />
+          <span class="hint">Total: {{ r.createdTickets }}</span>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </section>
+
+  <section aria-labelledby="trend-heading">
+    <h2 id="trend-heading">Ticket creation trend</h2>
+    <mat-card appearance="outlined" class="chart-card">
+      <mat-card-content>
+        <crm-report-bars label="Tickets created per day or week" [items]="trendBars()" />
+        <span class="hint">
+          {{ r.period.bucketDays === 1 ? 'Daily' : '7-day' }} buckets by creation date (UTC). This is a creation trend,
+          not a status-change trend.
+        </span>
+      </mat-card-content>
+    </mat-card>
+  </section>
+}

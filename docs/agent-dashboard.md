@@ -67,5 +67,5 @@ Each load runs **two** ticket statements, both under the Agent scope and the Ope
 ## 8. Deferred Agent Dashboard capabilities
 
 - Tasks & reminders, quick replies and team collaboration: delivered by DASH-002 — see [agent-productivity-and-collaboration.md](agent-productivity-and-collaboration.md). The dashboard adds a separate Tasks section (`GET /api/v1/agent-dashboard/tasks`); the ticket snapshot and its metrics are unchanged.
-- SuperAdmin or company-wide dashboard, analytics, SLA (Reports & Management, SLA & Automation).
+- SuperAdmin or company-wide dashboard and analytics: shipped in REPORT-001 ([reports-and-management.md](reports-and-management.md)); the Agent Dashboard stays Agent-only.
 - Clickable, filtered summary cards (requires Ticket list query-parameter support).

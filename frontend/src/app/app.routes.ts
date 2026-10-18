@@ -82,6 +82,11 @@ export const routes: Routes = [
         canActivate: [roleGuard('Customer')],
         loadChildren: () => import('./features/portal/portal.routes').then(m => m.PORTAL_ROUTES),
       },
+      {
+        path: 'reports',
+        canActivate: [roleGuard('SuperAdmin')],
+        loadChildren: () => import('./features/reports/reports.routes').then(m => m.REPORTS_ROUTES),
+      },
       // Feature stories add: { path: '<feature>', loadChildren: () => import('./features/<feature>/<feature>.routes') ... }
     ],
   },

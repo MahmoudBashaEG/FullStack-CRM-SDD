@@ -12,7 +12,7 @@ Approved decisions CP1–CP5:
 - **CP4** Help Center: `Published` + `Public` Knowledge Base articles only.
 - **CP5** One editable CSAT feedback record per ticket, while the ticket is `Resolved` or `Closed`.
 
-Not built: anonymous portal, contact claiming, customer replies/comments, email/SMS/chat, customer edit/close/reopen, priority/assignee/SLA display, any AI call, CSAT reports (future Reports & Management), rate limiting.
+Not built: anonymous portal, contact claiming, customer replies/comments, email/SMS/chat, customer edit/close/reopen, priority/assignee/SLA display, any AI call, CSAT reports (shipped in REPORT-001, SuperAdmin only), rate limiting.
 
 ## 2. Identity resolution
 
@@ -71,4 +71,4 @@ Customer-only (`roleGuard('Customer')`): `/portal`, `/portal/tickets`, `/portal/
 
 ## 11. Future
 
-Communication Channels (email/chat) remain the last story. CSAT reporting belongs to Reports & Management.
+Communication Channels (email/chat) remain the last story. CSAT reporting: see [reports-and-management.md](reports-and-management.md).

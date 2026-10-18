@@ -1,0 +1,141 @@
+<crm-page-header
+  title="SLA Performance"
+  subtitle="First-response and resolution targets of tickets created in the selected period."
+/>
+
+<p><a mat-button routerLink="/reports" queryParamsHandling="preserve">← Management Dashboard</a></p>
+
+<crm-report-period-filter
+  [value]="period()"
+  [loading]="loading()"
+  (changed)="onPeriodChanged($event)"
+  (refresh)="refresh()"
+/>
+
+<p class="hint">
+  First response = a recorded <strong>Mark as Responded</strong> action (internal acknowledgement, not a message sent
+  to the customer). Resolution = the first transition to Resolved.
+</p>
+<p class="hint">Compliance = met ÷ (met + breached). Pending and not-tracked targets are excluded.</p>
+
+@if (report(); as r) {
+  <p class="hint">
+    Period: {{ formatUtcDay(r.period.from) }} – {{ formatUtcDay(r.period.to) }} (UTC calendar days) · Updated
+    {{ r.generatedAtUtc | date: 'medium' : 'UTC' }} UTC
+  </p>
+}
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+@if (error(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+  <button mat-stroked-button type="button" (click)="refresh()">Retry</button>
+}
+
+@if (report(); as r) {
+  <section aria-labelledby="compliance-heading">
+    <h2 id="compliance-heading">Compliance</h2>
+    <div class="summary-grid">
+      <mat-card appearance="outlined" class="summary-card">
+        <mat-card-content>
+          <span class="scope">Period · current outcome for tickets created in the period</span>
+          <span>First response</span>
+          <span class="count">{{ formatPercent(r.firstResponse.compliancePercent) }}</span>
+          <span>Compliance</span>
+          <span class="hint">
+            Met {{ r.firstResponse.met }} · Breached {{ r.firstResponse.breached }} · Pending
+            {{ r.firstResponse.pending }} · Not tracked {{ r.firstResponse.notApplicable }} · Tracked
+            {{ r.firstResponse.applicable }} of {{ r.firstResponse.cohortTickets }}
+          </span>
+          @if (r.firstResponse.compliancePercent === null) {
+            <span class="hint">N/A — no target has been met or breached yet.</span>
+          }
+        </mat-card-content>
+      </mat-card>
+      <mat-card appearance="outlined" class="summary-card">
+        <mat-card-content>
+          <span class="scope">Period · current outcome for tickets created in the period</span>
+          <span>Resolution</span>
+          <span class="count">{{ formatPercent(r.resolution.compliancePercent) }}</span>
+          <span>Compliance</span>
+          <span class="hint">
+            Met {{ r.resolution.met }} · Breached {{ r.resolution.breached }} · Pending {{ r.resolution.pending }} ·
+            Not tracked {{ r.resolution.notApplicable }} · Tracked {{ r.resolution.applicable }} of
+            {{ r.resolution.cohortTickets }}
+          </span>
+          @if (r.resolution.compliancePercent === null) {
+            <span class="hint">N/A — no target has been met or breached yet.</span>
+          }
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </section>
+
+  <section aria-labelledby="trend-heading">
+    <h2 id="trend-heading">Compliance trend (by ticket creation date)</h2>
+    <div class="charts">
+      <mat-card appearance="outlined" class="chart-card">
+        <mat-card-content>
+          <h3>First response</h3>
+          <crm-report-bars label="First-response compliance per bucket" [items]="responseTrend()" emptyText="N/A — nothing decided yet." />
+        </mat-card-content>
+      </mat-card>
+      <mat-card appearance="outlined" class="chart-card">
+        <mat-card-content>
+          <h3>Resolution</h3>
+          <crm-report-bars label="Resolution compliance per bucket" [items]="resolutionTrend()" emptyText="N/A — nothing decided yet." />
+        </mat-card-content>
+      </mat-card>
+    </div>
+    <p class="hint">
+      Each bucket shows the current outcome of tickets created in it, not a historical point-in-time value. N/A =
+      nothing decided.
+    </p>
+  </section>
+
+  <section aria-labelledby="live-heading">
+    <h2 id="live-heading">Live now</h2>
+    <p class="scope">Live snapshot · not affected by the date filter</p>
+    <div class="summary-grid">
+      <mat-card appearance="outlined" class="summary-card">
+        <mat-card-content>
+          <span class="scope">Live snapshot</span>
+          <span>Active tickets with a breached target</span>
+          <span class="count">{{ r.live.activeTicketsWithBreach }}</span>
+        </mat-card-content>
+      </mat-card>
+      <mat-card appearance="outlined" class="summary-card">
+        <mat-card-content>
+          <span class="scope">Live snapshot</span>
+          <span>First responses at risk</span>
+          <span class="count">{{ r.live.responseAtRisk }}</span>
+        </mat-card-content>
+      </mat-card>
+      <mat-card appearance="outlined" class="summary-card">
+        <mat-card-content>
+          <span class="scope">Live snapshot</span>
+          <span>Resolutions at risk</span>
+          <span class="count">{{ r.live.resolutionAtRisk }}</span>
+        </mat-card-content>
+      </mat-card>
+    </div>
+    <p class="hint">
+      At risk = SLA Warning: pending targets within the lead time of an enabled SLA warning rule (same as SLA &amp;
+      Automation). Breached targets are never counted as at risk.
+    </p>
+    @if (!r.live.calendarConfigured) {
+      <p class="hint">No business calendar is configured, so no target can be flagged at risk.</p>
+    }
+    @if (r.live.enabledWarningRules === 0) {
+      <p class="hint">No SLA warning rules are enabled, so no target is flagged at risk.</p>
+    }
+    @if (r.live.scanLimitReached) {
+      <p class="hint">
+        At-risk counts cover the first {{ r.live.scannedActiveTickets }} active tracked tickets (oldest deadline first).
+      </p>
+    }
+    <a mat-stroked-button routerLink="/sla">Open SLA &amp; Automation</a>
+  </section>
+}
