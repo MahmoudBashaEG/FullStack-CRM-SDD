@@ -20,6 +20,7 @@ export function describeActivity(a: TicketActivity): { title: string; detail: st
         ? { title: 'Description changed', detail: null }
         : { title: `${a.field} changed`, detail: `${a.oldValue} → ${a.newValue}` };
     case 'AssigneeChanged':
+      if (a.isAutomatic) return { title: 'Assigned automatically', detail: a.reason ?? `To ${a.toAgentName}` };
       if (!a.fromAgentName) return { title: 'Assigned', detail: `To ${a.toAgentName}` };
       if (!a.toAgentName) return { title: 'Unassigned', detail: `Was ${a.fromAgentName}` };
       return { title: 'Reassigned', detail: `${a.fromAgentName} → ${a.toAgentName}` };
@@ -29,11 +30,13 @@ export function describeActivity(a: TicketActivity): { title: string; detail: st
         detail: `${statusLabel(a.oldValue as TicketStatus)} → ${statusLabel(a.newValue as TicketStatus)}`,
       };
     case 'Escalated':
-      return { title: 'Escalated', detail: a.reason };
+      return { title: a.isAutomatic ? 'Escalated automatically' : 'Escalated', detail: a.reason };
     case 'EscalationCleared':
       return { title: 'Escalation cleared', detail: null };
     case 'EscalationAutoCleared':
       return { title: 'Escalation cleared automatically', detail: 'The ticket was resolved.' };
+    case 'FirstResponseRecorded':
+      return { title: 'First response recorded', detail: 'Manual acknowledgement — nothing was sent to the customer.' };
   }
 }
 

@@ -1,0 +1,43 @@
+<p class="hint">SLA alerts are created by the CRM while it is running; nothing is sent outside the CRM.</p>
+
+<div class="toolbar">
+  <mat-slide-toggle [checked]="unreadOnly()" (change)="toggleUnread($event.checked)">Unread only</mat-slide-toggle>
+  <button mat-stroked-button type="button" (click)="load(1)" [disabled]="loading()">
+    <mat-icon>refresh</mat-icon> Refresh
+  </button>
+</div>
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+@if (error(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+  <button mat-stroked-button type="button" (click)="load(1)">Retry</button>
+}
+
+@if (!error() && !loading() && items().length === 0) {
+  <p>No SLA alerts.</p>
+}
+
+<ul class="rows">
+  @for (a of items(); track a.id) {
+    <li class="row" [class.unread]="!a.isRead">
+      <a class="row-title" [routerLink]="['/tickets', a.ticketId]">{{ a.ticketSubject }}</a>
+      @if (a.type === 'Breach') {
+        <crm-status-badge label="Breach" tone="error" />
+      } @else {
+        <crm-status-badge label="Warning" tone="pending" />
+      }
+      <span>{{ kindLabel(a.kind) }}</span>
+      <div class="meta">Due {{ a.dueAtUtc | date: 'medium' }} · Raised {{ a.createdAtUtc | date: 'medium' }}</div>
+      @if (!a.isRead) {
+        <button mat-stroked-button type="button" (click)="markRead(a)">Mark as read</button>
+      }
+    </li>
+  }
+</ul>
+
+@if (hasMore() && !loading()) {
+  <button mat-button type="button" (click)="loadMore()">Load more</button>
+}

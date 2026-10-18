@@ -22,7 +22,7 @@
             <dt>Escalation</dt>
             <dd>
               <crm-status-badge label="Escalated" tone="error" /> {{ current.escalationReason }}
-              <span class="hint">— {{ current.escalatedByName }}, {{ current.escalatedAtUtc | date: 'medium' }}</span>
+              <span class="hint">— {{ current.escalatedByName ?? 'Automation' }}, {{ current.escalatedAtUtc | date: 'medium' }}</span>
             </dd>
           }
           <dt>Priority</dt>
@@ -43,6 +43,20 @@
           <dd>{{ current.updatedAtUtc | date: 'medium' }}</dd>
         </dl>
         <p class="hint">Status, assignment and escalation change only through the actions below.</p>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card appearance="outlined">
+      <mat-card-header>
+        <mat-card-title>SLA</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <crm-ticket-sla-card
+          [ticket]="current"
+          [canMarkResponded]="canMarkResponded()"
+          [busy]="busy() || saving()"
+          (markResponded)="markResponded()"
+        />
       </mat-card-content>
     </mat-card>
 

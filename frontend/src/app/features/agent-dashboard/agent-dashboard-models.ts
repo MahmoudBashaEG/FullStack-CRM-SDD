@@ -1,3 +1,4 @@
+import type { SlaIndicator } from '../sla/sla-models';
 import { TicketCategory, TicketPriority, TicketStatus } from '../tickets/ticket-models';
 
 /** Matches Crm.Api AgentWorkloadSummaryResponse. Counts overlap — never add them up. active = open + inProgress. */
@@ -21,6 +22,7 @@ export interface AttentionTicket {
   customerName: string;
   customerEmail: string;
   updatedAtUtc: string;
+  slaIndicator: SlaIndicator;
 }
 
 /** Matches Crm.Api AgentDashboardResponse. */

@@ -1,3 +1,4 @@
+using Crm.Application.Sla;
 using Crm.Domain.Tickets;
 
 namespace Crm.Application.Tickets;
@@ -26,13 +27,16 @@ public sealed record TicketDetails(
     string? EscalationReason,
     DateTimeOffset? EscalatedAtUtc,
     Guid? EscalatedByUserId,
-    string? EscalatedByName);
+    string? EscalatedByName,
+    TicketSlaView? Sla = null);
 
-/// <summary>Optional list filters; Search is already trimmed (null/empty = no filter). Escalated: null = any; true = escalated only; false = not escalated.</summary>
+/// <summary>Optional list filters; Search is already trimmed (null/empty = no filter). Escalated: null = any; true = escalated only; false = not escalated.
+/// SlaBreached: true = at least one SLA target breached (SQL on stored due instants); false = none breached.</summary>
 public sealed record TicketListFilter(
     string? Search,
     Guid? CustomerId,
     TicketStatus? Status,
     TicketCategory? Category,
     TicketPriority? Priority,
-    bool? Escalated);
+    bool? Escalated,
+    bool? SlaBreached = null);

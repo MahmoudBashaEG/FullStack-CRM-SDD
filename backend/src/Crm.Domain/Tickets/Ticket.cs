@@ -1,4 +1,5 @@
 using Crm.Domain.Common;
+using Crm.Domain.Sla;
 
 namespace Crm.Domain.Tickets;
 
@@ -27,6 +28,20 @@ public sealed class Ticket
     public string? EscalationReason { get; private set; }
     public DateTimeOffset? EscalatedAtUtc { get; private set; }
     public Guid? EscalatedByUserId { get; private set; }
+
+    // SLA-001 snapshot, written once at creation (S1/S4). All null = not tracked (pre-SLA tickets or SLA disabled/not configured).
+    public int? SlaFirstResponseTargetMinutes { get; private set; }
+    public DateTimeOffset? SlaFirstResponseDueAtUtc { get; private set; }
+    public int? SlaResolutionTargetMinutes { get; private set; }
+    public DateTimeOffset? SlaResolutionDueAtUtc { get; private set; }
+    public string? SlaTimeZoneId { get; private set; }
+    public DateTimeOffset? FirstRespondedAtUtc { get; private set; }
+    public Guid? FirstRespondedByUserId { get; private set; }
+
+    /// <summary>First transition to Resolved only (S10); never cleared by resume/reopen.</summary>
+    public DateTimeOffset? SlaResolvedAtUtc { get; private set; }
+
+    public bool IsSlaTracked => SlaFirstResponseDueAtUtc is not null;
 
     // History owned by the aggregate. Loaded tickets start with an EMPTY list (never Include-d):
     // it only holds the events appended in this unit of work, which EF inserts on save.
@@ -119,6 +134,71 @@ public sealed class Ticket
         return true;
     }
 
+    /// <summary>Called once, before the first save, by ticket-creation automation. Due instants are already business-time adjusted.</summary>
+    public void StartSla(
+        int firstResponseMinutes, DateTimeOffset firstResponseDueAtUtc, int resolutionMinutes, DateTimeOffset resolutionDueAtUtc, string timeZoneId)
+    {
+        if (IsSlaTracked)
+        {
+            throw new DomainException("SLA tracking has already started for this ticket.");
+        }
+
+        SlaFirstResponseTargetMinutes = firstResponseMinutes;
+        SlaFirstResponseDueAtUtc = firstResponseDueAtUtc;
+        SlaResolutionTargetMinutes = resolutionMinutes;
+        SlaResolutionDueAtUtc = resolutionDueAtUtc;
+        SlaTimeZoneId = timeZoneId;
+    }
+
+    /// <summary>Rule-based assignment of an unassigned ticket (S5). The caller has verified an active Agent. Recorded as Automation.</summary>
+    public void AssignAutomatically(Guid agentUserId, string ruleName, DateTimeOffset now)
+    {
+        if (AssignedAgentUserId is not null)
+        {
+            throw new DomainException("Only an unassigned ticket can be assigned automatically.");
+        }
+
+        Record(TicketActivity.AutoAssigned(Id, now, agentUserId, $"Assigned automatically by rule \"{ruleName}\"."));
+        AssignedAgentUserId = agentUserId;
+        UpdatedAtUtc = now;
+    }
+
+    /// <summary>S2 manual acknowledgement. false = already recorded (only the first counts). Sends nothing.</summary>
+    public bool RecordFirstResponse(Guid actorUserId, DateTimeOffset now)
+    {
+        if (!IsSlaTracked || !TicketWorkflow.CanEscalate(Status))
+        {
+            throw new DomainException("A first response can be recorded only on an active SLA-tracked ticket.");
+        }
+
+        if (FirstRespondedAtUtc is not null)
+        {
+            return false;
+        }
+
+        FirstRespondedAtUtc = now;
+        FirstRespondedByUserId = actorUserId;
+        Record(TicketActivity.FirstResponseRecorded(Id, actorUserId, now));
+        UpdatedAtUtc = now;
+        return true;
+    }
+
+    /// <summary>S6 escalation by a breach rule, attributed to Automation (EscalatedByUserId null). Same preconditions as Escalate.</summary>
+    public void EscalateAutomatically(string reason, DateTimeOffset now)
+    {
+        if (IsEscalated || !TicketWorkflow.CanEscalate(Status))
+        {
+            throw new DomainException("Only an Open or In Progress ticket that is not already escalated can be escalated.");
+        }
+
+        IsEscalated = true;
+        EscalationReason = reason;
+        EscalatedAtUtc = now;
+        EscalatedByUserId = null;
+        Record(TicketActivity.AutoEscalated(Id, now, reason));
+        UpdatedAtUtc = now;
+    }
+
     /// <summary>Resolving an escalated ticket also clears the escalation (recorded as EscalationAutoCleared).</summary>
     public void TransitionTo(TicketStatus status, Guid actorUserId, DateTimeOffset now)
     {
@@ -129,6 +209,11 @@ public sealed class Ticket
 
         Record(TicketActivity.StatusChanged(Id, actorUserId, now, Status, status));
         Status = status;
+        if (status == TicketStatus.Resolved && IsSlaTracked && SlaResolvedAtUtc is null)
+        {
+            SlaResolvedAtUtc = now; // first resolution only (S10)
+        }
+
         if (status == TicketStatus.Resolved && IsEscalated)
         {
             ClearEscalationState();

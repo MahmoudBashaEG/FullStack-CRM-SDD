@@ -2,6 +2,7 @@ using Crm.Application.Abstractions.Identity;
 using Crm.Application.Abstractions.Persistence;
 using Crm.Application.Common.Paging;
 using Crm.Application.Customers;
+using Crm.Application.Sla;
 using Crm.Application.Tickets;
 using Crm.Application.Tickets.CreateTicket;
 using Crm.Domain.Customers;
@@ -19,7 +20,7 @@ public sealed class CreateTicketCommandHandlerTests
         var tickets = new FakeTicketRepository();
         var unitOfWork = new FakeUnitOfWork();
         var handler = new CreateTicketCommandHandler(
-            tickets, new FakeCustomerRepository(customerId), new UnusedIdentityService(), unitOfWork, TimeProvider.System);
+            tickets, new FakeCustomerRepository(customerId), new UnusedIdentityService(), new NoTicketAutomation(), unitOfWork, TimeProvider.System);
 
         var result = await handler.Handle(
             new CreateTicketCommand(
@@ -92,6 +93,11 @@ public sealed class CreateTicketCommandHandlerTests
         public Task<bool> ChangePasswordAsync(Guid userId, string currentPassword, string newPassword, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task SetPasswordAsync(Guid userId, string newPassword, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task SetActiveAsync(Guid userId, bool isActive, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    }
+
+    private sealed class NoTicketAutomation : ITicketCreationAutomation
+    {
+        public Task ApplyAsync(Ticket ticket, CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
     private sealed class FakeUnitOfWork : IUnitOfWork

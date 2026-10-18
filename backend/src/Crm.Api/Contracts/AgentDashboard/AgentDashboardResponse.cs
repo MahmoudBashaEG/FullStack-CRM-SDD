@@ -1,4 +1,5 @@
 using Crm.Application.AgentDashboard;
+using Crm.Application.Sla;
 using Crm.Domain.Tickets;
 
 namespace Crm.Api.Contracts.AgentDashboard;
@@ -30,8 +31,9 @@ public sealed record AttentionTicketResponse(
     Guid CustomerId,
     string CustomerName,
     string CustomerEmail,
-    DateTimeOffset UpdatedAtUtc)
+    DateTimeOffset UpdatedAtUtc,
+    SlaIndicator SlaIndicator)
 {
     public static AttentionTicketResponse From(AttentionTicket t) =>
-        new(t.Id, t.Subject, t.Category, t.Priority, t.Status, t.IsEscalated, t.CustomerId, t.CustomerName, t.CustomerEmail, t.UpdatedAtUtc);
+        new(t.Id, t.Subject, t.Category, t.Priority, t.Status, t.IsEscalated, t.CustomerId, t.CustomerName, t.CustomerEmail, t.UpdatedAtUtc, t.SlaIndicator);
 }

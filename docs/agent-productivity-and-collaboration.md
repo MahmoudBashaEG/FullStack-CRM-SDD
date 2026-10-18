@@ -60,6 +60,8 @@ Fields: title (≤ 200), description (≤ 2000), status `Pending`/`Completed`, o
 
 ## 4. Reminders
 
+> SLA-001: the bell and `/notifications` inbox now also show SLA alerts (own table and endpoints, all staff); the reminder rules below are unchanged.
+
 * One optional reminder per task, scheduled by the owner or SuperAdmin, delivered **in-app to the task's current owner only**. It must be in the future and at or before the due time. Only Pending, unarchived tasks can be scheduled; cancel is always allowed.
 * `ReminderGeneration` increases whenever a *different* time is scheduled; the same time is a no-op. Complete and archive cancel a pending reminder; reopen and restore never recreate it.
 * **Delivery:** `POST /notifications/check` (called on app open and every 60 s by the Agent UI bell) runs one idempotent `INSERT … SELECT` over the caller's own due tasks. It reads `AgentTasks WITH (UPDLOCK, ROWLOCK)` (so it waits for uncommitted reassignment/completion/archive and uses the committed row, required with `READ_COMMITTED_SNAPSHOT ON`) and is guarded by `NOT EXISTS (… WITH (UPDLOCK, HOLDLOCK))` plus the unique index `UX_TaskReminderNotifications_TaskGeneration (TaskId, ReminderGeneration)`. Two tabs or five parallel calls produce one row.

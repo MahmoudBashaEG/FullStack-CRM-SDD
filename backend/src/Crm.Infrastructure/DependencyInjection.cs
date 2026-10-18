@@ -45,6 +45,10 @@ public static class DependencyInjection
         services.AddScoped<IQuickReplyRepository, QuickReplyRepository>();
         services.AddScoped<ICollaborationRepository, CollaborationRepository>();
         services.AddScoped<ITicketAccessLock, TicketAccessLock>();
+        services.AddScoped<ISlaConfigurationRepository, SlaConfigurationRepository>();
+        services.AddScoped<IAutomationRuleRepository, AutomationRuleRepository>();
+        services.AddScoped<ISlaMonitoringRepository, SlaMonitoringRepository>();
+        services.AddScoped<ISlaAlertRepository, SlaAlertRepository>();
 
         services.AddIdentityCore<ApplicationUser>(options =>
             {

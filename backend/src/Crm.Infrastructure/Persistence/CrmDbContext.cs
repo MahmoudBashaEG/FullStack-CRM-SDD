@@ -1,8 +1,10 @@
 using Crm.Domain.AgentTasks;
+using Crm.Domain.Automation;
 using Crm.Domain.Collaboration;
 using Crm.Domain.Customers;
 using Crm.Domain.Identity;
 using Crm.Domain.QuickReplies;
+using Crm.Domain.Sla;
 using Crm.Domain.Tickets;
 using Crm.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
@@ -28,6 +30,11 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options)
     public DbSet<CustomerNote> CustomerNotes => Set<CustomerNote>();
     public DbSet<CustomerInteraction> CustomerInteractions => Set<CustomerInteraction>();
     public DbSet<CustomerAttachment> CustomerAttachments => Set<CustomerAttachment>();
+    public DbSet<SlaPolicy> SlaPolicies => Set<SlaPolicy>();
+    public DbSet<BusinessCalendar> BusinessCalendars => Set<BusinessCalendar>();
+    public DbSet<AutomationRule> AutomationRules => Set<AutomationRule>();
+    public DbSet<AutomationRuleExecution> AutomationRuleExecutions => Set<AutomationRuleExecution>();
+    public DbSet<SlaAlert> SlaAlerts => Set<SlaAlert>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -21,6 +21,8 @@ import { TicketCollaborators } from '../collaboration/ticket-collaborators';
 import { TicketDiscussion } from '../collaboration/ticket-discussion';
 import { QuickReplyPanel } from '../quick-replies/quick-reply-panel';
 import { TicketActivityList } from './ticket-activity-list';
+import { TicketSlaCard } from './ticket-sla-card';
+import { canMarkFirstResponse } from './ticket-sla';
 import {
   TICKET_CATEGORIES,
   TICKET_PRIORITIES,
@@ -45,6 +47,7 @@ import { TicketsApi } from './tickets-api';
     PageHeader,
     StatusBadge,
     TicketActivityList,
+    TicketSlaCard,
     TicketDiscussion,
     TicketCollaborators,
     QuickReplyPanel,
@@ -78,6 +81,10 @@ export class TicketDetailPage {
   protected readonly actions = computed(() => {
     const t = this.ticket();
     return t ? ticketActions(t, this.auth.currentUser()) : null;
+  });
+  protected readonly canMarkResponded = computed(() => {
+    const t = this.ticket();
+    return t ? canMarkFirstResponse(t, this.auth.currentUser()) : false;
   });
   protected readonly activeAgents = signal<Agent[]>([]);
   protected readonly agentsError = signal<string | null>(null);
@@ -182,6 +189,10 @@ export class TicketDetailPage {
 
   protected saveAssignee(): void {
     this.run(this.api.changeAssignee(this.id, { assignedAgentUserId: this.selectedAssignee() }), 'Assignment updated.');
+  }
+
+  protected markResponded(): void {
+    this.run(this.api.recordFirstResponse(this.id), 'First response recorded.');
   }
 
   protected escalate(): void {

@@ -20,7 +20,7 @@ export class TicketsApi {
   private readonly apiUrl = inject(ApiUrl);
 
   /** Empty filters are omitted. The server additionally restricts Agents to their own tickets. */
-  list({ page, pageSize, search, customerId, status, category, priority, escalated }: TicketListParams): Observable<PagedResponse<Ticket>> {
+  list({ page, pageSize, search, customerId, status, category, priority, escalated, slaBreached }: TicketListParams): Observable<PagedResponse<Ticket>> {
     let params = new HttpParams().set('page', page).set('pageSize', pageSize);
     const term = search?.trim();
     if (term) {
@@ -40,6 +40,9 @@ export class TicketsApi {
     }
     if (escalated != null) {
       params = params.set('escalated', escalated);
+    }
+    if (slaBreached != null) {
+      params = params.set('slaBreached', slaBreached);
     }
     return this.http.get<PagedResponse<Ticket>>(this.apiUrl.versioned('tickets'), { params });
   }
@@ -66,6 +69,11 @@ export class TicketsApi {
 
   escalate(id: string, body: EscalateTicketRequest): Observable<Ticket> {
     return this.http.post<Ticket>(this.apiUrl.versioned(`tickets/${id}/escalation`), body);
+  }
+
+  /** Records the first customer response for SLA (server time, caller as actor). Sends nothing to the customer. */
+  recordFirstResponse(id: string): Observable<Ticket> {
+    return this.http.post<Ticket>(this.apiUrl.versioned(`tickets/${id}/first-response`), {});
   }
 
   clearEscalation(id: string): Observable<Ticket> {

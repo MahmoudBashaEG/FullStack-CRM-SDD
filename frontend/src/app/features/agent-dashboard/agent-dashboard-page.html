@@ -78,6 +78,9 @@
             }
             <crm-status-badge [label]="t.priority" [tone]="priorityTone(t.priority)" />
             <crm-status-badge [label]="statusLabel(t.status)" [tone]="statusTone(t.status)" />
+            @if (t.slaIndicator !== 'NotTracked') {
+              <crm-status-badge [label]="slaIndicatorLabel(t.slaIndicator)" [tone]="slaIndicatorTone(t.slaIndicator)" />
+            }
             <div class="meta">
               {{ t.category }} ·
               <a [routerLink]="['/customers', t.customerId]">{{ t.customerName }}</a> ·

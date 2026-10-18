@@ -30,6 +30,11 @@ internal sealed class TicketConfiguration : IEntityTypeConfiguration<Ticket>
         builder.Property(t => t.EscalationReason).HasMaxLength(500);
         builder.HasOne<ApplicationUser>().WithMany().HasForeignKey(t => t.EscalatedByUserId).OnDelete(DeleteBehavior.Restrict);
 
+        // SLA-001 snapshot (all nullable; existing rows stay NULL = not tracked).
+        builder.Property(t => t.SlaTimeZoneId).HasMaxLength(64);
+        builder.HasOne<ApplicationUser>().WithMany().HasForeignKey(t => t.FirstRespondedByUserId).OnDelete(DeleteBehavior.Restrict);
+        builder.Ignore(t => t.IsSlaTracked);
+
         // Optimistic concurrency: two simultaneous writes to one ticket cannot both commit (EfUnitOfWork ⇒ 409).
         builder.Property<byte[]>("Version").IsRowVersion();
 
@@ -40,5 +45,9 @@ internal sealed class TicketConfiguration : IEntityTypeConfiguration<Ticket>
         builder.HasIndex(t => new { t.CreatedAtUtc, t.Id }).IsDescending(true, true);                              // SuperAdmin default list
         builder.HasIndex(t => new { t.AssignedAgentUserId, t.CreatedAtUtc, t.Id }).IsDescending(false, true, true); // Agent-scoped list
         builder.HasIndex(t => new { t.CustomerId, t.CreatedAtUtc, t.Id }).IsDescending(false, true, true);          // customer filter
+
+        // SLA worker: only tickets with an unfinished target are indexed.
+        builder.HasIndex(t => t.SlaFirstResponseDueAtUtc).HasFilter("[SlaFirstResponseDueAtUtc] IS NOT NULL AND [FirstRespondedAtUtc] IS NULL");
+        builder.HasIndex(t => t.SlaResolutionDueAtUtc).HasFilter("[SlaResolutionDueAtUtc] IS NOT NULL AND [SlaResolvedAtUtc] IS NULL");
     }
 }

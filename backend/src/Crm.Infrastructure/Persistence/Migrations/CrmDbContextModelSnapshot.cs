@@ -140,6 +140,180 @@ namespace Crm.Infrastructure.Persistence.Migrations
                     b.ToTable("TaskReminderNotifications", (string)null);
                 });
 
+            modelBuilder.Entity("Crm.Domain.Automation.AutomationRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<bool?>("AssignedCondition")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("CategoryCondition")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("EnabledAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("PriorityCondition")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("SlaKindCondition")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("TargetAgentUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Trigger")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("WarningLeadMinutes")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TargetAgentUserId");
+
+                    b.HasIndex("UpdatedByUserId");
+
+                    b.HasIndex("Trigger", "IsEnabled", "SortOrder", "CreatedAtUtc", "Id");
+
+                    b.ToTable("AutomationRules", (string)null);
+                });
+
+            modelBuilder.Entity("Crm.Domain.Automation.AutomationRuleExecution", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Detail")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTimeOffset>("OccurredAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<Guid>("RuleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("SlaKind")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<Guid>("TicketId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Trigger")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TicketId");
+
+                    b.HasIndex("OccurredAtUtc", "Id")
+                        .IsDescending();
+
+                    b.HasIndex("RuleId", "TicketId", "SlaKind")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AutomationRuleExecutions_RuleTicketKind");
+
+                    b.ToTable("AutomationRuleExecutions", (string)null);
+                });
+
+            modelBuilder.Entity("Crm.Domain.Automation.SlaAlert", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("DueAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long>("ExecutionId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTimeOffset?>("ReadAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("RecipientUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TicketId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TicketId");
+
+                    b.HasIndex("ExecutionId", "RecipientUserId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_SlaAlerts_ExecutionRecipient");
+
+                    b.HasIndex("RecipientUserId", "CreatedAtUtc", "Id")
+                        .IsDescending(false, true, true);
+
+                    b.ToTable("SlaAlerts", (string)null);
+                });
+
             modelBuilder.Entity("Crm.Domain.Collaboration.TicketCollaborator", b =>
                 {
                     b.Property<Guid>("Id")
@@ -483,6 +657,59 @@ namespace Crm.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Crm.Domain.Sla.BusinessCalendar", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("int");
+
+                    b.Property<TimeOnly>("ClosesAt")
+                        .HasColumnType("time");
+
+                    b.Property<TimeOnly>("OpensAt")
+                        .HasColumnType("time");
+
+                    b.Property<string>("TimeZoneId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("WorkingDaysMask")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UpdatedByUserId");
+
+                    b.ToTable("BusinessCalendars", (string)null);
+                });
+
+            modelBuilder.Entity("Crm.Domain.Sla.SlaPolicy", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UpdatedByUserId");
+
+                    b.ToTable("SlaPolicies", (string)null);
+                });
+
             modelBuilder.Entity("Crm.Domain.Tickets.Ticket", b =>
                 {
                     b.Property<Guid>("Id")
@@ -520,6 +747,12 @@ namespace Crm.Infrastructure.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<DateTimeOffset?>("FirstRespondedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("FirstRespondedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<bool>("IsEscalated")
                         .HasColumnType("bit");
 
@@ -527,6 +760,25 @@ namespace Crm.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTimeOffset?>("SlaFirstResponseDueAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int?>("SlaFirstResponseTargetMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("SlaResolutionDueAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int?>("SlaResolutionTargetMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("SlaResolvedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("SlaTimeZoneId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -552,6 +804,14 @@ namespace Crm.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("EscalatedByUserId");
 
+                    b.HasIndex("FirstRespondedByUserId");
+
+                    b.HasIndex("SlaFirstResponseDueAtUtc")
+                        .HasFilter("[SlaFirstResponseDueAtUtc] IS NOT NULL AND [FirstRespondedAtUtc] IS NULL");
+
+                    b.HasIndex("SlaResolutionDueAtUtc")
+                        .HasFilter("[SlaResolutionDueAtUtc] IS NOT NULL AND [SlaResolvedAtUtc] IS NULL");
+
                     b.HasIndex("CreatedAtUtc", "Id")
                         .IsDescending();
 
@@ -572,7 +832,7 @@ namespace Crm.Infrastructure.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
-                    b.Property<Guid>("ActorUserId")
+                    b.Property<Guid?>("ActorUserId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Field")
@@ -876,6 +1136,58 @@ namespace Crm.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
+            modelBuilder.Entity("Crm.Domain.Automation.AutomationRule", b =>
+                {
+                    b.HasOne("Crm.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("TargetAgentUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Crm.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UpdatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Crm.Domain.Automation.AutomationRuleExecution", b =>
+                {
+                    b.HasOne("Crm.Domain.Automation.AutomationRule", null)
+                        .WithMany()
+                        .HasForeignKey("RuleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Crm.Domain.Tickets.Ticket", null)
+                        .WithMany()
+                        .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Crm.Domain.Automation.SlaAlert", b =>
+                {
+                    b.HasOne("Crm.Domain.Automation.AutomationRuleExecution", "Execution")
+                        .WithMany()
+                        .HasForeignKey("ExecutionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Crm.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("RecipientUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Crm.Domain.Tickets.Ticket", null)
+                        .WithMany()
+                        .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Execution");
+                });
+
             modelBuilder.Entity("Crm.Domain.Collaboration.TicketCollaborator", b =>
                 {
                     b.HasOne("Crm.Infrastructure.Identity.ApplicationUser", null)
@@ -999,6 +1311,72 @@ namespace Crm.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Crm.Domain.Sla.BusinessCalendar", b =>
+                {
+                    b.HasOne("Crm.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UpdatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.OwnsMany("Crm.Domain.Sla.BusinessHoliday", "Holidays", b1 =>
+                        {
+                            b1.Property<int>("BusinessCalendarId")
+                                .HasColumnType("int");
+
+                            b1.Property<DateOnly>("Date")
+                                .HasColumnType("date");
+
+                            b1.Property<string>("Name")
+                                .IsRequired()
+                                .HasMaxLength(100)
+                                .HasColumnType("nvarchar(100)");
+
+                            b1.HasKey("BusinessCalendarId", "Date");
+
+                            b1.ToTable("BusinessHolidays", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("BusinessCalendarId");
+                        });
+
+                    b.Navigation("Holidays");
+                });
+
+            modelBuilder.Entity("Crm.Domain.Sla.SlaPolicy", b =>
+                {
+                    b.HasOne("Crm.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UpdatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.OwnsMany("Crm.Domain.Sla.SlaTarget", "Targets", b1 =>
+                        {
+                            b1.Property<int>("SlaPolicyId")
+                                .HasColumnType("int");
+
+                            b1.Property<string>("Priority")
+                                .HasMaxLength(20)
+                                .HasColumnType("nvarchar(20)");
+
+                            b1.Property<int>("FirstResponseMinutes")
+                                .HasColumnType("int");
+
+                            b1.Property<int>("ResolutionMinutes")
+                                .HasColumnType("int");
+
+                            b1.HasKey("SlaPolicyId", "Priority");
+
+                            b1.ToTable("SlaPolicyTargets", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("SlaPolicyId");
+                        });
+
+                    b.Navigation("Targets");
+                });
+
             modelBuilder.Entity("Crm.Domain.Tickets.Ticket", b =>
                 {
                     b.HasOne("Crm.Infrastructure.Identity.ApplicationUser", null)
@@ -1022,6 +1400,11 @@ namespace Crm.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("EscalatedByUserId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Crm.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("FirstRespondedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Crm.Domain.Tickets.TicketActivity", b =>
@@ -1029,8 +1412,7 @@ namespace Crm.Infrastructure.Persistence.Migrations
                     b.HasOne("Crm.Infrastructure.Identity.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("ActorUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Crm.Infrastructure.Identity.ApplicationUser", null)
                         .WithMany()

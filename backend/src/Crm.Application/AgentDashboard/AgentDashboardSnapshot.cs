@@ -1,3 +1,4 @@
+using Crm.Application.Sla;
 using Crm.Domain.Tickets;
 
 namespace Crm.Application.AgentDashboard;
@@ -29,7 +30,8 @@ public sealed record AttentionTicket(
     Guid CustomerId,
     string CustomerName,
     string CustomerEmail,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc,
+    SlaIndicator SlaIndicator = SlaIndicator.NotTracked);
 
 public static class AgentDashboardRules
 {

@@ -1,0 +1,156 @@
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+@if (loadError(); as message) {
+  <p class="form-error" role="alert">{{ message }}</p>
+  <button mat-stroked-button type="button" (click)="load()">Retry</button>
+}
+
+@if (!loadError()) {
+  <div class="stack">
+    <div class="inline">
+      <button mat-flat-button type="button" (click)="newRule()" [disabled]="editing() !== null">New rule</button>
+      <span class="hint">Rules run in sort order. Rules are never deleted — disable them. Notify and escalate on breach are two separate rules.</span>
+    </div>
+
+    @if (editing() !== null) {
+      <mat-card appearance="outlined">
+        <mat-card-header>
+          <mat-card-title>{{ editing() ? 'Edit rule' : 'New rule' }}</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <form [formGroup]="form" (ngSubmit)="save()" class="stack">
+            <mat-form-field appearance="outline">
+              <mat-label>Name</mat-label>
+              <input matInput formControlName="name" maxlength="100" />
+              @if (form.controls.name.invalid) {
+                <mat-error>A name is required (max 100 characters)</mat-error>
+              }
+            </mat-form-field>
+            <mat-slide-toggle formControlName="isEnabled">Enabled</mat-slide-toggle>
+
+            <div class="grid">
+              <mat-form-field appearance="outline">
+                <mat-label>Trigger</mat-label>
+                <mat-select formControlName="trigger" (selectionChange)="onTriggerChange($event.value)">
+                  @for (t of triggers; track t) {
+                    <mat-option [value]="t">{{ triggerLabel(t) }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Action</mat-label>
+                <mat-select formControlName="action" (selectionChange)="onActionChange($event.value)">
+                  @for (a of availableActions(); track a) {
+                    <mat-option [value]="a">{{ actionLabel(a) }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            @if (action() === 'AssignToAgent') {
+              <mat-form-field appearance="outline">
+                <mat-label>Assign to agent</mat-label>
+                <mat-select formControlName="targetAgentUserId">
+                  @for (agent of activeAgents(); track agent.id) {
+                    <mat-option [value]="agent.id">{{ agent.firstName }} {{ agent.lastName }}</mat-option>
+                  }
+                </mat-select>
+                <mat-hint>Only active Agents. Applies to tickets created without an assignee.</mat-hint>
+              </mat-form-field>
+            }
+
+            @if (trigger() === 'SlaWarningDue') {
+              <mat-form-field appearance="outline">
+                <mat-label>Warn this many business minutes before due</mat-label>
+                <input matInput type="number" min="1" max="10080" step="1" formControlName="warningLeadMinutes" />
+                <mat-hint>1 – 10080</mat-hint>
+              </mat-form-field>
+              <p class="hint">Recipients: the assigned Agent, or all SuperAdmins when the ticket is unassigned.</p>
+            }
+            @if (trigger() === 'SlaBreached' && action() === 'CreateInAppNotification') {
+              <p class="hint">Recipients: the assigned Agent and all SuperAdmins.</p>
+            }
+
+            <div class="grid">
+              <mat-form-field appearance="outline">
+                <mat-label>Category</mat-label>
+                <mat-select formControlName="categoryCondition">
+                  <mat-option [value]="null">Any</mat-option>
+                  @for (c of categories; track c) {
+                    <mat-option [value]="c">{{ c }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Priority</mat-label>
+                <mat-select formControlName="priorityCondition">
+                  <mat-option [value]="null">Any</mat-option>
+                  @for (p of priorities; track p) {
+                    <mat-option [value]="p">{{ p }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              @if (trigger() !== 'TicketCreated') {
+                <mat-form-field appearance="outline">
+                  <mat-label>Assignment</mat-label>
+                  <mat-select formControlName="assignedCondition">
+                    <mat-option [value]="null">Any</mat-option>
+                    <mat-option [value]="true">Assigned</mat-option>
+                    <mat-option [value]="false">Unassigned</mat-option>
+                  </mat-select>
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>SLA target</mat-label>
+                  <mat-select formControlName="slaKindCondition">
+                    <mat-option [value]="null">Both</mat-option>
+                    <mat-option value="FirstResponse">First response</mat-option>
+                    <mat-option value="Resolution">Resolution</mat-option>
+                  </mat-select>
+                </mat-form-field>
+              }
+              <mat-form-field appearance="outline">
+                <mat-label>Sort order</mat-label>
+                <input matInput type="number" min="1" max="1000" step="1" formControlName="sortOrder" />
+                <mat-hint>1 – 1000, lowest runs first</mat-hint>
+              </mat-form-field>
+            </div>
+
+            @if (saveError(); as message) {
+              <p class="form-error" role="alert">{{ message }}</p>
+            }
+            <div class="inline">
+              <button mat-flat-button type="submit" [disabled]="saving()">Save rule</button>
+              <button mat-stroked-button type="button" (click)="cancel()" [disabled]="saving()">Cancel</button>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    }
+
+    @if (!loading() && rules().length === 0) {
+      <p>No automation rules yet.</p>
+    }
+    <ul class="list">
+      @for (r of rules(); track r.id) {
+        <li class="list-item">
+          <div class="grow">
+            <strong>{{ r.name }}</strong>
+            <div class="hint">
+              #{{ r.sortOrder }} · {{ triggerLabel(r.trigger) }} → {{ actionLabel(r.action) }} · {{ conditions(r) }}
+              @if (parameters(r)) {
+                · {{ parameters(r) }}
+              }
+            </div>
+          </div>
+          <crm-status-badge [label]="r.isEnabled ? 'Enabled' : 'Disabled'" [tone]="r.isEnabled ? 'success' : 'neutral'" />
+          @if (r.targetAgentIsActive === false) {
+            <crm-status-badge label="Target agent inactive" tone="error" />
+          }
+          <button mat-stroked-button type="button" (click)="edit(r)" [disabled]="editing() !== null">Edit</button>
+        </li>
+      }
+    </ul>
+  </div>
+}

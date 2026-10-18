@@ -10,4 +10,5 @@ public enum TicketActivityType
     Escalated = 4,
     EscalationCleared = 5,
     EscalationAutoCleared = 6,
+    FirstResponseRecorded = 7,
 }

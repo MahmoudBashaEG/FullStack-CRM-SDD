@@ -4,6 +4,7 @@ namespace Crm.Domain.Tickets;
 /// Append-only history entry, created only by Ticket's own operations (so a change cannot be saved without its event).
 /// Id is a store-generated identity (insertion order = deterministic tie-breaker). Never updated or deleted.
 /// User ids reference AspNetUsers; display names are joined at read time.
+/// ActorUserId null = performed by SLA-001 automation (no user is impersonated).
 /// </summary>
 public sealed class TicketActivity
 {
@@ -12,7 +13,7 @@ public sealed class TicketActivity
     public long Id { get; private set; }
     public Guid TicketId { get; private set; }
     public TicketActivityType Type { get; private set; }
-    public Guid ActorUserId { get; private set; }
+    public Guid? ActorUserId { get; private set; }
     public DateTimeOffset OccurredAtUtc { get; private set; }
     public TicketField? Field { get; private set; }
     public string? OldValue { get; private set; }
@@ -39,8 +40,17 @@ public sealed class TicketActivity
     internal static TicketActivity EscalationCleared(Guid ticketId, Guid actorUserId, DateTimeOffset now, bool automatic) =>
         New(ticketId, automatic ? TicketActivityType.EscalationAutoCleared : TicketActivityType.EscalationCleared, actorUserId, now);
 
+    internal static TicketActivity AutoAssigned(Guid ticketId, DateTimeOffset now, Guid toAgentUserId, string reason) =>
+        New(ticketId, TicketActivityType.AssigneeChanged, null, now, fromAgentUserId: null, toAgentUserId: toAgentUserId, reason: reason);
+
+    internal static TicketActivity AutoEscalated(Guid ticketId, DateTimeOffset now, string reason) =>
+        New(ticketId, TicketActivityType.Escalated, null, now, reason: reason);
+
+    internal static TicketActivity FirstResponseRecorded(Guid ticketId, Guid actorUserId, DateTimeOffset now) =>
+        New(ticketId, TicketActivityType.FirstResponseRecorded, actorUserId, now);
+
     private static TicketActivity New(
-        Guid ticketId, TicketActivityType type, Guid actorUserId, DateTimeOffset now,
+        Guid ticketId, TicketActivityType type, Guid? actorUserId, DateTimeOffset now,
         TicketField? field = null, string? oldValue = null, string? newValue = null,
         Guid? fromAgentUserId = null, Guid? toAgentUserId = null, string? reason = null) =>
         new()

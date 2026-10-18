@@ -1,11 +1,12 @@
 using Crm.Application.Abstractions.Persistence;
 using Crm.Application.AgentDashboard;
+using Crm.Application.Sla;
 using Crm.Domain.Tickets;
 using Microsoft.EntityFrameworkCore;
 
 namespace Crm.Infrastructure.Persistence.Repositories;
 
-internal sealed class AgentDashboardRepository(CrmDbContext dbContext) : IAgentDashboardRepository
+internal sealed class AgentDashboardRepository(CrmDbContext dbContext, SlaEvaluator slaEvaluator) : IAgentDashboardRepository
 {
     public async Task<AgentWorkloadCounts> GetWorkloadCountsAsync(Guid agentUserId, CancellationToken cancellationToken = default) =>
         await ActiveAssignedTo(agentUserId)
@@ -19,8 +20,9 @@ internal sealed class AgentDashboardRepository(CrmDbContext dbContext) : IAgentD
         ?? new AgentWorkloadCounts(0, 0, 0, 0);
 
     public async Task<IReadOnlyList<AttentionTicket>> ListAttentionQueueAsync(
-        Guid agentUserId, int limit, CancellationToken cancellationToken = default) =>
-        await (
+        Guid agentUserId, int limit, CancellationToken cancellationToken = default)
+    {
+        var rows = await (
                 from t in ActiveAssignedTo(agentUserId)
                 join c in dbContext.Customers on t.CustomerId equals c.Id
                 // Priority is stored as a name: rank explicitly, never alphabetically.
@@ -31,7 +33,8 @@ internal sealed class AgentDashboardRepository(CrmDbContext dbContext) : IAgentD
                     : 3,
                     t.UpdatedAtUtc,
                     t.Id
-                select new AttentionTicket(
+                select new
+                {
                     t.Id,
                     t.Subject,
                     t.Category,
@@ -39,11 +42,37 @@ internal sealed class AgentDashboardRepository(CrmDbContext dbContext) : IAgentD
                     t.Status,
                     t.IsEscalated,
                     t.CustomerId,
-                    c.FirstName + " " + c.LastName,
-                    c.Email,
-                    t.UpdatedAtUtc))
+                    CustomerName = c.FirstName + " " + c.LastName,
+                    CustomerEmail = c.Email,
+                    t.UpdatedAtUtc,
+                    t.CreatedAtUtc,
+                    t.SlaTimeZoneId,
+                    t.SlaFirstResponseTargetMinutes,
+                    t.SlaFirstResponseDueAtUtc,
+                    t.FirstRespondedAtUtc,
+                    t.SlaResolutionTargetMinutes,
+                    t.SlaResolutionDueAtUtc,
+                    t.SlaResolvedAtUtc,
+                })
             .Take(limit)
             .ToListAsync(cancellationToken);
+
+        // Ordering, limit and the workload counts are unchanged; the SLA indicator is added after materialization (shared evaluator).
+        var context = rows.Any(r => r.SlaFirstResponseDueAtUtc is not null) ? await slaEvaluator.CreateContextAsync(cancellationToken) : null;
+        return rows
+            .Select(r => new AttentionTicket(
+                r.Id, r.Subject, r.Category, r.Priority, r.Status, r.IsEscalated, r.CustomerId, r.CustomerName, r.CustomerEmail, r.UpdatedAtUtc,
+                r.SlaFirstResponseDueAtUtc is null || context is null
+                    ? SlaIndicator.NotTracked
+                    : SlaEvaluator.Evaluate(
+                        new TicketSlaInput(
+                            r.Category, r.Priority, IsAssigned: true,
+                            new TicketSlaSnapshot(
+                                r.CreatedAtUtc, r.SlaTimeZoneId!, r.SlaFirstResponseTargetMinutes!.Value, r.SlaFirstResponseDueAtUtc.Value,
+                                r.FirstRespondedAtUtc, null, r.SlaResolutionTargetMinutes!.Value, r.SlaResolutionDueAtUtc!.Value, r.SlaResolvedAtUtc)),
+                        context).Indicator))
+            .ToList();
+    }
 
     // The one ownership filter shared with ticket list/detail/activity, then "needs attention" = Open or InProgress.
     private IQueryable<Ticket> ActiveAssignedTo(Guid agentUserId) =>

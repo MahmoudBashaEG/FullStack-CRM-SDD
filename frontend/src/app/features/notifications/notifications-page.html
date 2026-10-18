@@ -1,56 +1,70 @@
-<crm-page-header title="Notifications" subtitle="Reminders appear here while you use the CRM. Marking a reminder as read does not complete the task." />
+<crm-page-header
+  title="Notifications"
+  subtitle="SLA alerts and task reminders appear here while you use the CRM. Reading one changes nothing on the ticket or task."
+/>
 
-<div class="toolbar">
-  <mat-slide-toggle [checked]="unreadOnly()" (change)="toggleUnread($event.checked)">Unread only</mat-slide-toggle>
-  <button mat-stroked-button type="button" (click)="load(1)" [disabled]="loading()">
-    <mat-icon>refresh</mat-icon> Refresh
-  </button>
-</div>
+<section aria-labelledby="sla-alerts-heading">
+  <h2 id="sla-alerts-heading">SLA alerts</h2>
+  <crm-sla-alert-list />
+</section>
 
-@if (loading()) {
-  <mat-progress-bar mode="indeterminate" />
-}
+@if (isAgent()) {
+  <section aria-labelledby="reminders-heading">
+    <h2 id="reminders-heading">Task reminders</h2>
 
-@if (error(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
-  <button mat-stroked-button type="button" (click)="load(1)">Retry</button>
-}
+    <div class="toolbar">
+      <mat-slide-toggle [checked]="unreadOnly()" (change)="toggleUnread($event.checked)">Unread only</mat-slide-toggle>
+      <button mat-stroked-button type="button" (click)="load(1)" [disabled]="loading()">
+        <mat-icon>refresh</mat-icon> Refresh
+      </button>
+    </div>
 
-@if (!error() && !loading() && items().length === 0) {
-  <p>No reminders yet.</p>
-}
+    @if (loading()) {
+      <mat-progress-bar mode="indeterminate" />
+    }
 
-<ul class="rows">
-  @for (n of items(); track n.id) {
-    <li class="row" [class.unread]="!n.isRead">
-      <a class="row-title" [routerLink]="['/tasks', n.taskId]">{{ n.taskTitle }}</a>
-      @if (n.wasMissed) {
-        <crm-status-badge label="Missed reminder" tone="pending" />
-      } @else {
-        <crm-status-badge label="Reminder" tone="neutral" />
+    @if (error(); as message) {
+      <p class="error" role="alert">{{ message }}</p>
+      <button mat-stroked-button type="button" (click)="load(1)">Retry</button>
+    }
+
+    @if (!error() && !loading() && items().length === 0) {
+      <p>No reminders yet.</p>
+    }
+
+    <ul class="rows">
+      @for (n of items(); track n.id) {
+        <li class="row" [class.unread]="!n.isRead">
+          <a class="row-title" [routerLink]="['/tasks', n.taskId]">{{ n.taskTitle }}</a>
+          @if (n.wasMissed) {
+            <crm-status-badge label="Missed reminder" tone="pending" />
+          } @else {
+            <crm-status-badge label="Reminder" tone="neutral" />
+          }
+          @if (n.taskStatus === 'Completed') {
+            <crm-status-badge label="Completed" tone="success" />
+          }
+          @if (n.taskIsArchived) {
+            <crm-status-badge label="Archived" tone="neutral" />
+          }
+          <div class="meta">
+            Scheduled {{ n.scheduledForUtc | date: 'medium' }} · Delivered {{ n.issuedAtUtc | date: 'medium' }}
+            @if (n.wasMissed) {
+              <br />Delivered more than 5 minutes after its scheduled time.
+            }
+            @if (n.transferredAtUtc) {
+              <br />Transferred to you with the task on {{ n.transferredAtUtc | date: 'medium' }}.
+            }
+          </div>
+          @if (!n.isRead) {
+            <button mat-stroked-button type="button" (click)="markRead(n)">Mark as read</button>
+          }
+        </li>
       }
-      @if (n.taskStatus === 'Completed') {
-        <crm-status-badge label="Completed" tone="success" />
-      }
-      @if (n.taskIsArchived) {
-        <crm-status-badge label="Archived" tone="neutral" />
-      }
-      <div class="meta">
-        Scheduled {{ n.scheduledForUtc | date: 'medium' }} · Delivered {{ n.issuedAtUtc | date: 'medium' }}
-        @if (n.wasMissed) {
-          <br />Delivered more than 5 minutes after its scheduled time.
-        }
-        @if (n.transferredAtUtc) {
-          <br />Transferred to you with the task on {{ n.transferredAtUtc | date: 'medium' }}.
-        }
-      </div>
-      @if (!n.isRead) {
-        <button mat-stroked-button type="button" (click)="markRead(n)">Mark as read</button>
-      }
-    </li>
-  }
-</ul>
+    </ul>
 
-@if (hasMore() && !loading()) {
-  <button mat-button type="button" (click)="loadMore()">Load more</button>
+    @if (hasMore() && !loading()) {
+      <button mat-button type="button" (click)="loadMore()">Load more</button>
+    }
+  </section>
 }

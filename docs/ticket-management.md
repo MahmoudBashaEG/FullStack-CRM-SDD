@@ -69,9 +69,12 @@ A manual attention flag, separate from `Status`.
 - **Escalate** — `POST /api/v1/tickets/{id}/escalation` `{ "reason": "…" }`. SuperAdmin (any ticket) or the currently assigned Agent. Only `Open`/`InProgress` tickets. Reason required, trimmed, ≤ 500 (blank/missing/too long ⇒ 400). Already escalated, or `Resolved`/`Closed` ⇒ 409.
 - **Clear** — `DELETE /api/v1/tickets/{id}/escalation`. **SuperAdmin only** (Agents ⇒ 403). Not escalated ⇒ 409. Clearing nulls the reason/by/at fields; history keeps the events.
 - **Automatic clearance:** transitioning an escalated ticket to `Resolved` clears the flag in the same save and records `EscalationAutoCleared` (actor = the user who resolved). Resume/Reopen never re-escalate; escalation survives assignment changes and `Open → InProgress`.
+- **Automatic escalation (SLA-001):** an enabled `SlaBreached` + `EscalateTicket` rule escalates an Open/In Progress ticket once; `EscalatedByUserId` is null = Automation. Already escalated: no second event. See [sla-and-automation.md](sla-and-automation.md).
 - The list filter `escalated=true|false` narrows within the caller's scope.
 
 ## 6. Activity history
+
+`ActorUserId` is nullable since SLA-001: null = **Automation** (shown as "Automation", `isAutomatic: true`); an automatic `AssigneeChanged` carries the rule name in its reason.
 
 Table `TicketActivities` (`Crm.Domain.Tickets.TicketActivity`), **append-only**: there is no update/delete method, endpoint or UI.
 
@@ -84,6 +87,7 @@ Table `TicketActivities` (`Crm.Domain.Tickets.TicketActivity`), **append-only**:
 | `Escalated` | escalation raised | `Reason` |
 | `EscalationCleared` | SuperAdmin clears | — |
 | `EscalationAutoCleared` | ticket resolved while escalated | — |
+| `FirstResponseRecorded` | Mark as Responded (SLA-001) | — |
 
 Every event stores the authenticated actor and the UTC time. Actor/agent **names are joined at read time** from `AspNetUsers` (accounts are never deleted, so disabled users still display; a later rename changes how old events display). No passwords, stamps or profiles are copied.
 
@@ -114,6 +118,8 @@ After a 409 the Angular detail page shows the server message, refreshes the tick
 
 ## 9. API
 
+SLA-001 additions: `POST /tickets/{id}/first-response`, `GET /tickets?slaBreached=true|false`, an `sla` object on every ticket response (null = not tracked) and `isAutomatic` on activity entries.
+
 | Method | Route | Auth | Success / errors |
 |---|---|---|---|
 | GET | `/api/v1/tickets` | SuperAdmin, Agent | 200 paged |
@@ -142,6 +148,8 @@ After a 409 the Angular detail page shows the server message, refreshes the tick
 `AddTicketWorkflowAndActivity` is additive: five new `Tickets` columns (`IsEscalated` default `0`, three nullable escalation columns, `Version rowversion`), one FK + index for `EscalatedByUserId`, and the new `TicketActivities` table with `Restrict` FKs and indexes. No existing column is altered, no row is inserted or updated, and the `Status` column needs no change (names in `nvarchar(20)`). Existing tickets keep every value and start with no history. Rolling back drops `TicketActivities` (all history is lost) and the new columns; first reset any `InProgress`/`Resolved`/`Closed` tickets to `Open` or the TICK-001 code cannot read them.
 
 ## 12. Future stories
+
+SLA & automation shipped in `SLA-001`: see [sla-and-automation.md](sla-and-automation.md).
 
 - **Customer Portal:** customer self-service submission and tracking.
 - **SLA & Automation:** SLA targets, rule/workload-based assignment, notifications.

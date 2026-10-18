@@ -10,6 +10,7 @@ using Crm.Application.Tickets.EscalateTicket;
 using Crm.Application.Tickets.GetTicket;
 using Crm.Application.Tickets.ListTicketActivity;
 using Crm.Application.Tickets.ListTickets;
+using Crm.Application.Tickets.RecordFirstResponse;
 using Crm.Application.Tickets.TransitionTicket;
 using Crm.Application.Tickets.UpdateTicket;
 using Crm.Domain.Identity;
@@ -25,7 +26,7 @@ namespace Crm.Api.Controllers;
 [Authorize(Policy = AuthorizationPolicies.Staff)]
 public sealed class TicketsController(ISender sender) : ControllerBase
 {
-    [EndpointDescription("Requires role: SuperAdmin (all tickets) or Agent (only tickets assigned to them). One-based page (default 1), pageSize (default 20, values above 100 are clamped to 100), optional search on subject or exact ticket id, filters customerId/status/category/priority/escalated (true/false). Newest first.")]
+    [EndpointDescription("Requires role: SuperAdmin (all tickets) or Agent (only tickets assigned to them). One-based page (default 1), pageSize (default 20, values above 100 are clamped to 100), optional search on subject or exact ticket id, filters customerId/status/category/priority/escalated (true/false)/slaBreached (true = at least one breached SLA target, false = none). Newest first.")]
     [HttpGet]
     public async Task<ActionResult<PagedResponse<TicketResponse>>> List(
         [FromQuery] string? search,
@@ -34,12 +35,13 @@ public sealed class TicketsController(ISender sender) : ControllerBase
         [FromQuery] TicketCategory? category,
         [FromQuery] TicketPriority? priority,
         [FromQuery] bool? escalated,
+        [FromQuery] bool? slaBreached,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = Paging.DefaultPageSize,
         CancellationToken cancellationToken = default)
     {
         var result = await sender.Send(
-            new ListTicketsQuery(Actor, search, customerId, status, category, priority, escalated, page, pageSize), cancellationToken);
+            new ListTicketsQuery(Actor, search, customerId, status, category, priority, escalated, slaBreached, page, pageSize), cancellationToken);
         return Ok(new PagedResponse<TicketResponse>(
             result.Items.Select(TicketResponse.From).ToList(), result.Page, result.PageSize, result.TotalCount));
     }
@@ -86,6 +88,11 @@ public sealed class TicketsController(ISender sender) : ControllerBase
     [HttpPost("{id:guid}/escalation")]
     public async Task<ActionResult<TicketResponse>> Escalate(Guid id, EscalateTicketRequest request, CancellationToken cancellationToken) =>
         Ok(TicketResponse.From(await sender.Send(new EscalateTicketCommand(Actor, id, request.Reason), cancellationToken)));
+
+    [EndpointDescription("Requires role: SuperAdmin (any ticket) or Agent (only tickets assigned to them; others 404). Records the first customer response for SLA (server time, caller as actor) on an Open/In Progress SLA-tracked ticket. Internal tracking only — nothing is sent to the customer. Already recorded or not SLA-tracked: 409.")]
+    [HttpPost("{id:guid}/first-response")]
+    public async Task<ActionResult<TicketResponse>> RecordFirstResponse(Guid id, CancellationToken cancellationToken) =>
+        Ok(TicketResponse.From(await sender.Send(new RecordFirstResponseCommand(Actor, id), cancellationToken)));
 
     [EndpointDescription("Requires role: SuperAdmin. Clears an active escalation (409 if not escalated). Recorded in the ticket activity.")]
     [HttpDelete("{id:guid}/escalation")]

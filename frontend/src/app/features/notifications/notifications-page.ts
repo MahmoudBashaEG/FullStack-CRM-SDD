@@ -10,29 +10,34 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { RouterLink } from '@angular/router';
 import { EMPTY, Subject, catchError, map, of, switchMap } from 'rxjs';
 import { describeHttpError } from '../../core/api/describe-http-error';
+import { AuthService } from '../../core/auth/auth-service';
 import { TaskReminder } from '../../core/notifications/notification-models';
 import { NotificationsApi } from '../../core/notifications/notifications-api';
 import { ReminderBadgeRefresh } from '../../core/notifications/reminder-badge-refresh';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
+import { SlaAlertList } from './sla-alert-list';
 
 const PAGE_SIZE = 20;
 
 @Component({
   selector: 'crm-notifications-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, RouterLink, PageHeader, StatusBadge, MatButtonModule, MatIconModule, MatProgressBarModule, MatSlideToggleModule],
+  imports: [DatePipe, RouterLink, PageHeader, StatusBadge, SlaAlertList, MatButtonModule, MatIconModule, MatProgressBarModule, MatSlideToggleModule],
   templateUrl: './notifications-page.html',
   styleUrl: '../../shared/ui/productivity-page.scss',
 })
 export class NotificationsPage {
   private readonly api = inject(NotificationsApi);
+  private readonly auth = inject(AuthService);
   private readonly badge = inject(ReminderBadgeRefresh);
   private readonly snackBar = inject(MatSnackBar);
   private readonly destroyRef = inject(DestroyRef);
   private readonly requests = new Subject<{ page: number; unreadOnly: boolean }>();
   private nextPage = 1;
 
+  /** Task reminders are Agent-only: SuperAdmin must never call /notifications (403). */
+  protected readonly isAgent = computed(() => this.auth.role() === 'Agent');
   protected readonly items = signal<TaskReminder[]>([]);
   protected readonly totalCount = signal(0);
   protected readonly unreadOnly = signal(false);
@@ -69,7 +74,11 @@ export class NotificationsPage {
         this.loading.set(false);
       });
 
-    this.load(1);
+    if (this.isAgent()) {
+      this.load(1);
+    } else {
+      this.loading.set(false);
+    }
   }
 
   protected toggleUnread(value: boolean): void {

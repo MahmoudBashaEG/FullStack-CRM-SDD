@@ -13,6 +13,7 @@ import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
 import { AgentTaskSummary } from '../tasks/task-models';
 import { TasksApi } from '../tasks/tasks-api';
+import { slaIndicatorLabel, slaIndicatorTone } from '../sla/sla-models';
 import { priorityTone, statusLabel, statusTone } from '../tickets/ticket-models';
 import { AgentDashboardApi } from './agent-dashboard-api';
 import { AgentDashboard } from './agent-dashboard-models';
@@ -43,6 +44,8 @@ export class AgentDashboardPage {
   protected readonly priorityTone = priorityTone;
   protected readonly statusLabel = statusLabel;
   protected readonly statusTone = statusTone;
+  protected readonly slaIndicatorLabel = slaIndicatorLabel;
+  protected readonly slaIndicatorTone = slaIndicatorTone;
 
   protected readonly dashboard = signal<AgentDashboard | null>(null);
   protected readonly loading = signal(true);

@@ -1,0 +1,60 @@
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+@if (loadError(); as message) {
+  <p class="form-error" role="alert">{{ message }}</p>
+  <button mat-stroked-button type="button" (click)="load()">Retry</button>
+}
+
+@if (policy(); as p) {
+  <div class="stack">
+    @if (!p.isConfigured) {
+      <p class="banner" role="status">
+        No SLA configured. New tickets are not tracked until a policy is saved and enabled. The values below are suggestions only.
+      </p>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="save()" class="stack">
+      <mat-slide-toggle formControlName="isEnabled">SLA tracking enabled for new tickets</mat-slide-toggle>
+      <p class="hint">
+        Targets are business minutes (working hours from the Calendar tab). A change applies to tickets created afterwards; existing
+        deadlines never change.
+      </p>
+
+      <div formArrayName="rows" class="stack">
+        @for (row of rows.controls; track $index) {
+          <div class="row-line" [formGroupName]="$index">
+            <strong>{{ row.value.priority }}</strong>
+            <mat-form-field appearance="outline">
+              <mat-label>First response (min)</mat-label>
+              <input matInput type="number" min="1" step="1" formControlName="first" />
+              <mat-hint>{{ format(+row.value.first || 0) }}</mat-hint>
+              @if (row.controls['first'].invalid) {
+                <mat-error>1 – 525600 whole minutes</mat-error>
+              }
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Resolution (min)</mat-label>
+              <input matInput type="number" min="1" step="1" formControlName="resolution" />
+              <mat-hint>{{ format(+row.value.resolution || 0) }}</mat-hint>
+              @if (row.controls['resolution'].invalid) {
+                <mat-error>1 – 525600 whole minutes</mat-error>
+              }
+            </mat-form-field>
+          </div>
+        }
+      </div>
+
+      @if (saveError(); as message) {
+        <p class="form-error" role="alert">{{ message }}</p>
+      }
+      <div class="inline">
+        <button mat-flat-button type="submit" [disabled]="saving()">Save policy</button>
+        @if (p.isConfigured && p.updatedAtUtc) {
+          <span class="hint">Last saved {{ p.updatedAtUtc | date: 'medium' }} by {{ p.updatedByName }}</span>
+        }
+      </div>
+    </form>
+  </div>
+}

@@ -19,5 +19,6 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { label: 'Quick Replies', icon: 'quickreply', path: '/quick-replies', exact: false, roles: ['SuperAdmin', 'Agent'] },
   { label: 'My Collaborations', icon: 'forum', path: '/collaboration', exact: false, roles: ['Agent'] },
   { label: 'Agents', icon: 'badge', path: '/agents', exact: false, roles: ['SuperAdmin'] },
+  { label: 'SLA & Automation', icon: 'timer', path: '/sla', exact: false, roles: ['SuperAdmin'] },
   { label: 'Profile', icon: 'account_circle', path: '/profile', exact: false },
 ];

@@ -1,5 +1,6 @@
 using Crm.Application.Abstractions.Identity;
 using Crm.Application.Abstractions.Persistence;
+using Crm.Application.Sla;
 using Crm.Domain.Identity;
 using Crm.Domain.Tickets;
 using FluentValidation;
@@ -9,7 +10,8 @@ using Mediator;
 namespace Crm.Application.Tickets.CreateTicket;
 
 /// <summary>
-/// Single save — not transactional. Creator and (for Agents) assignee come from Actor, never from the client.
+/// Single save — not transactional: the SLA snapshot and an optional automatic assignment (SLA-001) are staged on the same unit of work,
+/// so they commit with the ticket or not at all. Creator and (for Agents) assignee come from Actor, never from the client.
 /// Category is nullable only so a missing JSON field fails validation instead of defaulting to General.
 /// </summary>
 public sealed record CreateTicketCommand(
@@ -25,6 +27,7 @@ public sealed class CreateTicketCommandHandler(
     ITicketRepository tickets,
     ICustomerRepository customers,
     IIdentityService identity,
+    ITicketCreationAutomation automation,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider) : ICommandHandler<CreateTicketCommand, TicketDetails>
 {
@@ -49,11 +52,12 @@ public sealed class CreateTicketCommandHandler(
             assignedAgentUserId,
             timeProvider.GetUtcNow());
 
+        await automation.ApplyAsync(ticket, cancellationToken);
         tickets.Add(ticket);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        // Read back under the caller's own scope, like every other ticket read. Always visible here:
-        // an Agent's new ticket is assigned to that Agent; SuperAdmin's scope is unrestricted.
+        // Read back under the caller's own scope, like every other ticket read. Always visible here: an Agent's ticket is self-assigned
+        // (automation never moves it out of the Agent's scope); SuperAdmin's scope is unrestricted.
         return (await tickets.FindDetailsByIdAsync(ticket.Id, command.Actor.AgentScope, cancellationToken))!;
     }
 

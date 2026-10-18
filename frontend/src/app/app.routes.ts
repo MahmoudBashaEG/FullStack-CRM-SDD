@@ -49,7 +49,7 @@ export const routes: Routes = [
       },
       {
         path: 'notifications',
-        canActivate: [roleGuard('Agent')],
+        canActivate: [roleGuard('SuperAdmin', 'Agent')],
         loadChildren: () => import('./features/notifications/notifications.routes').then(m => m.NOTIFICATIONS_ROUTES),
       },
       {
@@ -61,6 +61,11 @@ export const routes: Routes = [
         path: 'collaboration',
         canActivate: [roleGuard('Agent')],
         loadChildren: () => import('./features/collaboration/collaboration.routes').then(m => m.COLLABORATION_ROUTES),
+      },
+      {
+        path: 'sla',
+        canActivate: [roleGuard('SuperAdmin')],
+        loadChildren: () => import('./features/sla/sla.routes').then(m => m.SLA_ROUTES),
       },
       // Feature stories add: { path: '<feature>', loadChildren: () => import('./features/<feature>/<feature>.routes') ... }
     ],

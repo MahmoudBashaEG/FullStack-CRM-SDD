@@ -19,7 +19,7 @@ internal sealed class TicketActivityConfiguration : IEntityTypeConfiguration<Tic
         builder.Property(a => a.NewValue).HasMaxLength(200);
         builder.Property(a => a.Reason).HasMaxLength(500);
 
-        // References only; nothing cascades (accounts and tickets are never deleted).
+        // References only; nothing cascades (accounts and tickets are never deleted). ActorUserId null = SLA-001 automation.
         builder.HasOne<ApplicationUser>().WithMany().HasForeignKey(a => a.ActorUserId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<ApplicationUser>().WithMany().HasForeignKey(a => a.FromAgentUserId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<ApplicationUser>().WithMany().HasForeignKey(a => a.ToAgentUserId).OnDelete(DeleteBehavior.Restrict);

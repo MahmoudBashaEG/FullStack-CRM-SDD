@@ -33,6 +33,7 @@ import {
   statusTone,
 } from './ticket-models';
 import { TicketsApi } from './tickets-api';
+import { slaIndicatorLabel, slaIndicatorTone } from '../sla/sla-models';
 
 @Component({
   selector: 'crm-ticket-list-page',
@@ -63,7 +64,7 @@ export class TicketListPage {
   private readonly auth = inject(AuthService);
 
   protected readonly isSuperAdmin = computed(() => this.auth.role() === 'SuperAdmin'); // wording only; the API scopes the data
-  protected readonly columns = ['subject', 'customer', 'category', 'priority', 'status', 'assignee', 'created', 'actions'];
+  protected readonly columns = ['subject', 'customer', 'category', 'priority', 'status', 'sla', 'assignee', 'created', 'actions'];
   protected readonly pageSizeOptions = [10, 20, 50, 100];
   protected readonly categories = TICKET_CATEGORIES;
   protected readonly priorities = TICKET_PRIORITIES;
@@ -71,12 +72,15 @@ export class TicketListPage {
   protected readonly priorityTone = priorityTone;
   protected readonly statusLabel = statusLabel;
   protected readonly statusTone = statusTone;
+  protected readonly slaIndicatorLabel = slaIndicatorLabel;
+  protected readonly slaIndicatorTone = slaIndicatorTone;
   protected readonly filters = inject(NonNullableFormBuilder).group({
     search: [''],
     status: [null as TicketStatus | null],
     category: [null as TicketCategory | null],
     priority: [null as TicketPriority | null],
     escalated: [null as boolean | null],
+    slaBreached: [null as boolean | null],
   });
   protected readonly customerId = signal<string | null>(null);
   protected readonly tickets = signal<Ticket[]>([]);
@@ -127,7 +131,7 @@ export class TicketListPage {
 
   protected hasFilters(): boolean {
     const f = this.filters.getRawValue();
-    return !!(f.search.trim() || f.status || f.category || f.priority || f.escalated !== null || this.customerId());
+    return !!(f.search.trim() || f.status || f.category || f.priority || f.escalated !== null || f.slaBreached !== null || this.customerId());
   }
 
   protected onPage(event: PageEvent): void {
@@ -148,6 +152,7 @@ export class TicketListPage {
       category: f.category,
       priority: f.priority,
       escalated: f.escalated,
+      slaBreached: f.slaBreached,
     });
   }
 }

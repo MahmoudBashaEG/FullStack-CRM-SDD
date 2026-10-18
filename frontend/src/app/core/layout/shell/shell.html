@@ -34,7 +34,7 @@
       }
       <span class="shell__title">Customer Support CRM</span>
       <span class="shell__spacer"></span>
-      @if (isAgent()) {
+      @if (isStaff()) {
         <crm-notification-bell />
       }
       @if (user(); as user) {

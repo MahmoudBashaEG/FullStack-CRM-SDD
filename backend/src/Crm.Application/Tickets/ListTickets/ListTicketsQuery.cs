@@ -13,6 +13,7 @@ public sealed record ListTicketsQuery(
     TicketCategory? Category,
     TicketPriority? Priority,
     bool? Escalated,
+    bool? SlaBreached,
     int Page = 1,
     int PageSize = Paging.DefaultPageSize) : IQuery<PagedResult<TicketDetails>>;
 
@@ -23,7 +24,7 @@ public sealed class ListTicketsQueryHandler(ITicketRepository tickets)
     {
         var search = string.IsNullOrWhiteSpace(query.Search) ? null : query.Search.Trim();
         var pageSize = Math.Min(query.PageSize, Paging.MaxPageSize); // documented cap: larger values are clamped
-        var filter = new TicketListFilter(search, query.CustomerId, query.Status, query.Category, query.Priority, query.Escalated);
+        var filter = new TicketListFilter(search, query.CustomerId, query.Status, query.Category, query.Priority, query.Escalated, query.SlaBreached);
 
         // Requested filters only ever narrow the actor's scope; they can never widen it.
         return await tickets.ListAsync(filter, query.Actor.AgentScope, query.Page, pageSize, cancellationToken);

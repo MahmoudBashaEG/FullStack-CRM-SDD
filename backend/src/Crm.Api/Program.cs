@@ -1,4 +1,5 @@
 using Crm.Api;
+using Crm.Api.BackgroundJobs;
 using Crm.Application;
 using Crm.Infrastructure;
 using Crm.Infrastructure.Customers;
@@ -10,7 +11,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services
     .AddApplication()
     .AddInfrastructure(builder.Configuration)
-    .AddPresentation();
+    .AddPresentation()
+    .AddBackgroundJobs(builder.Configuration);
 
 var app = builder.Build();
 

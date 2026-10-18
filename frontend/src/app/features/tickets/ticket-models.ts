@@ -1,4 +1,5 @@
 import { StatusTone } from '../../shared/ui/status-badge/status-badge';
+import type { TicketSla } from '../sla/sla-models';
 
 /** Fixed sets — must match Crm.Domain.Tickets enums (serialized by name). */
 export const TICKET_CATEGORIES = ['General', 'Technical', 'Billing', 'Other'] as const;
@@ -32,6 +33,8 @@ export interface Ticket {
   escalatedAtUtc: string | null;
   escalatedByUserId: string | null;
   escalatedByName: string | null;
+  /** null = not SLA-tracked (created before SLA tracking or while no SLA policy was enabled). */
+  sla: TicketSla | null;
 }
 
 export interface TicketListParams {
@@ -44,6 +47,8 @@ export interface TicketListParams {
   priority: TicketPriority | null;
   /** null/undefined = any. Optional so existing callers compile. */
   escalated?: boolean | null;
+  /** true = at least one SLA target breached, false = none. null/undefined = any. */
+  slaBreached?: boolean | null;
 }
 
 /** No status/creator/timestamps. assignedAgentUserId is sent only by SuperAdmin (null = unassigned). */
@@ -84,7 +89,8 @@ export type TicketActivityType =
   | 'StatusChanged'
   | 'Escalated'
   | 'EscalationCleared'
-  | 'EscalationAutoCleared';
+  | 'EscalationAutoCleared'
+  | 'FirstResponseRecorded';
 
 /** Matches Crm.Api TicketActivityResponse (names only, no user ids). */
 export interface TicketActivity {
@@ -98,6 +104,8 @@ export interface TicketActivity {
   fromAgentName: string | null;
   toAgentName: string | null;
   reason: string | null;
+  /** Performed by SLA automation (actorName is then 'Automation'). */
+  isAutomatic: boolean;
 }
 
 /** null = unassigned. SuperAdmin only. */

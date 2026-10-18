@@ -1,0 +1,88 @@
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+@if (error(); as message) {
+  <p class="form-error" role="alert">{{ message }}</p>
+  <button mat-stroked-button type="button" (click)="load()">Retry</button>
+}
+
+@if (overview(); as o) {
+  <div class="stack">
+    <div class="inline">
+      <button mat-stroked-button type="button" (click)="load()" [disabled]="loading()">
+        <mat-icon>refresh</mat-icon> Refresh
+      </button>
+      <span class="hint">Updated {{ o.generatedAtUtc | date: 'mediumTime' }}</span>
+    </div>
+
+    <div class="counts">
+      <div class="count"><strong>{{ o.warningCount }}</strong> Warning</div>
+      <div class="count"><strong>{{ o.breachedCount }}</strong> Breached</div>
+      <div class="count"><strong>{{ o.onTrackCount }}</strong> On track</div>
+    </div>
+    <p class="hint">Counts cover the first 500 active tracked tickets, oldest due first.</p>
+
+    <h2>Breached</h2>
+    @if (o.breached.length === 0) {
+      <p>No breached tickets.</p>
+    }
+    <ul class="list">
+      @for (t of o.breached; track t.ticketId) {
+        <li class="list-item">
+          <a class="grow" [routerLink]="['/tickets', t.ticketId]">{{ t.subject }}</a>
+          <crm-status-badge label="Breached" tone="error" />
+          <span class="hint">
+            {{ t.assignedAgentName ?? 'Unassigned' }} · {{ statusLabel(t.status) }} · {{ kindLabel(focus(t.sla, true).kind) }} due
+            {{ focus(t.sla, true).dueAtUtc | date: 'medium' }}
+            @if (timeText(focus(t.sla, true))) {
+              · {{ timeText(focus(t.sla, true)) }}
+            }
+          </span>
+        </li>
+      }
+    </ul>
+
+    <h2>Warning</h2>
+    @if (o.warning.length === 0) {
+      <p>No tickets at warning level.</p>
+    }
+    <ul class="list">
+      @for (t of o.warning; track t.ticketId) {
+        <li class="list-item">
+          <a class="grow" [routerLink]="['/tickets', t.ticketId]">{{ t.subject }}</a>
+          <crm-status-badge label="Warning" tone="pending" />
+          <span class="hint">
+            {{ t.assignedAgentName ?? 'Unassigned' }} · {{ statusLabel(t.status) }} · {{ kindLabel(focus(t.sla, false).kind) }} due
+            {{ focus(t.sla, false).dueAtUtc | date: 'medium' }}
+            @if (timeText(focus(t.sla, false))) {
+              · {{ timeText(focus(t.sla, false)) }}
+            }
+          </span>
+        </li>
+      }
+    </ul>
+
+    <h2>Recent automation</h2>
+    @if (o.recentExecutions.length === 0) {
+      <p>No automation has run yet.</p>
+    }
+    <ul class="list">
+      @for (e of o.recentExecutions; track e.id) {
+        <li class="list-item">
+          <span class="grow">
+            {{ e.occurredAtUtc | date: 'medium' }} · {{ e.ruleName }} ·
+            <a [routerLink]="['/tickets', e.ticketId]">{{ e.ticketSubject }}</a>
+            @if (e.slaKind) {
+              · {{ kindLabel(e.slaKind) }}
+            }
+            @if (e.detail) {
+              <span class="hint"> · {{ e.detail }}</span>
+            }
+          </span>
+          <crm-status-badge [label]="outcomeLabel(e.outcome)" [tone]="e.outcome === 'Escalated' ? 'error' : 'neutral'" />
+        </li>
+      }
+    </ul>
+  </div>
+}

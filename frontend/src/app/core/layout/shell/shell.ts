@@ -32,7 +32,7 @@ import { NAV_ITEMS } from '../navigation';
 export class Shell {
   private readonly auth = inject(AuthService);
   protected readonly user = this.auth.currentUser;
-  protected readonly isAgent = computed(() => this.auth.role() === 'Agent');
+  protected readonly isStaff = computed(() => this.auth.role() === 'Agent' || this.auth.role() === 'SuperAdmin');
   protected readonly navItems = computed(() => {
     const role = this.auth.role();
     return NAV_ITEMS.filter(item => !item.roles || (role !== null && item.roles.includes(role)));

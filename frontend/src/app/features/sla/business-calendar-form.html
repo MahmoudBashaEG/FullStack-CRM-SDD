@@ -1,0 +1,116 @@
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+@if (loadError(); as message) {
+  <p class="form-error" role="alert">{{ message }}</p>
+  <button mat-stroked-button type="button" (click)="load()">Retry</button>
+}
+
+@if (calendar(); as c) {
+  <div class="stack">
+    @if (!c.isConfigured) {
+      <p class="banner" role="status">
+        No business calendar saved yet. New tickets are not tracked until a calendar and an enabled policy exist. The values below are
+        suggestions only.
+      </p>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="save()" class="stack">
+      <mat-form-field appearance="outline">
+        <mat-label>Time zone</mat-label>
+        <input matInput formControlName="timeZoneId" list="crm-time-zones" autocomplete="off" />
+        <mat-hint>IANA id, e.g. Africa/Cairo</mat-hint>
+        @if (form.controls.timeZoneId.invalid) {
+          <mat-error>A time zone id is required</mat-error>
+        }
+      </mat-form-field>
+      <datalist id="crm-time-zones">
+        @for (zone of timeZones; track zone) {
+          <option [value]="zone"></option>
+        }
+      </datalist>
+
+      <fieldset class="days">
+        <legend class="hint">Working days</legend>
+        @for (day of weekDays; track day) {
+          <mat-checkbox [checked]="isWorkingDay(day)" (change)="toggleDay(day, $event.checked)">{{ day }}</mat-checkbox>
+        }
+      </fieldset>
+
+      <div class="grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Opens at</mat-label>
+          <input matInput type="time" formControlName="opensAt" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Closes at</mat-label>
+          <input matInput type="time" formControlName="closesAt" />
+        </mat-form-field>
+      </div>
+
+      <h2>Holidays</h2>
+      <div class="inline">
+        <mat-form-field appearance="outline">
+          <mat-label>Date</mat-label>
+          <input matInput type="date" [formControl]="holidayDate" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Name</mat-label>
+          <input matInput [formControl]="holidayName" maxlength="100" />
+        </mat-form-field>
+        <button mat-stroked-button type="button" (click)="addHoliday()">Add</button>
+      </div>
+      @if (sortedHolidays().length === 0) {
+        <p class="hint">No holidays. Closed weekdays and holidays never count as business time.</p>
+      }
+      <ul class="list">
+        @for (h of sortedHolidays(); track h.date) {
+          <li class="list-item">
+            <span class="grow">{{ h.date }} · {{ h.name }}</span>
+            <button mat-icon-button type="button" [attr.aria-label]="'Remove holiday ' + h.name" (click)="removeHoliday(h.date)">
+              <mat-icon>close</mat-icon>
+            </button>
+          </li>
+        }
+      </ul>
+
+      <p class="hint">
+        Changes apply to tickets created afterwards. Existing due times never change; remaining business time shown on existing tickets
+        uses the current calendar.
+      </p>
+      @if (clientError(); as message) {
+        <p class="form-error" role="alert">{{ message }}</p>
+      }
+      @if (saveError(); as message) {
+        <p class="form-error" role="alert">{{ message }}</p>
+      }
+      <div class="inline">
+        <button mat-flat-button type="submit" [disabled]="saving() || !!clientError()">Save calendar</button>
+        @if (c.isConfigured && c.updatedAtUtc) {
+          <span class="hint">Last saved {{ c.updatedAtUtc | date: 'medium' }} by {{ c.updatedByName }}</span>
+        }
+      </div>
+    </form>
+
+    <h2>Due-date preview</h2>
+    <p class="hint">Uses the saved calendar. Leave the start empty to start now.</p>
+    <div class="inline">
+      <mat-form-field appearance="outline">
+        <mat-label>Start (your time)</mat-label>
+        <input matInput type="datetime-local" [formControl]="previewStart" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Business minutes</mat-label>
+        <input matInput type="number" min="1" step="1" [formControl]="previewMinutes" />
+      </mat-form-field>
+      <button mat-stroked-button type="button" [disabled]="previewing() || previewMinutes.invalid" (click)="runPreview()">Preview</button>
+    </div>
+    @if (previewError(); as message) {
+      <p class="form-error" role="alert">{{ message }}</p>
+    }
+    @if (preview(); as p) {
+      <p>Due {{ p.dueAtUtc | date: 'full' }} (your time) — calendar zone {{ p.timeZoneId }}</p>
+    }
+  </div>
+}
