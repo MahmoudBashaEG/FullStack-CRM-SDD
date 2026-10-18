@@ -1,0 +1,22 @@
+<p class="hint">{{ hint }}</p>
+<mat-form-field appearance="outline" class="search">
+  <mat-label>Search quick replies</mat-label>
+  <input matInput type="search" [formControl]="search" />
+  <mat-icon matSuffix>search</mat-icon>
+</mat-form-field>
+
+@if (error(); as message) {
+  <p class="form-error" role="alert">{{ message }}</p>
+}
+
+<ul class="rows">
+  @for (q of items(); track q.id) {
+    <li class="row">
+      <span class="row-title">{{ q.title }}</span>
+      <button mat-stroked-button type="button" (click)="copy(q)"><mat-icon>content_copy</mat-icon> Copy</button>
+    </li>
+  } @empty {
+    <li class="hint">No quick replies match.</li>
+  }
+</ul>
+<p><a routerLink="/quick-replies">Manage quick replies</a></p>

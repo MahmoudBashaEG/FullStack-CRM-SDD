@@ -1,5 +1,8 @@
+using Crm.Domain.AgentTasks;
+using Crm.Domain.Collaboration;
 using Crm.Domain.Customers;
 using Crm.Domain.Identity;
+using Crm.Domain.QuickReplies;
 using Crm.Domain.Tickets;
 using Crm.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
@@ -17,6 +20,11 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options)
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Ticket> Tickets => Set<Ticket>();
     public DbSet<TicketActivity> TicketActivities => Set<TicketActivity>();
+    public DbSet<AgentTask> AgentTasks => Set<AgentTask>();
+    public DbSet<TaskReminderNotification> TaskReminderNotifications => Set<TaskReminderNotification>();
+    public DbSet<QuickReplyTemplate> QuickReplyTemplates => Set<QuickReplyTemplate>();
+    public DbSet<TicketCollaborator> TicketCollaborators => Set<TicketCollaborator>();
+    public DbSet<TicketInternalMessage> TicketInternalMessages => Set<TicketInternalMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

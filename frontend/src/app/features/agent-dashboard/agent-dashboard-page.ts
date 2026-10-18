@@ -11,6 +11,8 @@ import { EMPTY, Subject, catchError, switchMap } from 'rxjs';
 import { describeHttpError } from '../../core/api/describe-http-error';
 import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
+import { AgentTaskSummary } from '../tasks/task-models';
+import { TasksApi } from '../tasks/tasks-api';
 import { priorityTone, statusLabel, statusTone } from '../tickets/ticket-models';
 import { AgentDashboardApi } from './agent-dashboard-api';
 import { AgentDashboard } from './agent-dashboard-models';
@@ -33,8 +35,10 @@ import { AgentDashboard } from './agent-dashboard-models';
 })
 export class AgentDashboardPage {
   private readonly api = inject(AgentDashboardApi);
+  private readonly tasksApi = inject(TasksApi);
   private readonly destroyRef = inject(DestroyRef);
   private readonly requests = new Subject<void>();
+  private readonly taskRequests = new Subject<void>();
 
   protected readonly priorityTone = priorityTone;
   protected readonly statusLabel = statusLabel;
@@ -43,6 +47,11 @@ export class AgentDashboardPage {
   protected readonly dashboard = signal<AgentDashboard | null>(null);
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
+
+  // Independent tasks section: it fails and retries on its own, so the ticket cards keep rendering.
+  protected readonly taskSummary = signal<AgentTaskSummary | null>(null);
+  protected readonly tasksLoading = signal(true);
+  protected readonly tasksError = signal<string | null>(null);
 
   constructor() {
     this.requests
@@ -65,6 +74,25 @@ export class AgentDashboardPage {
         this.loading.set(false);
       });
 
+    this.taskRequests
+      .pipe(
+        switchMap(() =>
+          this.tasksApi.summary().pipe(
+            catchError((error: HttpErrorResponse) => {
+              this.taskSummary.set(null); // never show stale numbers or zeros after a failure
+              this.tasksError.set(describeHttpError(error, 'Could not load your tasks.'));
+              this.tasksLoading.set(false);
+              return EMPTY;
+            }),
+          ),
+        ),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(result => {
+        this.taskSummary.set(result);
+        this.tasksLoading.set(false);
+      });
+
     this.refresh();
   }
 
@@ -72,5 +100,12 @@ export class AgentDashboardPage {
     this.loading.set(true);
     this.error.set(null);
     this.requests.next();
+    this.refreshTasks();
+  }
+
+  protected refreshTasks(): void {
+    this.tasksLoading.set(true);
+    this.tasksError.set(null);
+    this.taskRequests.next();
   }
 }

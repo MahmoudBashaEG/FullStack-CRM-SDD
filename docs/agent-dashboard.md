@@ -56,6 +56,8 @@ Counts overlap: one ticket can be in Open/In Progress, Escalated and High / Urge
 }
 ```
 
+`GET /api/v1/agent-dashboard/tasks` (Agent, DASH-002): the caller's Pending, unarchived task counts (pending, overdue, dueSoon) plus the next 5 tasks; a separate query so either section can fail independently.
+
 ## 7. Persistence
 
 Read-only: no migration and no new index. The existing `(AssignedAgentUserId, CreatedAtUtc, Id)` index supports the Agent filter. It does not necessarily cover the other filtered, grouped, ordered or selected columns, so those may be looked up and sorted per Agent, which is acceptable at per-Agent volumes.
@@ -64,6 +66,6 @@ Each load runs **two** ticket statements, both under the Agent scope and the Ope
 
 ## 8. Deferred Agent Dashboard capabilities
 
-- Tasks and reminders, quick replies, team collaboration (need new business models; later stories).
+- Tasks & reminders, quick replies and team collaboration: delivered by DASH-002 — see [agent-productivity-and-collaboration.md](agent-productivity-and-collaboration.md). The dashboard adds a separate Tasks section (`GET /api/v1/agent-dashboard/tasks`); the ticket snapshot and its metrics are unchanged.
 - SuperAdmin or company-wide dashboard, analytics, SLA (Reports & Management, SLA & Automation).
 - Clickable, filtered summary cards (requires Ticket list query-parameter support).

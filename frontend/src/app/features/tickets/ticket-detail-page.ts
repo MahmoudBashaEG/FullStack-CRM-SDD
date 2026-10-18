@@ -17,6 +17,9 @@ import { PageHeader } from '../../shared/ui/page-header/page-header';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
 import { Agent } from '../agents/agent-models';
 import { AgentsApi } from '../agents/agents-api';
+import { TicketCollaborators } from '../collaboration/ticket-collaborators';
+import { TicketDiscussion } from '../collaboration/ticket-discussion';
+import { QuickReplyPanel } from '../quick-replies/quick-reply-panel';
 import { TicketActivityList } from './ticket-activity-list';
 import {
   TICKET_CATEGORIES,
@@ -42,6 +45,9 @@ import { TicketsApi } from './tickets-api';
     PageHeader,
     StatusBadge,
     TicketActivityList,
+    TicketDiscussion,
+    TicketCollaborators,
+    QuickReplyPanel,
     MatCardModule,
     MatFormFieldModule,
     MatInputModule,
@@ -226,6 +232,12 @@ export class TicketDetailPage {
     if (error.status === 409) {
       this.reload();
     }
+  }
+
+  /** The internal discussion returned 404: the caller lost access, same handling as any other 404 on this page. */
+  protected onAccessLost(): void {
+    this.ticket.set(null);
+    this.loadError.set('This ticket is no longer available to you. It may have been reassigned.');
   }
 
   private reload(): void {

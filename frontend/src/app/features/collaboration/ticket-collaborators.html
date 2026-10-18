@@ -1,0 +1,35 @@
+<p class="hint">Collaborators can read and post in this discussion only. They cannot open, edit or act on the ticket.</p>
+
+<ul class="rows">
+  @for (c of collaborators(); track c.agentUserId) {
+    <li class="row">
+      <span class="row-title">{{ c.agentName }}{{ c.isActive ? '' : ' (inactive)' }}</span>
+      <span class="hint">Invited by {{ c.addedByName }} on {{ c.addedAtUtc | date: 'medium' }}</span>
+      @if (canManage()) {
+        <button mat-button type="button" [disabled]="busy()" (click)="remove(c)">Remove</button>
+      }
+    </li>
+  } @empty {
+    <li class="hint">No collaborators yet.</li>
+  }
+</ul>
+
+@if (canManage()) {
+  <div class="actions">
+    <mat-form-field appearance="outline">
+      <mat-label>Invite an Agent</mat-label>
+      <mat-select [formControl]="selection">
+        @for (a of candidates(); track a.agentUserId) {
+          <mat-option [value]="a.agentUserId">{{ a.agentName }}</mat-option>
+        } @empty {
+          <mat-option disabled>No Agents available.</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    <button mat-flat-button type="button" [disabled]="busy() || !selection.value" (click)="invite()">Invite</button>
+  </div>
+}
+
+@if (error(); as message) {
+  <p class="form-error" role="alert">{{ message }}</p>
+}

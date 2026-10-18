@@ -9,6 +9,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { map } from 'rxjs';
 import { AuthService } from '../../auth/auth-service';
+import { NotificationBell } from '../../notifications/notification-bell';
 import { NAV_ITEMS } from '../navigation';
 
 @Component({
@@ -23,6 +24,7 @@ import { NAV_ITEMS } from '../navigation';
     MatListModule,
     MatIconModule,
     MatButtonModule,
+    NotificationBell,
   ],
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
@@ -30,6 +32,7 @@ import { NAV_ITEMS } from '../navigation';
 export class Shell {
   private readonly auth = inject(AuthService);
   protected readonly user = this.auth.currentUser;
+  protected readonly isAgent = computed(() => this.auth.role() === 'Agent');
   protected readonly navItems = computed(() => {
     const role = this.auth.role();
     return NAV_ITEMS.filter(item => !item.roles || (role !== null && item.roles.includes(role)));

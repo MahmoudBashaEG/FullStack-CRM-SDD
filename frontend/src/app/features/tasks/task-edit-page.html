@@ -1,0 +1,216 @@
+<crm-page-header [title]="isNew ? 'New task' : 'Task'" subtitle="Personal work items and optional in-app reminders." />
+
+<p><a routerLink="/tasks">← Back to tasks</a></p>
+
+@if (loadError(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+} @else if (isNew) {
+  <mat-card appearance="outlined" class="stack">
+    <mat-card-content>
+      <form class="form" [formGroup]="form" (ngSubmit)="create()">
+        <mat-form-field appearance="outline">
+          <mat-label>Title</mat-label>
+          <input matInput formControlName="title" maxlength="200" required />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Description</mat-label>
+          <textarea matInput rows="4" formControlName="description" maxlength="2000"></textarea>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Due</mat-label>
+          <input matInput type="datetime-local" formControlName="due" />
+          <mat-hint>Uses your local time zone.</mat-hint>
+        </mat-form-field>
+        @if (isSuperAdmin()) {
+          <mat-form-field appearance="outline">
+            <mat-label>Task owner</mat-label>
+            <mat-select formControlName="ownerId" required>
+              @for (a of activeAgents(); track a.id) {
+                <mat-option [value]="a.id">{{ a.firstName }} {{ a.lastName }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        }
+        <crm-ticket-picker [ownerUserId]="pickerOwner()" [requireOwner]="isSuperAdmin()" (selected)="selectedTicket.set($event)" />
+        <mat-slide-toggle formControlName="remind">Remind me</mat-slide-toggle>
+        @if (form.controls.remind.value) {
+          <mat-form-field appearance="outline">
+            <mat-label>Reminder time</mat-label>
+            <input matInput type="datetime-local" formControlName="remindAt" />
+            <mat-hint>Delivered in this app to {{ ownerName() }} only — no email, SMS or push. Times use your local time zone.</mat-hint>
+          </mat-form-field>
+        }
+        @if (errors().create; as message) {
+          <p class="form-error" role="alert">{{ message }}</p>
+        }
+        <div class="actions">
+          <button mat-flat-button type="submit" [disabled]="busy()">Create task</button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+} @else if (task(); as t) {
+  <div class="stack">
+    <div class="actions">
+      @if (t.isOverdue) {
+        <crm-status-badge label="Overdue" tone="error" />
+      } @else if (t.isDueSoon) {
+        <crm-status-badge label="Due soon" tone="pending" />
+      }
+      <crm-status-badge [label]="t.status" [tone]="t.status === 'Completed' ? 'success' : 'pending'" />
+      @if (t.isArchived) {
+        <crm-status-badge label="Archived" tone="neutral" />
+      }
+      <span class="hint">Task owner: {{ t.assignedAgentName }} · Created by {{ t.createdByName }} · Updated {{ t.updatedAtUtc | date: 'medium' }}</span>
+    </div>
+
+    <mat-card appearance="outlined">
+      <mat-card-header><mat-card-title>Details</mat-card-title></mat-card-header>
+      <mat-card-content>
+        <form class="form" [formGroup]="form" (ngSubmit)="saveDetails()">
+          <mat-form-field appearance="outline">
+            <mat-label>Title</mat-label>
+            <input matInput formControlName="title" maxlength="200" required />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Description</mat-label>
+            <textarea matInput rows="4" formControlName="description" maxlength="2000"></textarea>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Due</mat-label>
+            <input matInput type="datetime-local" formControlName="due" />
+            <mat-hint>Uses your local time zone.</mat-hint>
+          </mat-form-field>
+          @if (errors().details; as message) {
+            <p class="form-error" role="alert">{{ message }}</p>
+          }
+          <div class="actions">
+            <button mat-flat-button type="submit" [disabled]="busy() || t.isArchived">Save</button>
+            @if (t.isArchived) {
+              <span class="hint">Restore the task before editing it.</span>
+            }
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card appearance="outlined">
+      <mat-card-header><mat-card-title>Reminder</mat-card-title></mat-card-header>
+      <mat-card-content>
+        @if (t.remindAtUtc) {
+          <p>Scheduled for {{ t.remindAtUtc | date: 'medium' }}.</p>
+        } @else if (t.reminderSentAtUtc) {
+          <p>Sent {{ t.reminderSentAtUtc | date: 'medium' }}.</p>
+        } @else {
+          <p>No reminder.</p>
+        }
+        <form class="form" [formGroup]="reminderForm" (ngSubmit)="saveReminder()">
+          <mat-form-field appearance="outline">
+            <mat-label>Reminder time</mat-label>
+            <input matInput type="datetime-local" formControlName="remindAt" />
+            <mat-hint>Delivered in this app to {{ t.assignedAgentName }} only — no email, SMS or push. Times use your local time zone.</mat-hint>
+          </mat-form-field>
+          @if (errors().reminder; as message) {
+            <p class="form-error" role="alert">{{ message }}</p>
+          }
+          <div class="actions">
+            <button mat-flat-button type="submit" [disabled]="busy() || t.isArchived || t.status === 'Completed'">Save reminder</button>
+            @if (t.remindAtUtc) {
+              <button mat-stroked-button type="button" [disabled]="busy()" (click)="cancelReminder()">Cancel reminder</button>
+            }
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card appearance="outlined">
+      <mat-card-header><mat-card-title>Status</mat-card-title></mat-card-header>
+      <mat-card-content>
+        @if (errors().status; as message) {
+          <p class="form-error" role="alert">{{ message }}</p>
+        }
+        <div class="actions">
+          @if (!t.isArchived) {
+            @if (t.status === 'Pending') {
+              <button mat-flat-button type="button" [disabled]="busy()" (click)="setCompleted(true)">Complete</button>
+            } @else {
+              <button mat-stroked-button type="button" [disabled]="busy()" (click)="setCompleted(false)">Reopen</button>
+            }
+            <button mat-stroked-button type="button" [disabled]="busy()" (click)="setArchived(true)">Archive</button>
+          } @else {
+            <button mat-flat-button type="button" [disabled]="busy()" (click)="setArchived(false)">Restore</button>
+          }
+        </div>
+        <p class="hint">Completing or archiving cancels a pending reminder; reopening or restoring does not recreate it.</p>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card appearance="outlined">
+      <mat-card-header><mat-card-title>Linked ticket</mat-card-title></mat-card-header>
+      <mat-card-content>
+        @switch (t.linkedTicketState) {
+          @case ('Accessible') {
+            <p>Ticket: <a [routerLink]="['/tickets', t.linkedTicketId]">{{ t.linkedTicketSubject }}</a></p>
+          }
+          @case ('Inaccessible') {
+            <p>
+              Linked ticket no longer accessible
+              @if (t.linkedTicketSubject) {
+                ({{ t.linkedTicketSubject }})
+              }
+              — it is no longer assigned to the task owner.
+            </p>
+          }
+          @default {
+            <p>No ticket linked.</p>
+          }
+        }
+        @if (errors().link; as message) {
+          <p class="form-error" role="alert">{{ message }}</p>
+        }
+        @if (changingLink()) {
+          <crm-ticket-picker label="Ticket" [ownerUserId]="t.assignedAgentUserId" [requireOwner]="true" (selected)="changeTicket.set($event)" />
+          <div class="actions">
+            <button mat-flat-button type="button" [disabled]="busy() || !changeTicket()" (click)="saveLink()">Link ticket</button>
+            <button mat-button type="button" (click)="changingLink.set(false)">Cancel</button>
+          </div>
+        } @else if (!t.isArchived) {
+          <div class="actions">
+            <button mat-stroked-button type="button" [disabled]="busy()" (click)="changingLink.set(true)">Change</button>
+            @if (t.linkedTicketState !== 'None') {
+              <button mat-stroked-button type="button" [disabled]="busy()" (click)="removeLink()">Remove</button>
+            }
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    @if (isSuperAdmin()) {
+      <mat-card appearance="outlined">
+        <mat-card-header><mat-card-title>Owner</mat-card-title></mat-card-header>
+        <mat-card-content>
+          <form class="form" [formGroup]="ownerForm" (ngSubmit)="reassign()">
+            <mat-form-field appearance="outline">
+              <mat-label>Task owner</mat-label>
+              <mat-select formControlName="ownerId" required>
+                @for (a of activeAgents(); track a.id) {
+                  <mat-option [value]="a.id">{{ a.firstName }} {{ a.lastName }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <mat-checkbox formControlName="removeTicketLink">Remove the ticket link</mat-checkbox>
+            <p class="hint">Unread reminders for this task move to the new owner. The linked ticket must be assigned to the new owner, or remove the link.</p>
+            @if (errors().owner; as message) {
+              <p class="form-error" role="alert">{{ message }}</p>
+            }
+            <div class="actions">
+              <button mat-flat-button type="submit" [disabled]="busy() || t.isArchived">Reassign</button>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    }
+  </div>
+} @else if (loading()) {
+  <p>Loading…</p>
+}

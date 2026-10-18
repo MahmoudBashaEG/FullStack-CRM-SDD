@@ -1,0 +1,84 @@
+<crm-page-header title="Quick Replies" subtitle="Reusable plain-text replies." />
+<p class="hint" role="note"><mat-icon aria-hidden="true">content_copy</mat-icon> {{ hint }}</p>
+
+<div class="toolbar" [formGroup]="filters">
+  <mat-form-field appearance="outline" class="search">
+    <mat-label>Search</mat-label>
+    <input matInput type="search" formControlName="search" placeholder="Title or text" />
+    <mat-icon matSuffix>search</mat-icon>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="filter">
+    <mat-label>Category</mat-label>
+    <mat-select formControlName="category">
+      <mat-option [value]="null">Any</mat-option>
+      @for (c of categories; track c) {
+        <mat-option [value]="c">{{ c }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  @if (!isSuperAdmin()) {
+    <mat-form-field appearance="outline" class="filter">
+      <mat-label>Scope</mat-label>
+      <mat-select formControlName="scope">
+        <mat-option [value]="null">Any</mat-option>
+        <mat-option value="Shared">Shared</mat-option>
+        <mat-option value="Personal">Personal</mat-option>
+      </mat-select>
+    </mat-form-field>
+  }
+
+  <mat-slide-toggle formControlName="archived">Show archived</mat-slide-toggle>
+
+  <a mat-flat-button routerLink="/quick-replies/new">
+    <mat-icon>add</mat-icon> {{ isSuperAdmin() ? 'New shared quick reply' : 'New personal quick reply' }}
+  </a>
+</div>
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+@if (error(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+  <button mat-stroked-button type="button" (click)="reload()">Retry</button>
+}
+
+@if (!loading() && !error()) {
+  @if (items().length === 0) {
+    <p>No quick replies match.</p>
+  } @else {
+    <ul class="rows">
+      @for (q of items(); track q.id) {
+        <li class="row">
+          <a class="row-title" [routerLink]="['/quick-replies', q.id]">{{ q.title }}</a>
+          <crm-status-badge [label]="q.scope" [tone]="q.scope === 'Shared' ? 'pending' : 'neutral'" />
+          @if (q.isArchived) {
+            <crm-status-badge label="Archived" tone="neutral" />
+          }
+          <span class="hint">{{ q.category }}</span>
+          <p class="body user-text">{{ q.body }}</p>
+          <div class="actions">
+            <button mat-stroked-button type="button" (click)="copy(q)"><mat-icon>content_copy</mat-icon> Copy</button>
+            @if (q.canEdit) {
+              <a mat-button [routerLink]="['/quick-replies', q.id]">Edit</a>
+              @if (q.isArchived) {
+                <button mat-button type="button" (click)="setArchived(q, false)">Restore</button>
+              } @else {
+                <button mat-button type="button" (click)="setArchived(q, true)">Archive</button>
+              }
+            }
+          </div>
+        </li>
+      }
+    </ul>
+    <mat-paginator
+      [length]="totalCount()"
+      [pageIndex]="page() - 1"
+      [pageSize]="pageSize()"
+      [pageSizeOptions]="pageSizeOptions"
+      (page)="onPage($event)"
+      aria-label="Select page of quick replies" />
+  }
+}

@@ -21,6 +21,13 @@ Roles are assigned by the server only. Angular guards and navigation filtering a
 | Clear escalation | ✔ | — | — |
 | View ticket activity | ✔ all | ✔ assigned to them | — |
 | View own Agent Dashboard (assigned-ticket workload) | — | ✔ | — |
+| Create / manage tasks | ✔ for any active Agent | ✔ own | — |
+| Reassign a task | ✔ | — | — |
+| Task reminder inbox | — | ✔ own tasks | — |
+| Shared quick replies | ✔ manage | ✔ read / copy | — |
+| Personal quick replies | — (never visible) | ✔ own | — |
+| Internal discussion (read / post) | ✔ any ticket | ✔ primary or active collaborator | — |
+| Invite / remove collaborators | ✔ any ticket | ✔ primary assignee only | — |
 | Create a SuperAdmin | nobody via the API (bootstrap only) | | |
 
 ## 2. API routes
@@ -47,6 +54,11 @@ Roles are assigned by the server only. Angular guards and navigation filtering a
 | DELETE | `/api/v1/tickets/{id}/escalation` | SuperAdmin | 200 |
 | GET | `/api/v1/tickets/{id}/activity` | SuperAdmin, Agent (only own assigned) | 200 |
 | GET | `/api/v1/agent-dashboard` | Agent | 200 |
+| GET | `/api/v1/agent-dashboard/tasks` | Agent | 200 |
+| * | `/api/v1/tasks/*` | SuperAdmin, Agent (own); `PUT .../assignee` SuperAdmin | 200 / 201 |
+| POST / GET / PUT | `/api/v1/notifications/*` | Agent | 200 / 204 |
+| * | `/api/v1/quick-replies/*` | SuperAdmin (Shared), Agent (Personal + read Shared) | 200 / 201 |
+| * | `/api/v1/collaborations/*` | SuperAdmin, Agent (primary / collaborator); `GET /collaborations` Agent | 200 / 201 / 204 |
 | GET / PUT | `/api/v1/me/customer-profile` | Customer | 200 |
 | GET | `/api/health` | anonymous | 200 |
 

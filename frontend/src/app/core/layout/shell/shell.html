@@ -34,6 +34,9 @@
       }
       <span class="shell__title">Customer Support CRM</span>
       <span class="shell__spacer"></span>
+      @if (isAgent()) {
+        <crm-notification-bell />
+      }
       @if (user(); as user) {
         <span class="shell__user">{{ user.firstName }} {{ user.lastName }}</span>
       }

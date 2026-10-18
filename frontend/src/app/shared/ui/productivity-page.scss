@@ -1,0 +1,88 @@
+/* Shared layout for the DASH-002 pages (tasks, notifications, quick replies, collaboration). Logical properties only. */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--crm-space-4);
+}
+
+.search {
+  flex: 1 1 220px;
+  max-inline-size: 320px;
+}
+
+.filter {
+  flex: 0 1 170px;
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--crm-space-3);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--crm-space-2) var(--crm-space-3);
+  padding: var(--crm-space-3) var(--crm-space-4);
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: var(--crm-radius-md);
+}
+
+.row-title {
+  flex: 1 1 240px;
+  font: var(--mat-sys-title-medium);
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  flex-basis: 100%;
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-medium);
+  overflow-wrap: anywhere;
+}
+
+.user-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+
+.hint {
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-medium);
+}
+
+.error,
+.form-error {
+  margin: 0;
+  color: var(--mat-sys-error);
+}
+
+.stack {
+  display: grid;
+  gap: var(--crm-space-4);
+  max-inline-size: 720px;
+}
+
+.form {
+  display: grid;
+  gap: var(--crm-space-3);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--crm-space-3);
+  align-items: center;
+}
+
+.unread {
+  font-weight: 600;
+}

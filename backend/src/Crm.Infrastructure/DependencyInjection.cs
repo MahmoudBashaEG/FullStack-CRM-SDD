@@ -39,6 +39,11 @@ public static class DependencyInjection
         services.AddScoped<ICustomerRepository, CustomerRepository>();
         services.AddScoped<ITicketRepository, TicketRepository>();
         services.AddScoped<IAgentDashboardRepository, AgentDashboardRepository>();
+        services.AddScoped<IAgentTaskRepository, AgentTaskRepository>();
+        services.AddScoped<ITaskReminderRepository, TaskReminderRepository>();
+        services.AddScoped<IQuickReplyRepository, QuickReplyRepository>();
+        services.AddScoped<ICollaborationRepository, CollaborationRepository>();
+        services.AddScoped<ITicketAccessLock, TicketAccessLock>();
 
         services.AddIdentityCore<ApplicationUser>(options =>
             {

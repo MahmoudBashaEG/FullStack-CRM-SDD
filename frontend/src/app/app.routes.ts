@@ -42,6 +42,26 @@ export const routes: Routes = [
         canActivate: [roleGuard('SuperAdmin')],
         loadChildren: () => import('./features/agents/agents.routes').then(m => m.AGENTS_ROUTES),
       },
+      {
+        path: 'tasks',
+        canActivate: [roleGuard('SuperAdmin', 'Agent')],
+        loadChildren: () => import('./features/tasks/tasks.routes').then(m => m.TASKS_ROUTES),
+      },
+      {
+        path: 'notifications',
+        canActivate: [roleGuard('Agent')],
+        loadChildren: () => import('./features/notifications/notifications.routes').then(m => m.NOTIFICATIONS_ROUTES),
+      },
+      {
+        path: 'quick-replies',
+        canActivate: [roleGuard('SuperAdmin', 'Agent')],
+        loadChildren: () => import('./features/quick-replies/quick-replies.routes').then(m => m.QUICK_REPLIES_ROUTES),
+      },
+      {
+        path: 'collaboration',
+        canActivate: [roleGuard('Agent')],
+        loadChildren: () => import('./features/collaboration/collaboration.routes').then(m => m.COLLABORATION_ROUTES),
+      },
       // Feature stories add: { path: '<feature>', loadChildren: () => import('./features/<feature>/<feature>.routes') ... }
     ],
   },

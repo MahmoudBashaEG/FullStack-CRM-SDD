@@ -1,0 +1,10 @@
+@use '../../shared/ui/productivity-page';
+
+.body {
+  flex-basis: 100%;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

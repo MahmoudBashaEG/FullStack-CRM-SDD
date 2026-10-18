@@ -189,5 +189,24 @@
         <crm-ticket-activity-list [ticketId]="current.id" [refresh]="activityRefresh()" />
       </mat-card-content>
     </mat-card>
+
+    <mat-card appearance="outlined">
+      <mat-card-header><mat-card-title>Internal discussion</mat-card-title></mat-card-header>
+      <mat-card-content>
+        <crm-ticket-discussion [ticketId]="current.id" (accessLost)="onAccessLost()" />
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card appearance="outlined">
+      <mat-card-header><mat-card-title>Collaborators</mat-card-title></mat-card-header>
+      <mat-card-content>
+        <crm-ticket-collaborators [ticketId]="current.id" [canManage]="true" />
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card appearance="outlined">
+      <mat-card-header><mat-card-title>Quick replies</mat-card-title></mat-card-header>
+      <mat-card-content><crm-quick-reply-panel /></mat-card-content>
+    </mat-card>
   </div>
 }

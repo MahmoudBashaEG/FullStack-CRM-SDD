@@ -1,0 +1,53 @@
+<crm-page-header [title]="isNew ? 'New quick reply' : 'Quick reply'" [subtitle]="hint" />
+
+<p><a routerLink="/quick-replies">← Back to quick replies</a></p>
+
+@if (loadError(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+} @else {
+  <mat-card appearance="outlined" class="stack">
+    <mat-card-content>
+      <p class="hint">{{ scopeLine() }}</p>
+      @if (item() && !item()!.canEdit) {
+        <p class="hint">Shared quick replies are managed by SuperAdmin. You can read and copy this one.</p>
+      }
+      <form class="form" [formGroup]="form" (ngSubmit)="save()">
+        <mat-form-field appearance="outline">
+          <mat-label>Title</mat-label>
+          <input matInput formControlName="title" maxlength="120" required />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Category</mat-label>
+          <mat-select formControlName="category">
+            @for (c of categories; track c) {
+              <mat-option [value]="c">{{ c }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Text</mat-label>
+          <textarea matInput rows="8" formControlName="body" maxlength="2000" required></textarea>
+          <mat-hint align="end">{{ form.controls.body.value.length }} / 2000</mat-hint>
+        </mat-form-field>
+        @if (error(); as message) {
+          <p class="form-error" role="alert">{{ message }}</p>
+        }
+        <div class="actions">
+          @if (!item() || (item()!.canEdit && !item()!.isArchived)) {
+            <button mat-flat-button type="submit" [disabled]="busy()">Save</button>
+          }
+          @if (item()) {
+            <button mat-stroked-button type="button" (click)="copy()"><mat-icon>content_copy</mat-icon> Copy</button>
+            @if (item()!.canEdit) {
+              @if (item()!.isArchived) {
+                <button mat-button type="button" [disabled]="busy()" (click)="setArchived(false)">Restore</button>
+              } @else {
+                <button mat-button type="button" [disabled]="busy()" (click)="setArchived(true)">Archive</button>
+              }
+            }
+          }
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+}

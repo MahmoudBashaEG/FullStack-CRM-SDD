@@ -1,0 +1,48 @@
+<crm-page-header title="My Collaborations" subtitle="Tickets whose internal discussion you were invited to." />
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+@if (error(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+  <button mat-stroked-button type="button" (click)="load(page())">Retry</button>
+}
+
+@if (!loading() && !error()) {
+  @if (items().length === 0) {
+    <p>You have not been invited to any ticket discussions.</p>
+  } @else {
+    <ul class="rows">
+      @for (c of items(); track c.ticketId) {
+        <li class="row">
+          @if (c.isPrimaryAssignee) {
+            <a class="row-title" [routerLink]="['/tickets', c.ticketId]">{{ c.subject }}</a>
+            <crm-status-badge label="You are now the assigned Agent" tone="success" />
+          } @else {
+            <a class="row-title" [routerLink]="['/collaboration/tickets', c.ticketId]">{{ c.subject }}</a>
+          }
+          <crm-status-badge [label]="c.priority" [tone]="priorityTone(c.priority)" />
+          <crm-status-badge [label]="statusLabel(c.status)" [tone]="statusTone(c.status)" />
+          @if (c.isSuspended) {
+            <crm-status-badge label="Access suspended — ticket is unassigned" tone="neutral" />
+          }
+          <div class="meta">
+            @if (c.lastMessageAtUtc) {
+              Last message {{ c.lastMessageAtUtc | date: 'medium' }}
+            } @else {
+              No messages yet
+            }
+          </div>
+        </li>
+      }
+    </ul>
+    <mat-paginator
+      [length]="totalCount()"
+      [pageIndex]="page() - 1"
+      [pageSize]="pageSize()"
+      [pageSizeOptions]="[10, 20, 50]"
+      (page)="onPage($event)"
+      aria-label="Select page of collaborations" />
+  }
+}

@@ -1,0 +1,36 @@
+<p><a routerLink="/collaboration">← My collaborations</a></p>
+
+@if (error(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+} @else if (ticket(); as t) {
+  <crm-page-header [title]="t.subject" subtitle="Ticket discussion" />
+  <div class="stack">
+    <div class="actions">
+      <crm-status-badge [label]="t.priority" [tone]="priorityTone(t.priority)" />
+      <crm-status-badge [label]="statusLabel(t.status)" [tone]="statusTone(t.status)" />
+      <span class="hint">
+        Assigned Agent: {{ t.assignedAgentName ?? 'none' }}
+        @if (t.access === 'Collaborator') {
+          · You are a collaborator
+        }
+      </span>
+      @if (t.access === 'PrimaryAgent' || t.access === 'SuperAdmin') {
+        <a [routerLink]="['/tickets', t.ticketId]">Open ticket</a>
+      }
+    </div>
+
+    <mat-card appearance="outlined">
+      <mat-card-header><mat-card-title>Internal discussion</mat-card-title></mat-card-header>
+      <mat-card-content>
+        <crm-ticket-discussion [ticketId]="t.ticketId" (accessLost)="onAccessLost()" />
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card appearance="outlined">
+      <mat-card-header><mat-card-title>Collaborators</mat-card-title></mat-card-header>
+      <mat-card-content>
+        <crm-ticket-collaborators [ticketId]="t.ticketId" [canManage]="t.canManage" />
+      </mat-card-content>
+    </mat-card>
+  </div>
+}

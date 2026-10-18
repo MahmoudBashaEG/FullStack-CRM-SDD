@@ -8,9 +8,10 @@
   - `shared/ui/` — presentational building blocks (`PageHeader`, `StatusBadge`).
   - `features/<name>/` — routes, pages, API service and models for that feature, lazy-loaded via `<name>.routes.ts`.
 - **Lists:** server-side paging with `MatPaginator` (`pageIndex = page - 1`), debounced (300 ms) search field, `StatusBadge` for record type/status.
-- **Pickers:** select existing records through server-side search (`CustomerPicker` in `features/tickets/` wraps `MatAutocomplete` over `GET /api/v1/customers`); fixed sets use `MatSelect`.
+- **Pickers:** select existing records through server-side search (`CustomerPicker` in `features/tickets/` wraps `MatAutocomplete` over `GET /api/v1/customers`); fixed sets use `MatSelect`. `TicketPicker` (`features/tasks/`) lists only tickets currently assigned to the chosen task owner.
 - **Role-aware actions:** pages compute available actions from the current user and record (`ticketActions` in `features/tickets/ticket-workflow.ts`) for display only; the API re-checks. After a 404 on an action the page drops the stale record and shows an access-lost message.
 - **CSS:** use logical properties only (`padding-inline`, `margin-block`, `inline-size`, `text-align: start`); never `left`/`right`. No RTL or localization logic yet.
 - **Auth:** access token in memory only (`AuthService`); guards are UX only; `NavItem.roles` filters navigation; public pages (`/sign-in`, `/sign-up`) render outside the shell.
-- **Navigation:** entries are added to `NAV_ITEMS` only when a screen ships.
+- **Navigation:** entries are added to `NAV_ITEMS` only when a screen ships (DASH-002 added Tasks, Quick Replies, My Collaborations; the Agent notification bell lives in the shell toolbar).
+- **Polling:** only `core/notifications/NotificationBell` polls (60 s, Agent only, `exhaustMap`); every other screen loads on visit / user action.
 - **Future screens** are designed per feature intake from real data; no placeholder pages.

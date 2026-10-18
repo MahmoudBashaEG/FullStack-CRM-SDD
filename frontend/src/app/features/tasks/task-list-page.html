@@ -1,0 +1,122 @@
+<crm-page-header
+  [title]="isSuperAdmin() ? 'Tasks' : 'My Tasks'"
+  subtitle="Personal work items and optional in-app reminders." />
+
+<div class="toolbar" [formGroup]="filters">
+  <mat-form-field appearance="outline" class="search">
+    <mat-label>Search</mat-label>
+    <input matInput type="search" formControlName="search" placeholder="Task title" />
+    <mat-icon matSuffix>search</mat-icon>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="filter">
+    <mat-label>Status</mat-label>
+    <mat-select formControlName="status">
+      <mat-option value="Pending">Pending</mat-option>
+      <mat-option value="Completed">Completed</mat-option>
+      <mat-option value="Any">Any</mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="filter">
+    <mat-label>Due</mat-label>
+    <mat-select formControlName="dueState">
+      <mat-option [value]="null">Any</mat-option>
+      <mat-option value="Overdue">Overdue</mat-option>
+      <mat-option value="DueSoon">Due soon</mat-option>
+      <mat-option value="NoDueDate">No due date</mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="filter">
+    <mat-label>Reminder</mat-label>
+    <mat-select formControlName="hasReminder">
+      <mat-option [value]="null">Any</mat-option>
+      <mat-option [value]="true">With reminder</mat-option>
+      <mat-option [value]="false">Without reminder</mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  @if (isSuperAdmin()) {
+    <mat-form-field appearance="outline" class="filter">
+      <mat-label>Agent</mat-label>
+      <mat-select formControlName="assignedAgentUserId">
+        <mat-option [value]="null">Any</mat-option>
+        @for (a of agents(); track a.id) {
+          <mat-option [value]="a.id">{{ a.firstName }} {{ a.lastName }}{{ a.isActive ? '' : ' (inactive)' }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  }
+
+  <mat-slide-toggle formControlName="archived">Show archived</mat-slide-toggle>
+
+  <a mat-flat-button routerLink="/tasks/new"><mat-icon>add</mat-icon> New task</a>
+</div>
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+@if (error(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+  <button mat-stroked-button type="button" (click)="reload()">Retry</button>
+}
+
+@if (!loading() && !error()) {
+  @if (tasks().length === 0) {
+    <p>{{ hasFilters() ? 'No tasks match these filters.' : 'No tasks yet. Create the first task.' }}</p>
+  } @else {
+    <ul class="rows">
+      @for (t of tasks(); track t.id) {
+        <li class="row">
+          <a class="row-title" [routerLink]="['/tasks', t.id]">{{ t.title }}</a>
+          @if (t.isOverdue) {
+            <crm-status-badge label="Overdue" tone="error" />
+          } @else if (t.isDueSoon) {
+            <crm-status-badge label="Due soon" tone="pending" />
+          }
+          @if (t.status === 'Completed') {
+            <crm-status-badge label="Completed" tone="success" />
+          }
+          @if (t.isArchived) {
+            <crm-status-badge label="Archived" tone="neutral" />
+          }
+          <div class="meta">
+            @if (t.dueAtUtc) {
+              Due {{ t.dueAtUtc | date: 'medium' }}
+            } @else {
+              No due date
+            }
+            @if (t.remindAtUtc) {
+              · Reminder {{ t.remindAtUtc | date: 'short' }}
+            } @else if (t.reminderSentAtUtc) {
+              · Reminder sent
+            }
+            @if (isSuperAdmin()) {
+              · Owner: {{ t.assignedAgentName }}
+            }
+            @switch (t.linkedTicketState) {
+              @case ('Accessible') {
+                · Ticket: <a [routerLink]="['/tickets', t.linkedTicketId]">{{ t.linkedTicketSubject }}</a>
+              }
+              @case ('Inaccessible') {
+                · Linked ticket no longer accessible
+                @if (t.linkedTicketSubject) {
+                  ({{ t.linkedTicketSubject }})
+                }
+              }
+            }
+          </div>
+        </li>
+      }
+    </ul>
+    <mat-paginator
+      [length]="totalCount()"
+      [pageIndex]="page() - 1"
+      [pageSize]="pageSize()"
+      [pageSizeOptions]="pageSizeOptions"
+      (page)="onPage($event)"
+      aria-label="Select page of tasks" />
+  }
+}

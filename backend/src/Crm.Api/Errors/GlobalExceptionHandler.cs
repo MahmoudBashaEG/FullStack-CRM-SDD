@@ -33,6 +33,24 @@ internal sealed class GlobalExceptionHandler(
                 Title = "Resource not found.",
                 Detail = notFound.Message,
             },
+            ForbiddenException forbidden => new ProblemDetails
+            {
+                Status = StatusCodes.Status403Forbidden,
+                Title = "Forbidden.",
+                Detail = forbidden.Message,
+            },
+            PreconditionRequiredException precondition => new ProblemDetails
+            {
+                Status = StatusCodes.Status428PreconditionRequired,
+                Title = "Precondition required.",
+                Detail = precondition.Message,
+            },
+            CommitOutcomeUnknownException unknown => new ProblemDetails // >= 500 is logged with the inner exception below
+            {
+                Status = StatusCodes.Status503ServiceUnavailable,
+                Title = "Outcome unknown.",
+                Detail = unknown.Message,
+            },
             DomainException domain => new ProblemDetails
             {
                 Status = StatusCodes.Status422UnprocessableEntity,

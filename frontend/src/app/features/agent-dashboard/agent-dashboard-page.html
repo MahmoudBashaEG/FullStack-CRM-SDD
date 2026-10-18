@@ -9,6 +9,10 @@
   </button>
   <a mat-stroked-button routerLink="/tickets">View all my tickets</a>
   <a mat-flat-button routerLink="/tickets/new"><mat-icon>add</mat-icon> Create ticket</a>
+  <a mat-stroked-button routerLink="/tasks">My Tasks</a>
+  <a mat-stroked-button routerLink="/notifications">Notifications</a>
+  <a mat-stroked-button routerLink="/quick-replies">Quick Replies</a>
+  <a mat-stroked-button routerLink="/collaboration">My Collaborations</a>
 </div>
 
 @if (loading()) {
@@ -92,3 +96,68 @@
     }
   </section>
 }
+
+<section aria-labelledby="tasks-heading">
+  <h2 id="tasks-heading">My tasks</h2>
+
+  @if (tasksLoading()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+
+  @if (tasksError(); as message) {
+    <p class="error" role="alert">{{ message }}</p>
+    <button mat-stroked-button type="button" (click)="refreshTasks()">Retry tasks</button>
+  }
+
+  @if (taskSummary(); as s) {
+    <p class="hint">Overdue and Due soon are part of Pending. Due soon = within 7 days.</p>
+    <div class="summary-grid">
+      <mat-card appearance="outlined" class="summary-card">
+        <mat-card-content>
+          <span>Pending</span>
+          <span class="count">{{ s.pending }}</span>
+        </mat-card-content>
+      </mat-card>
+      <mat-card appearance="outlined" class="summary-card">
+        <mat-card-content>
+          <span>Overdue</span>
+          <span class="count">{{ s.overdue }}</span>
+        </mat-card-content>
+      </mat-card>
+      <mat-card appearance="outlined" class="summary-card">
+        <mat-card-content>
+          <span>Due soon</span>
+          <span class="count">{{ s.dueSoon }}</span>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    @if (s.nextTasks.length === 0) {
+      <p>No pending tasks.</p>
+    } @else {
+      <ol class="queue">
+        @for (t of s.nextTasks; track t.id) {
+          <li class="queue-item">
+            <a class="subject" [routerLink]="['/tasks', t.id]">{{ t.title }}</a>
+            @if (t.isOverdue) {
+              <crm-status-badge label="Overdue" tone="error" />
+            } @else if (t.isDueSoon) {
+              <crm-status-badge label="Due soon" tone="pending" />
+            }
+            <div class="meta">
+              @if (t.dueAtUtc) {
+                Due {{ t.dueAtUtc | date: 'medium' }}
+              } @else {
+                No due date
+              }
+              @if (t.remindAtUtc) {
+                · Reminder {{ t.remindAtUtc | date: 'short' }}
+              }
+            </div>
+          </li>
+        }
+      </ol>
+    }
+    <p class="hint"><a routerLink="/tasks">View all my tasks</a></p>
+  }
+</section>
